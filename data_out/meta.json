@@ -1,0 +1,22 @@
+{
+  "book_ids": [
+    1342,
+    84,
+    1661,
+    98
+  ],
+  "train_books": [
+    1342,
+    84
+  ],
+  "val_books": [
+    1661
+  ],
+  "test_books": [
+    98
+  ],
+  "vocab_size": 95,
+  "train_chars": 1140524,
+  "val_chars": 561852,
+  "test_chars": 756961
+}
