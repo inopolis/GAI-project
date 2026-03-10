@@ -1,0 +1,38 @@
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# MacOS system files
+.DS_Store
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Logs
+*.log
+
+# Temporary files
+*.tmp
+*.temp
+
+# # Data binaries (dataset preprocessing outputs)
+# data_out/*.bin
+
+# Editor configs
+.vscode/
+.idea/
+
+# Python build
+build/
+dist/
+*.egg-info/
+
+# Matplotlib cache
+.matplotlib/

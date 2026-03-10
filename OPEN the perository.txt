@@ -1,5 +1,0 @@
-Here is the github repo with full code! 
-
-https://github.com/inopolis/GAI-project.git
-
-Also the report is in repository!

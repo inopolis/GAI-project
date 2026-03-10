@@ -55,7 +55,13 @@ def main():
     set_seed(args.seed)
     ensure_dir(args.out_dir)
 
-    device = "cpu"
+    if torch.backends.mps.is_available():
+        device = torch.device("mps")
+    elif torch.cuda.is_available():
+        device = torch.device("cuda")
+    else:
+        device = torch.device("cpu")
+
     print("Device:", device)
 
     vocab = load_json(os.path.join(args.data_dir, "vocab.json"))
