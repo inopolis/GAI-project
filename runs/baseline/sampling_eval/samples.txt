@@ -1,0 +1,424 @@
+================================================================================
+SAMPLING EVALUATION — GENERATED SAMPLES
+================================================================================
+
+[greedy] prompt='CHAPTER 1'
+------------------------------------------------------------
+CHAPTER 1
+ XIII.
+
+[Illustration]
+
+CHAPTER XIII.
+
+[Illustration]
+
+CHAPTER XIII.
+
+[Illustration]
+
+CHAPTER XIII.
+
+[Illustration]
+
+The party of the sun and the sun of the sun and the subject of the subject
+which I had not been so much as the sun of the sun and the subject of
+the sun and the sun of the sun and the sun of the sun and the sun of
+the sun and the sun of the sun and the sun of the sun and the strange
+of the sun and the sun of the sun and the sun of the sun and the stream
+of the sun and the sun of the sun and the sun of the sun and the strength
+of the sun and the sun of the sun and the sun of the 
+
+[greedy] prompt='The night was'
+------------------------------------------------------------
+The night was not to be so much as the same of the subject of
+the subject of the subject of the subject of the subject of the subject,
+and the sun of the sun and the sun of the sun and the sun of the sun and
+desired the subject of the subject of the subject of the subject of the
+country. I was not to be so much as the sun of the sun and the strange
+of the sun and the sun of the sun and the sun of the sun and the strength
+of the sun and the sun of the sun and the sun of the sun and the
+considerable of the subject of the subject of the sun and the sun of
+the sun and the sun of the sun and the sun of the sun a
+
+[greedy] prompt='She had never'
+------------------------------------------------------------
+She had never seen the sun of the sun and the subject of the
+country of the subject of the subject of the subject of the subject, and
+the sun of the sun which I had not been so much as the sun of the sun
+which I had not been so much as the sun of the sun and the sun of
+the sun and the sun of the sun and the sun of the sun and the subject of
+the sun and the sun of the sun and the sun of the sun and the sun of
+the sun and the sun of the sun and the sun of the sun and the strange
+of the sun and the sun of the sun and the sun of the sun and the strength
+of the sun and the sun of the sun and the sun of the sun a
+
+[temp_0.6] prompt='CHAPTER 1'
+------------------------------------------------------------
+CHAPTER 1
+
+[Illustration]
+
+CHAPTER XVIII.
+
+[Illustration]
+
+The cold was of the most and body and hardly creature, as to the
+reason of the happiness were more particularly to much as they were to
+the matter, and had heard to me the sunse of the particular as the sister
+of what all the design was an end such an approaching and amiable as it
+is companion, however, there was again.
+
+She spoke a house end to one a real pretty of a very agreeable in the
+country of was the side of the only distression, and something went
+a short who had been to speak of the manner of his sufferings to my
+father in surprise him
+
+[temp_0.6] prompt='The night was'
+------------------------------------------------------------
+The night was at length over her into the present of
+her to the world, and the struck of the others of the interest to his
+feelings.
+
+“I saw the season of such a complete to my mountain that the arrangement,
+but the door of the exulture as if she desired the since of the next
+way and thought I have been lost. I will not be so it as your dear,
+and which half the ingrative which an end the person of my eyes should be
+all this soul and manners, that which he all the advanced of what had a
+grief before my friends; and this considerable to the breakfast. It
+was now to allude. My daughter care will be impossible 
+
+[temp_0.6] prompt='She had never'
+------------------------------------------------------------
+She had never been conversation that is the same time of
+the most compliment to the matter. I have no attempt and so much
+of life as the struck of the deserts and preference of my own, which the
+advantage to be a complete of the rest of the land and things of such a
+continue with an importance what he should distinguish might be able to
+discover the whole short in the rest; and and was a persuade by the sleep,
+and even self-considerable and disappointments to be a sense of the words,
+and in remained and something wonder resolutions that he was seen the
+family and afful understanding cares; and therefore, an
+
+[temp_0.8] prompt='CHAPTER 1'
+------------------------------------------------------------
+CHAPTER 1
+
+[Illustration]
+
+CHAPTWER XII.
+
+[Illustration]
+
+CHAPTER XIIII.
+
+[Illustration]
+
+Summnle at this departures, of Ingratuing his abhorent as we sweet
+can to be prevented disposition of that all the most dear, and with regiment
+second to the interest a length to despise and musch began at Netherfield
+and previously addiscovered ship; the prevailly was in the view; and
+into a family partings enjoyment was explainted on the purpose of
+Elizabeth, that he party, her instant who should remain to joy and to
+the night, she was tranquillity of whom they are alone and unncle as to
+my father letter, and his
+
+[temp_0.8] prompt='The night was'
+------------------------------------------------------------
+The night was at length over her into return the subject of
+the word, that they known to be borne to have pictures which to the
+refuse of the happiness were made an invitation. Thus is a concern and
+the matter, I could have been run in his countenance in my sister from
+the same diservance of Longbourn so much destroyed in the world of her
+father’s friend. He found the view; and and was not happy with even
+short a regret first of a soul such attachment study understanding
+into a manners of its marriage from the sun toils resolutely returned
+those who else manners days as his daughter cares; and therefore, an
+
+[temp_0.8] prompt='She had never'
+------------------------------------------------------------
+She had never been collected her inclination of Mr. Bingley,
+as well, the strike moment of those and interesting a man, and the
+refuse of the happiness were made an invitation. Thus is a concern and
+the matter, I could have been run in his countenance in my sister from
+the same diservance of Longbourn so much destroyed in the world of her
+father’s friend. He found the view; and and was not happy with even
+short a regret first of a soul such attachment study understanding
+into a manners of its marriage from the sun toils resolutely returned
+those who else manners days as his daughter cares; and therefore, an
+
+[temp_1.0] prompt='CHAPTER 1'
+------------------------------------------------------------
+CHAPTER 1
+
+[Illustration]
+
+She was train again capable of the cution of Miss Darcy, him both
+and had seing Elizabeth, of I walking seeing him.
+
+Having such inclination? Someme of the countenance; there was except of
+knowing or
+
+ Elizabeth was desired. Mrs. Bennet friend away. Never met spiritate and lose.
+But My resister, which you given him courage close, bittered in a
+daughter letter.
+
+[Illustration]
+
+Elizabeth felt proposal so last to that we promised that a beholding
+was engaged: in remained with story, I wonder resolutely returned too see
+of the marriage and despair, and Lydia’s since on rest in th
+
+[temp_1.0] prompt='The night was'
+------------------------------------------------------------
+The night was at length over her inclination of Mr. Bingley,
+as welcomed set to them; to be boy my dear Charlotte’s first of life.
+
+“I should have to us your wanter, for which Mr. Wickham part of that all
+this else of fheim with ruin; and every did not more sast length to
+despise and mumbt by chiar. Insolemned mother. Our little able wight no
+improvement. On this gentlemen; and into life perceived as even showed to
+him, at much as so many town. My father had enough before it was entroyed
+in remained with stowing, went confessionable; that they should take
+and Grodinanage Mr. Hurst, what was in the thousand 
+
+[temp_1.0] prompt='She had never'
+------------------------------------------------------------
+She had never at length over her inclination of Mr. Bingley,
+as welcomed set to them; to be boy my dear Charlotte’s first of life.
+
+“I should have to us your wanter, for which Mr. Collins part of that all
+this else of fheim with ruin; and every did not more sast length to
+despise and mumbt by chiar. Insolemned mother. Our little able wight no
+improvement. On this gentlemen; and into life perceived as even showed to
+him, at much as so many town. My father had enough before it was entroyed
+in remained with stowing, went confessionable; that they should take
+and Grodinanage Mr. Hurst, what was in the thousand 
+
+[top_k_10] prompt='CHAPTER 1'
+------------------------------------------------------------
+CHAPTER 1
+
+[Illustration]
+
+She was train again together the word, that they were thrushed by
+any of their departure, and I was since in the character--summony, I found
+with my own, which never bat all that he had often a toppressive the land
+of sixing who say that him he wished to contracter at Netherfield and
+philosophy, which these shakes of your falseh, bitter, and all having at
+lose, and when she was to a gentleman in which our such, that which
+there had a degree of two mention of its marriage, I should be to
+scene; and a matter, it would not take and at this daughter and
+discarce; filless the pleas
+
+[top_k_10] prompt='The night was'
+------------------------------------------------------------
+The night was at length over her inclination of Mr. Bingley,
+as welcomed set to them; to be so leate interestrably this acount was
+sight in the charman weeks, and write forward me of the course of talk
+or that he could have been run it, as if she desired. I has blessed to
+despise and mumbt by enjal. Insolated, and the first that an
+once disposition; and also
+fortunated in and hander at a persuade by tempers, we arre from the
+poor, so many town. My father had been advised into a mention of
+its marriage fully almost toils when his concerning those
+were to say in the fault.
+
+But whose done which the rest were 
+
+[top_k_10] prompt='She had never'
+------------------------------------------------------------
+She had never at length over her and protections the
+hovel, which ice the cordernment to be so leate interesting a man,
+and the wife all time, a letter weeks, and write forward me of the
+course of satisfied, but the door.
+
+[Illustration:
+
+  [Illustration:
+
+  Mr. W consist has been an acquaintance.
+
+“Insidered, mother. I have notioned with his steps; but already
+in the piece, and her attention; which I must hope a real pretting of
+the last town.”
+
+“I am there that a few months are not agreeable, it would not almost to
+scene; and a matter, it would not take and at this daughter and
+discarce; filless the plana
+
+[top_k_50] prompt='CHAPTER 1'
+------------------------------------------------------------
+CHAPTER 1
+
+[Illustration]
+
+She was train again capable of the cution of Miss Darcy, him both
+and had seing Elizabeth, of I walking seeing him.
+
+Having such inclination? Someme of the countenance; there was except of
+knowing or
+
+ Elizabeth was desired. Mrs. Bennet friend away. Never met spiritate and lose.
+But My resister, which you given him courage close, bittered in a
+daughter letter.
+
+[Illustration]
+
+Elizabeth felt proposal so last to that we promised that a beholding
+was engaged: in remained with story, I wonder resolutely returned too see
+of the marriage and despair, and Lydia’s since on rest in th
+
+[top_k_50] prompt='The night was'
+------------------------------------------------------------
+The night was at length over her inclination of Mr. Bingley,
+as welcomed set to them; to be boy my dear Charlotte’s first of life.
+
+“I should have to us your wanter, for which Mr. Wickham part of that all
+this else of fheim with ruin; and every did not more sast length to
+despise and mumbt by chiar. Insolemned mother. Our little able wight no
+improvement. On this gentlemen; and into life perceived as even showed to
+him, at much as so many town. My father had enough before it was entroyed
+in remained with stowing, went confessionable; that they should take
+and Grodinanage Mr. Hurst, what was in the thousand 
+
+[top_k_50] prompt='She had never'
+------------------------------------------------------------
+She had never at length over her inclination of Mr. Bingley,
+as welcomed set to them; to be boy my dear Charlotte’s first of life.
+
+“I should have to us your wanter, for which Mr. Collins part of that all
+this else of fheim with ruin; and every did not more sast length to
+despise and mumbt by chiar. Insolemned mother. Our little able wight no
+improvement. On this gentlemen; and into life perceived as even showed to
+him, at much as so many town. My father had enough before it was entroyed
+in remained with stowing, went confessionable; that they should take
+and Grodinanage Mr. Hurst, what was in the thousand 
+
+[nucleus_p0.9] prompt='CHAPTER 1'
+------------------------------------------------------------
+CHAPTER 1
+
+[Illustration]
+
+She was the prepared again more happy, that they were through of my
+desires, and they were of life from serious a letter uncommonly presented
+by Mr. Collins was the different to the country, they perhaps of second to
+permite which the since of my same view considerable from my made
+taken in the character of single children, when it was to introduce his
+letter. We were still despair to his little with some such attachment
+in his eyes and her into a manner country. The delighted alone. It was
+not hard the death of the words for his portion with conversation. The
+invitation which
+
+[nucleus_p0.9] prompt='The night was'
+------------------------------------------------------------
+The night was at length of party in contrary and sister, I had been
+intensity and departure by the compliments of it, as the least sights
+to be in the desertion. You know that Mr. Darcy was complaint to be
+restored on the marriage in providence of the interest a length to destroy
+and moments, from the seldom, with pleasure, that it would shall meet,
+which she passed the eyes against at a person his stead was to prepar
+the proposal soul such attachment of his endeavouring in the perfect of
+its marriage, I should be to such should be the devil, as well, as many
+attention in the mother concern in the thousand 
+
+[nucleus_p0.9] prompt='She had never'
+------------------------------------------------------------
+She had never at length of party in contrary and sister, I had been
+intensity and departure by the compliments of it, as the least sights
+to be in the desertion. You know that Mr. Darcy is a sense of the arrival
+concern. I am my real providence in the place of the first promise and
+discovered for the read summons as they destroyed in what had been previous
+so place to remain the heart and exceedingly embarrassed of his letter,
+and so many town. My father had enough before it was engaged to the
+highest from the sun to make some capable to his opinion. As they
+wanted at little from London. But it seems and sa
+
+[nucleus_p0.95] prompt='CHAPTER 1'
+------------------------------------------------------------
+CHAPTER 1
+
+[Illustration]
+
+She was train again capable of the cottages that the matter’s own
+and hardly crimes which they were son should have to unwelcome.
+
+When I found the body, which the advantage to be little from her feelings,
+the languages and break a lengtful. The walk with me. He can then solemn
+distinguished, and to be not doing it. The whole house to step with
+again. He almost parting the character of living manner, so an
+until having pleased upon was the side, and who should remain to the
+story at her sisters proceeding. There was not to travelling in a
+rend dark to rearly in love its circum
+
+[nucleus_p0.95] prompt='The night was'
+------------------------------------------------------------
+The night was at length over him in contrary of Mr. Bingley, as
+well, the cordial of the little manners I will persuade a moment of
+increasing a letter uneasy and pride for better of the course of Miss
+Bingley, and had her a to mean appeared, a visit, in mind such for his
+death dislikely to your attention seem at Margarement, with an assist
+the children, when it was through the change and exceedingly embarrassed to
+his little with something. I am consolate to be was the side, and who are
+introducing your stay, and they were opinioned to his room, which felt
+disposition in the mother cares; for there cannot 
+
+[nucleus_p0.95] prompt='She had never'
+------------------------------------------------------------
+She had never at length over him in contrary and sympathy. At the cause
+of this disappointments many interest, and I was expected fixed in
+subject, or affectionate refuse the tome of the course of Matlan. I
+should be often a to man, and the land of some objects of such time and
+disentment. He cannot answer from the brother. The improbable his
+improvement was forced to remember, and was not happy with everybody
+upon that happiness, so assurance. My father had enough before it was
+engaged to the highest from not summer, confessively returned to the
+work of man was differently dark to rearly in love its circum
+
+[temp0.8_p0.9] prompt='CHAPTER 1'
+------------------------------------------------------------
+CHAPTER 1
+ CO.
+ XIII.
+
+[Illustration]
+
+CHAPTER XXIIII.
+
+[Illustration]
+
+Mr. Bingley had been at the particular of my expectation and taste
+a letter uncle which I had sure the power of part of the day. I am always
+of my present in which he was desired by his sister’s present discovered with
+my liberty with some pleasure, that it was not in its window, when I
+could do with the heart and excellent still despair of his life. The
+source of the subject of the sensations which she was only and remained
+with an account of my father’s companion who had often the dance and
+despair, and of concerning the thousand 
+
+[temp0.8_p0.9] prompt='The night was'
+------------------------------------------------------------
+The night was at least for the existence of his stimation. The
+happy were defined of the little manners that the sight, and the room,
+as the beauty of the summer party of the tome of the course of the affection
+of his friends. The is providence of the place of the first promise and
+discovered for the read secure of his desire. My mind so since were to
+his relation as he was a victim at all. We were still despair to his
+proper with some such attention of the sensations which she was on
+his probable to the strange of the compliment of the party of which may
+be allowed to refuse my lot day and in the thousand 
+
+[temp0.8_p0.9] prompt='She had never'
+------------------------------------------------------------
+She had never been conversation, and interruption of his
+companion and desertion. I had a most persuade to give the former from
+the family subject, or the summon of the father of the subjects of a
+small of the eldest of my present in which he was desired by his
+sisters to her will be more than my liberty with some particulars, that
+you will be so written to her in the rest of his present permittion
+and a letter present seated of a sound and wish to be so called to be
+herself with the scountry of the different of my nature should be the
+devil, and the satisfaction of the house and discovered in the town of
+a
+
