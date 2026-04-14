@@ -13,6 +13,9 @@ C_GRID  = "#EEEEEE"
 C_BG    = "#FAFAFA"
 
 
+
+
+
 def load_log(path):
     import csv
     rows = []
@@ -179,3 +182,4 @@ if __name__ == "__main__":
         exit(1)
 
     make_plots(args.log, args.out)
+    

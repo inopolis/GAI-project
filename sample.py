@@ -1,7 +1,6 @@
 import os
 import argparse
 import torch
-
 from src.utils import set_seed, load_json
 from src.model import CharTransformerLM
 from src.decoding import generate

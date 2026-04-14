@@ -1,6 +1,7 @@
 """
 train_cosine.py — train.py with cosine LR schedule + weight tying
 
+
 baseline train.py:
   1. Cosine LR schedule с linear warmup (--warmup_steps)
   2. flag --tie_weights: tie input/output embeddings (меньше параметров)

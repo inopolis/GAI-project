@@ -1,3 +1,7 @@
 torch
 numpy
 tqdm
+mathplotlib
+scipy
+pandas
+sklearn
