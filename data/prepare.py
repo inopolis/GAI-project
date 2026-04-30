@@ -17,9 +17,7 @@ ALT_END   = re.compile(r"END OF THIS PROJECT GUTENBERG EBOOK", re.IGNORECASE)
 
 
 def fetch_gutenberg_text(book_id: int) -> str:
-    """
-    Try a few standard Gutenberg URLs. Not all IDs work the same way.
-    """
+
     candidates = [
         f"https://www.gutenberg.org/cache/epub/{book_id}/pg{book_id}.txt",
         f"https://www.gutenberg.org/files/{book_id}/{book_id}-0.txt",
