@@ -1,0 +1,11 @@
+[
+  {
+    "ckpt": "runs/baseline/best.pt",
+    "split": "val",
+    "mode": "full",
+    "n_tokens": 561664,
+    "mean_nll_nats": 1.510336,
+    "mean_bpc": 2.179,
+    "elapsed_sec": 1.2
+  }
+]

@@ -1,3 +1,8 @@
+# python3 sample.py \
+#   --ckpt runs/cosine/best.pt \
+#   --prompt "It was the best of " \
+#   --temperature 0.8 \
+#   --max_new_chars 500
 import os
 import argparse
 import torch

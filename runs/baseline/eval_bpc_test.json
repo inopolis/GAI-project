@@ -1,0 +1,26 @@
+[
+  {
+    "ckpt": "runs/baseline/best.pt",
+    "split": "test",
+    "mode": "bootstrap",
+    "n_tokens": 756736,
+    "mean_nll_nats": 1.551378,
+    "mean_bpc": 2.2382,
+    "elapsed_sec": 1.0,
+    "ci95_low": 2.2247,
+    "ci95_high": 2.25,
+    "std_bpc": 0.0066
+  },
+  {
+    "ckpt": "runs/cosine/best.pt",
+    "split": "test",
+    "mode": "bootstrap",
+    "n_tokens": 756736,
+    "mean_nll_nats": 1.548213,
+    "mean_bpc": 2.2336,
+    "elapsed_sec": 0.9,
+    "ci95_low": 2.2204,
+    "ci95_high": 2.2458,
+    "std_bpc": 0.0066
+  }
+]
