@@ -1,0 +1,32 @@
+{
+  "results": [
+    {
+      "ckpt": "runs/baseline/best.pt",
+      "n_tokens": 756736,
+      "mean_bpc": 2.2382,
+      "elapsed_sec": 1.0,
+      "ci95_low": 2.2236,
+      "ci95_high": 2.2504,
+      "std_bpc": 0.0068
+    },
+    {
+      "ckpt": "runs/cosine/best.pt",
+      "n_tokens": 756736,
+      "mean_bpc": 2.2336,
+      "elapsed_sec": 0.9,
+      "ci95_low": 2.2193,
+      "ci95_high": 2.246,
+      "std_bpc": 0.0067
+    }
+  ],
+  "paired_test": {
+    "delta_bpc_A_minus_B": 0.00457,
+    "ci95_low": 0.00202,
+    "ci95_high": 0.00684,
+    "p_value": 0.0005,
+    "significant_p05": true,
+    "n_boot": 2000,
+    "block_len": 512,
+    "n_tokens_compared": 756736
+  }
+}

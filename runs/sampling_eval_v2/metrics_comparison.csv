@@ -1,0 +1,12 @@
+strategy,category,ttr_baseline,ttr_cosine,rep_baseline,rep_cosine,loop_baseline,loop_cosine
+greedy,baseline,0.1738,0.1165,0.7492,0.8766,49.0,27.4
+temp_0.6,baseline,0.653,0.6434,0.1153,0.1142,180.56,219.88
+temp_0.8,baseline,0.7333,0.7297,0.0685,0.0738,107.2,82.74
+temp_1.0,baseline,0.8057,0.7966,0.0477,0.0476,69.54,70.58
+top_k_10,baseline,0.7607,0.754,0.0592,0.064,87.42,125.42
+nucleus_p0.95,baseline,0.7548,0.7531,0.0656,0.0646,99.02,112.44
+typical_p0.9,probabilistic,0.7387,0.7295,0.0669,0.0679,122.48,120.84
+rep_penalty_1.3,probabilistic,0.8324,0.8381,0.0356,0.033,52.94,74.88
+mirostat_tau3,probabilistic,0.7943,0.7987,0.0486,0.0426,47.82,45.8
+mirostat_tau5,probabilistic,0.791,0.8043,0.0467,0.0462,57.72,88.66
+no_repeat_4gram,hard_constraint,0.9397,0.946,0.0,0.0,-1.0,-1.0

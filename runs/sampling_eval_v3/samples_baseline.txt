@@ -1,0 +1,559 @@
+[greedy][baseline] prompt='CHAPTER 1'
+------------------------------------------------------------
+ XIII.
+
+[Illustration]
+
+CHAPTER XIII.
+
+[Illustration]
+
+CHAPTER XIII.
+
+[Illustration]
+
+CHAPTER XIII.
+
+[Illustration]
+
+The party of the sun and the sun of the sun and the subject of the subject
+which I had not been so much as the sun of the sun and the subject of
+the sun and the sun of the sun and the sun of the sun and the sun of
+the sun and the sun of the sun and the sun of the sun and the strange
+of the sun and the sun of the sun and the sun of the sun and the stream
+of the sun and the sun of t
+
+[greedy][baseline] prompt='The night was'
+------------------------------------------------------------
+not to be so much as the same of the subject of
+the subject of the subject of the subject of the subject of the subject,
+and the sun of the sun and the sun of the sun and the sun of the sun and
+desired the subject of the subject of the subject of the subject of the
+country. I was not to be so much as the sun of the sun and the strange
+of the sun and the sun of the sun and the sun of the sun and the strength
+of the sun and the sun of the sun and the sun of the sun and the
+considerable of the subj
+
+[greedy][baseline] prompt='She had never'
+------------------------------------------------------------
+seen the sun of the sun and the subject of the
+country of the subject of the subject of the subject of the subject, and
+the sun of the sun which I had not been so much as the sun of the sun
+which I had not been so much as the sun of the sun and the sun of
+the sun and the sun of the sun and the sun of the sun and the subject of
+the sun and the sun of the sun and the sun of the sun and the sun of
+the sun and the sun of the sun and the sun of the sun and the strange
+of the sun and the sun of the su
+
+[greedy][baseline] prompt='It was the best of'
+------------------------------------------------------------
+the sun who would be so much as the sun of
+the sun and the subject of the subject of the subject of the subject,
+and the sun of the sun and the sun of the sun and the sun of the sun and
+despair. The sun who was a servant of the sun and the sun of the strength
+of the sun and the sun of the sun and the sun of the sun and the
+considerable of the sun and the sun of the sun and the sun of the
+country of the sun and the sun of the sun and the sun of the strange
+who had been so much as the sun of the s
+
+[greedy][baseline] prompt='Mr. Darcy had never'
+------------------------------------------------------------
+been so much as the same of the subject of
+the subject of the subject of the subject of the subject of the subject,
+and the subject of the subject of the subject of the subject of the
+conversation of the subject of the subject of the sun and the strange
+of the subject of the subject of the subject of the subject of the strange
+who had been so much as the sun of the sun and the sun of the strange
+who had been so much as the sun of the sun and the sun of the strange
+who had been so much as the sun
+
+[temp_0.8][baseline] prompt='CHAPTER 1'
+------------------------------------------------------------
+
+[Illustration]
+
+CHAPTWER XII.
+
+[Illustration]
+
+CHAPTER XIIII.
+
+[Illustration]
+
+Summnle at this departures, of Ingratuing his abhorent as we sweet
+can to be prevented disposition of that all the most dear, and with regiment
+second to the interest a length to despise and musch began at Netherfield
+and previously addiscovered ship; the prevailly was in the view; and
+into a family partings enjoyment was explainted on the purpose of
+Elizabeth, that he party, her instant who should remain to joy and 
+
+[temp_0.8][baseline] prompt='The night was'
+------------------------------------------------------------
+at length over her into return the subject of
+the word, that they known to be borne to have pictures which to the
+refuse of the happiness were made an invitation. Thus is a concern and
+the matter, I could have been run in his countenance in my sister from
+the same diservance of Longbourn so much destroyed in the world of her
+father’s friend. He found the view; and and was not happy with even
+short a regret first of a soul such attachment study understanding
+into a manners of its marriage from th
+
+[temp_0.8][baseline] prompt='She had never'
+------------------------------------------------------------
+been collected her inclination of Mr. Bingley,
+as well, the strike moment of those and interesting a man, and the
+refuse of the happiness were made an invitation. Thus is a concern and
+the matter, I could have been run in his countenance in my sister from
+the same diservance of Longbourn so much destroyed in the world of her
+father’s friend. He found the view; and and was not happy with even
+short a regret first of a soul such attachment study understanding
+into a manners of its marriage from th
+
+[temp_0.8][baseline] prompt='It was the best of'
+------------------------------------------------------------
+the language of her friend. I have such
+returned a prudence of the most dear than my dear Charlotte’s
+prospects, and since it was in that we should be the father--mound but
+could be to the matter, I could have been run in his countenance in
+the since of the next was all thought new at Netherfield and pleasure.
+The improvement in its window--land, bit as I very daughter at a persuade
+by the cleasant of his being one and manners, that which there was a delight
+of which poor girls between yourself 
+
+[temp_0.8][baseline] prompt='Mr. Darcy had never'
+------------------------------------------------------------
+been collected her inclination of
+Mr. Bingley, as well, the strike moment of those and interesting any
+insitation to sink him to a letter uneasy and preferent between distance.
+
+She that all the most dear, and with regiments of her unconsiderable and
+friend. The walk which considered the seldom.
+
+“But I am must not able to do not the prevailly,
+and the terms and handsome and exceedingly enjoyed to a regret first of
+a soul such attachment study understanding into a manners of its
+marriage from no
+
+[nucleus_p0.95][baseline] prompt='CHAPTER 1'
+------------------------------------------------------------
+
+[Illustration]
+
+She was train again capable of the cottages that the matter’s own
+and hardly crimes which they were son should have to unwelcome.
+
+When I found the body, which the advantage to be little from her feelings,
+the languages and break a lengtful. The walk with me. He can then solemn
+distinguished, and to be not doing it. The whole house to step with
+again. He almost parting the character of living manner, so an
+until having pleased upon was the side, and who should remain to the
+stor
+
+[nucleus_p0.95][baseline] prompt='The night was'
+------------------------------------------------------------
+at length over him in contrary of Mr. Bingley, as
+well, the cordial of the little manners I will persuade a moment of
+increasing a letter uneasy and pride for better of the course of Miss
+Bingley, and had her a to mean appeared, a visit, in mind such for his
+death dislikely to your attention seem at Margarement, with an assist
+the children, when it was through the change and exceedingly embarrassed to
+his little with something. I am consolate to be was the side, and who are
+introducing your stay
+
+[nucleus_p0.95][baseline] prompt='She had never'
+------------------------------------------------------------
+at length over him in contrary and sympathy. At the cause
+of this disappointments many interest, and I was expected fixed in
+subject, or affectionate refuse the tome of the course of Matlan. I
+should be often a to man, and the land of some objects of such time and
+disentment. He cannot answer from the brother. The improbable his
+improvement was forced to remember, and was not happy with everybody
+upon that happiness, so assurance. My father had enough before it was
+engaged to the highest from no
+
+[nucleus_p0.95][baseline] prompt='It was the best of'
+------------------------------------------------------------
+an ill life approaching for in the such door,
+which it is very tries of the most peace into the depart, as they were
+since in the character-estated and for my better of the course of Miss
+Bingley, I could have either in providence in the interest a length to
+despise and moments, children solemnity of pleasure.
+
+Their into girls, it could his renew in the view; and into life. It saw
+weeks my lady, I do not be proposed so longer, that which there I
+had desired in walked on the innjurished. The tow
+
+[nucleus_p0.95][baseline] prompt='Mr. Darcy had never'
+------------------------------------------------------------
+been conversation, and interruptions of
+your own. On continued to the matter. But my dear Charlotte’s
+first of life friends.
+
+“Oh, met as well me. But the father of the subject, that Mary, ma’an
+the country start for it; and every did not more say, the first death and
+without spirit. But so much distance in the night. But I should chose
+which have in his views, and her life. I learnt as every hope as it for
+the point soul such attachment study upon was the side, and who should
+remain to company 
+
+[rep_penalty_1.3][baseline] prompt='CHAPTER 1'
+------------------------------------------------------------
+
+[Illustration]
+
+She was traved instance, of my fault intense. But my presument would
+continuing myself in to be attended highly a letter:--“I may cept for
+_twee_ me of Mr. Darcy was sat almost be liked of knowing or
+
+ Eprotested, I desired, who say I should have said?”
+
+Kitty, I must be so much, and placed; and which you given him course
+for his bitterness when had entreated his who asked him, would exclaim
+prude.
+
+When all their incumpations of her deeper into a mention of it?
+
+Fight you so no
+
+[rep_penalty_1.3][baseline] prompt='The night was'
+------------------------------------------------------------
+overlooking aparencing
+interruption.”
+
+“But I was upon my vast to know; to be boy, and I am picture, I
+wished the rousin of the hall, or aunt which party I was at my own
+voice?”
+
+Mr. Darcy, at length, “Soften’s imperud apology what is notice we shall no
+fatigue, was all thought I must be solicitude that I would not able with
+him; the first close, bitter, I will be and returned, partings excellent
+up of live to up myself and Mondt. And I not bride. We delighted to the
+fool receiving into just, no
+
+[rep_penalty_1.3][baseline] prompt='She had never'
+------------------------------------------------------------
+been collections,
+with imprudenting your voice. He pruded!”
+
+“My dear Lizzy is of my dear.”
+
+“Wrakes I image I love usine him one; he caused sweetned that it?”
+
+Elizabeth was actually attached, but that he know to me
+in provided from the interest a length to despise and mumbt by chiar. But lose.
+Jane’s spirits.
+
+After this disnolitely; but Mrs.
+Robing starved; and and was not happy with excellent up of live to
+up myself and Mondt. This wordship that as they would be not agreeable, it
+now fully a
+
+[rep_penalty_1.3][baseline] prompt='It was the best of'
+------------------------------------------------------------
+any
+light, vain and cruished sixing.”
+
+“But I was upon my vast to know; to be boy my dear.”
+
+“Wrakes you have been turned into the letter:--I was not by no married! Onde
+make you buard; there you have parthly a toper
+ill.”
+
+This was desiring the same nor circumstances?”
+
+However, much. Such will distance him, and time your difference from
+Mrs. Gardiner that was agained at a persuade by tempers, was reprised to
+up it, so answered Elizabeth, that he party, Elizabeth was only animated
+into the stor
+
+[rep_penalty_1.3][baseline] prompt='Mr. Darcy had never'
+------------------------------------------------------------
+been collections,
+came interruptions; and the was upsuited for the moment of those
+and ill--will know to him.”
+
+“Not sight! I am a lett us?--I must compliment between distance.”
+
+Such a tale to be little from her feelings, the languages ainot I assure
+you to despise and mumbt by chiar. But listen and pleasure.”
+
+“Miss Bennet; nothing friends,” said Elizabeth:--
+
+
+“Your life perfectly as excellent up of live to up myself and
+Mr. Collins would be equal designant, which poor girls between yourself
+
+
+[mirostat_tau5][baseline] prompt='CHAPTER 1'
+------------------------------------------------------------
+ I.
+[Illustration]
+
+After them, for your eye, and I only owed my advision. This
+idea of the prepeaties of exulume! I do not know to obtain you. It is
+read you know from the purposele, I could not have herself what had given
+the road, when I should never your friends employ or time and might much
+in her done manner could be more to amuse unhappy your geting.”
+
+“Long Rosings had been to convinced for a fine, Mr. Darcy
+
+_to_ that you at not Mor Ducase roders, in conceive shortly laugh at the
+amusem
+
+[mirostat_tau5][baseline] prompt='The night was'
+------------------------------------------------------------
+not acquaided and sad _fulles, oments, and a seize would
+generous to each other, she was dared imple; and of human any of
+his voice, I had then interested, iN very rather was conclustaded on,
+and advanced the and of this friends, where the accompanion of her
+feelings hands, their very point my two mind creatures.
+
+Elizabeth; the evenry occasion of a feelings to hope of the power of
+the dark of distance.
+
+Mrs. Bennet had a sensible temper amiable mans, and the laboure, on her
+branching that no ho
+
+[mirostat_tau5][baseline] prompt='She had never'
+------------------------------------------------------------
+since the change of connections, and an convulng that I
+will for my vanish towards my parts in more life; and, she was no one
+general; and man, resolved the Ingolstation of Lydia harily, although
+in Beingley strong of discovery the manner, from an imminatence and
+the world, that I was shardly in before overcome state; you talk of his
+nature in the fathis is all miserable liberal manners of the liberal
+manners, and that the sun had been unjudge his reage; I did not by that
+circumstance of been cr
+
+[mirostat_tau5][baseline] prompt='It was the best of'
+------------------------------------------------------------
+the more to
+darkned, his principal, like soon avoided their gravel place with
+win the whole country understand
+of Geneva.
+
+“I hear no, that? The time miserable of this sight, or a tomptiony in
+the relation of cheeks anything, when often we laugh to be overlooking
+at Septerits would be myself? But I did must have passed.”
+
+“Avery yet by the is, I have never now yet the house to Elizabeth: in
+the extraordinary which I am not tell; for I am ownn my advenly well
+in ratitude, I have no torture.”
+
+“Wa
+
+[mirostat_tau5][baseline] prompt='Mr. Darcy had never'
+------------------------------------------------------------
+been
+quite, but I am repuse, if every congrulations, that his characters
+them, shut they might to another of mind in his endure. It was lesay in
+consideration of a breath, figured, I wandered to do the  sight of
+the size with him to the place of myself. I sweep anything daughter
+the pecurially laugh with a suffering require, which a room. You do I
+had been soon more the fortune escape of intelligent, when I had enver
+end to my own a wish pernone without its of think.
+
+Had you greatly just for yo
+
+[typical_p0.9][baseline] prompt='CHAPTER 1'
+------------------------------------------------------------
+
+[Illustration]
+
+She replied no instrument that the cause of the intention of his
+eyes into the departure, and I was sincerely beautiful assurance.
+
+When I was at more intended, the difficulty of her dead, and with regiments
+of her intention whose tranquillity and discovery the nonly pause of
+feature and fortune, for in what had such powerful, which we take in
+the change and exceedingly embarrassed the language of a very agreeable
+incumstance in his advice, with a manner countenance from my stra
+
+[typical_p0.9][baseline] prompt='The night was'
+------------------------------------------------------------
+at length of party in contrary and sister, I have been
+less enough to me during your opinion, no could not expect to be
+equally his ladies, I was not refuse to my mean, but I am to advantage my
+behaviour from a to me, with the languages and miserable from the
+same discovery of your attention. We did Mrs. Gardiner’s absence as
+not merely which he pleased, and all have written exceedingly embarrass
+in regret to make a very astonishment.
+
+After all his addression, which presently remained with stor
+
+[typical_p0.9][baseline] prompt='She had never'
+------------------------------------------------------------
+at length of party in contrary and sister, I have been
+less enough to make her, I exceedingly concerning his feelings.
+
+“As they will often ever anything better to me.”
+
+“I can not attempt my rom, I could have remained a most in such possess which
+I
+must complace and expected. We must can of such an approaching address
+to give her character.”
+
+Mr. Bingley is all handsome that he assured that she saw her far to
+speak, so an action of change to the house, he sought to be one and remained
+with stor
+
+[typical_p0.9][baseline] prompt='It was the best of'
+------------------------------------------------------------
+an ill love and an involvent side. My aunt
+too my word, that I talked of do me, I may charge, it was marriage.
+I was sorry in the child I will prevent to be prevent that moments
+to anything. I am always of my permits, with the languages and break the
+neighbourhood and discovered from the effects dances, that I cannot it with
+him improvement. I was in the views at an end that your were still despair of
+his letter, and so lost to it, the pleasant enough and convinced with
+a greater sight which the
+
+[typical_p0.9][baseline] prompt='Mr. Darcy had never'
+------------------------------------------------------------
+at length of party in
+contrary and sister, I exclaimed, that I talked of do me, I may change
+interesting his feelings. But it was in so visit which playful was
+good brother, and ever ball, better, I cannot know to me, with the lost
+of some objects to such the man. I always considered that I was do
+to pursue the night. But I shall think it forget, but I cannot particularly
+complacations, she despaired in the taments of the matter, and had she
+almost was not single that one and trimes her cousin, 
+
+[no_repeat_4gram][baseline] prompt='CHAPTER 1'
+------------------------------------------------------------
+
+[Illustration]
+
+CHAR XIII.
+
+[_CHAM
+AROI.
+ [Ilusstrprised Mr. Bingley’s desire, I entered their departure
+and tempted in seize that he assured, which I found? I took of this
+parent and; though, but thus offended my resources or often to mine who
+say I should have said,--
+
+“‘Oh, I, _at all myself, my
+dear from througands what, not told towards him till thy introduced his talk
+of pardonable anybody upon my. He proposed,” saaid time. “You are shall
+be was thleant, walked on th infrozen her journey 
+
+[no_repeat_4gram][baseline] prompt='The night was'
+------------------------------------------------------------
+at length over her into return the subject of
+the
+word, that this disappointments manners I will know to him. I fear three
+in town heart to-morrow. You knew thought, or too concern and to
+heat, but tears from he migh
+happy. This, which I instrume told his
+time about anxious tone child. In trust different inconstant able when hither
+course for hills, an terms any of heir particulars, by thus
+desolation off thyping may so last timprudent. But have been desired in
+way togethed thleesse thôe must, a
+
+[no_repeat_4gram][baseline] prompt='She had never'
+------------------------------------------------------------
+been collected her inclination of Mr. Bingley,
+as well, the strike moment of. I have seen, I indeed, I, shall know
+to inform my happiness with me.
+
+We tried,? I thought that part our sisters to be little from a tomer
+in providence in this words as througful. The want whom me we new at
+Netherfield and previously addied towards, too character. In
+somit a chrief; anguish which perceived assembly how ladies for thus
+were so last touch interest. It was peace, Elizabeth walk, any instantly
+town; as, a
+
+[no_repeat_4gram][baseline] prompt='It was the best of'
+------------------------------------------------------------
+things life and an involving silence of
+those who were to be that thought him both any often, anguish througw thy
+to sink it such a very due spirit anxious which Mr. Collins part our
+sisters too me. I had have river unwilliard before me, in my sislents an
+impulse advanced me with means are from distinguencially addiscovered, as
+he chositated thus bitterness way thlenes at myself; when she walked,
+and, his situation answers.
+
+“I thhink. How I am th^{easant what, why wanted,” said her Ladyship,
+“y
+
+[no_repeat_4gram][baseline] prompt='Mr. Darcy had never'
+------------------------------------------------------------
+been collected her inclination of
+Mr.
+Bingley, as well, the strike moment of those and interesting a man,
+and, I was since to think that thus which has for make through thy
+concern anythics. I am except on my promise in presserve, I
+desired thk what, she will be imposed me considerably answers much
+tears insultiness an expreminence. The accold, annimative is all to
+her.
+
+“They were weasted, dear, I, with your murder, so made tentiols off
+studying. If I have not walked only to-morrow town, Isat y
+
+[adaptive][baseline] prompt='CHAPTER 1'
+------------------------------------------------------------
+
+[Illustration]
+
+CHAPTER XVIII.
+
+[Illustration]
+
+The cold was of the most him both and had settled to the appearance
+with her own interest suspection of her presentment at Longbourn to
+the return, and particularly expected.
+
+“All this beauty who say I should have said the means of what I shall
+chosen passed, I could not have been secured him to find a stepiting
+against at the house, by the sister was exclaiming on a very agreeable
+incumstance when I am not and so much of concerning that the stor
+
+[adaptive][baseline] prompt='The night was'
+------------------------------------------------------------
+at length of party in contrary and sister, I had been
+intensity and departure boy my dear.”
+
+“What a man happy pretty in seize the seaty of them. We pride is well
+for disposition of this affection and particularly entirely to her pounds
+and misery, that you would say with me. He cannot be eloquent to place
+him. Their into girls his cousins considerable to introduce him at
+Pemberley would be despair to the latter of a sound and wish to be
+still the person of it, which property the heart of my pow
+
+[adaptive][baseline] prompt='She had never'
+------------------------------------------------------------
+been conversation, and interruptions of the
+gentle pretty which I did not have been to have finished which they
+were since of my acquaintance. I am about that I took of a word of
+the satisfaction of your feelings before we shall not desire of his
+friends, that she discovered her characters for my father.
+
+“When I first not as it is company at his black to introduce him at
+least particularly despair to the latter of some and tone house. He
+has been persuaded in the manners of its marriage from th
+
+[adaptive][baseline] prompt='It was the best of'
+------------------------------------------------------------
+the
+light of party in contrary and sister, I had been the very tries of
+the most person at this, and I was am the reflect into the season of
+summer. Why do was stared to make you be that all them, I cannot know
+to expect my sensation to him. I saw the first young man even more
+to much an unfoldly attention. He could not have been secured him and
+placed the eyes against at least particularly despair to her being
+possible and constant consolations of which had often proposed for his
+importance, sh
+
+[adaptive][baseline] prompt='Mr. Darcy had never'
+------------------------------------------------------------
+been conversation, and interruptions of
+the mother’s communication of my dear solitude in the creature, as the
+leaves in silence a letter uneasy and present to my mean, but I am to
+advance, and the stream, as I took up a most in a distance of honour and
+father and dislike me. He could not know man with him.
+
+He had a long addressed courage also for the three appearance of the
+house, by the visit, and even better with some such attachment, that
+he had been married to be no recovered into the worl
+
