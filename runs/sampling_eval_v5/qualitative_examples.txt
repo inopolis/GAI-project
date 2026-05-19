@@ -1,0 +1,484 @@
+
+################################################################################
+Checkpoint: baseline
+################################################################################
+
+================================================================================
+PROMPT: 'CHAPTER 1'  SEED: 1
+================================================================================
+
+[greedy]  [loop@31]
+ XIII.
+
+[Illustration]
+
+CHAPTER XIII.
+
+[Illustration]
+
+CHAPTER XIII.
+
+[Illustration]
+
+CHAPTER XIII.
+
+[Illustration]
+
+The party of the sun and the sun of the sun and the subject of the subject
+which I had not been so much as the sun of the sun and the subject of
+the sun and the sun of the sun and the sun of the sun and the sun of
+the sun and the sun of the sun and the sun of the sun and the strange...
+
+[temp_0.8]  [loop@31]
+
+[Illustration]
+
+CHAPTWER XII.
+
+[Illustration]
+
+CHAPTER XIIII.
+
+[Illustration]
+
+Summnle at this departures, of Ingratuing his abhorent as we sweet
+can to be prevented disposition of that all the most dear, and with regiment
+second to the interest a length to despise and musch began at Netherfield
+and previously addiscovered ship; the prevailly was in the view; and
+into a family partings enjoyment ...
+
+[rep_penalty_1.3]  [no_loop]
+
+[Illustration]
+
+She was traved instance, of my fault intense. But my presument would
+continuing myself in to be attended highly a letter:--“I may cept for
+_twee_ me of Mr. Darcy was sat almost be liked of knowing or
+
+ Eprotested, I desired, who say I should have said?”
+
+Kitty, I must be so much, and placed; and which you given him course
+for his bitterness when had entreated his who asked him, wo...
+
+[no_repeat_4gram]  [no_loop]
+
+[Illustration]
+
+CHAR XIII.
+
+[_CHAM
+AROI.
+ [Ilusstrprised Mr. Bingley’s desire, I entered their departure
+and tempted in seize that he assured, which I found? I took of this
+parent and; though, but thus offended my resources or often to mine who
+say I should have said,--
+
+“‘Oh, I, _at all myself, my
+dear from througands what, not told towards him till thy introduced his talk
+of pardonable anybody ...
+
+[adaptive_full]  [loop@32]
+
+[Illustration]
+
+CHAPTER XVIII.
+
+[Illustration]
+
+The cold was of the most him both and had settled to the appearance
+with her own interest suspection of her presentment at Longbourn to
+the return, and particularly expected.
+
+“All this beauty who say I should have said the means of what I shall
+chosen passed, I could not have been secured him to find a stepiting
+against at the house, by the sister ...
+
+[lz_decoder]  [loop@32]
+
+[Illustration]
+
+CHAPTER XVIII.
+
+[Illustration]
+
+The cold was of the most him both and interestly the first of life.
+
+“I should have to say I was not by the present world. I saw the different
+to the complete of the regiments of her intention who say I had taken
+with an impossible my tranquillity, and as they had been in whom he
+had company could pleasure my enemy, and when she was his stranger,
+wa...
+
+================================================================================
+PROMPT: 'It was the best of'  SEED: 2
+================================================================================
+
+[greedy]  [loop@69]
+the sun who would be so much as the sun of
+the sun and the subject of the subject of the subject of the subject,
+and the sun of the sun and the sun of the sun and the sun of the sun and
+despair. The sun who was a servant of the sun and the sun of the strength
+of the sun and the sun of the sun and the sun of the sun and the
+considerable of the sun and the sun of the sun and the sun of the
+country o...
+
+[temp_0.8]  [loop@455]
+the less of the next of the
+intel-death of the other. I am sure on her cousin; I should have not
+great reason.
+
+“It was no read of the simple, my that sisters when I am considerable to say
+you; but you am surprise cannot be acceptiful of living, and do, and my
+discovery her state, do not consequent that Mr. Collins, the insufficience
+and character his love me, lidle with every of whom, and that he...
+
+[rep_penalty_1.3]  [no_loop]
+this;
+everybody, only, almost courage and weaknessed.”
+
+The inmitiment’s usual perhaps, to be quit us prehasily expressed in the
+path. Mrs. Bennet, at listened that kneeling which they saw Mr.
+Collins was led with certain: I heard femer Miss Bingley darked omen
+in in dreadfully drew me him and with the absence whose three are side;
+but so could pain discream,--“Ad you will admire with, and you in ...
+
+[no_repeat_4gram]  [no_loop]
+this; I have burning over my sister’s engagements,
+and she dismised with his own silent, or profession of. The
+certain I am not ready as your pile, and, self-more a kindness which
+they saw Mr. Collins way were in such supposite by an entertines, a
+placent ormrtal of! I pleased, I shall him a describe to be possible,
+that her father, after could no hideloping, wished it. I returned to
+think of; it ...
+
+[adaptive_full]  [no_loop]
+the less of my father, and miserable to my
+father’s absence in for her considerable particulars. The death of
+which she had not read her. Elizabeth was instantly approached, and
+satisfied from his remaining his life will not be served of living. He
+was seen more to recommend that he might in every death. I was not
+expect the fair of a tranquillity of all the children, when he
+would give him into m...
+
+[lz_decoder]  [no_loop]
+the less of the next of the interruption of
+the seldom and disappointment to my dear for his contrast present.
+
+“It was not to see this be the more attentions of an answer. When she
+had already her lovely with in her sister’s extremely. My visitor was
+disgraced in in the entreation of my friends continued and precipitation
+of the house.”
+
+“It is a miserable dislike to what he was likely to me that...
+
+================================================================================
+PROMPT: 'Mr. Darcy had never'  SEED: 3
+================================================================================
+
+[greedy]  [loop@43]
+been so much as the same of the subject of
+the subject of the subject of the subject of the subject of the subject,
+and the subject of the subject of the subject of the subject of the
+conversation of the subject of the subject of the sun and the strange
+of the subject of the subject of the subject of the subject of the strange
+who had been so much as the sun of the sun and the sun of the strange
+w...
+
+[temp_0.8]  [no_loop]
+seen her sister’s interference and
+word a resolution for the friend; and she could discover in which had for
+us indeed into the vestiment that I now of my time were to triumph by
+reading to refusal for it.”
+
+Mrs. Bennet too the other sun had been dark, in her aunt’s tears.
+
+[Illustration:
+
+ “The attentions to be pursued to the feelings and good, and their
+mother own might be loved discoracely rece...
+
+[rep_penalty_1.3]  [no_loop]
+spirit,
+Mr. Bingley.”
+
+“Such an among have been no left.”
+
+“And Mrs; You stay,--that you retirew that I often his deficiante
+night?”
+
+Elizabeth had been down sixten to Elizabeth. “No,” said Jane’s concern
+rouble that me. To be bester! And how you was yet Poilia, in good,
+your first gardeurly improved?” said something for his own sisters to
+ghosstruce, “it is a moment in a good-two discorry?”
+
+“Whe...
+
+[no_repeat_4gram]  [no_loop]
+seen her all there with a
+summon manner which sunk this sisters.
+
+She know his, that you returned through he is indeed into those whom I
+had, when my family for myself to compliment. We could not be blook at Mrs. Did
+nothing him some sudden, will now, and heard towards any in thus long
+and, althougwarrd Mr.
+Bingley were, about too say, as thy turrn so often a marriage attention
+witness of sleep. A...
+
+[adaptive_full]  [no_loop]
+seen her
+sister’s interference and horror of situation, which was not only as
+her mother’s time at least and impertinence in his country of the good
+of my time which I had obliged my father, there concern of beauty to
+the shore of expectation and dark, if he had ever dancing me to long
+him to be at Rosings that he was very disposed at the least, and the
+mountains of mind with relations still by th...
+
+[lz_decoder]  [no_loop]
+seen her sister’s interference and having in
+some manners so from the opposition of the whole of the same of interval,
+she was satisfied by the good-humour, for my reasons of the remains to
+refusal for it. The town the country would prevent a singulary in
+her aunt’s tears with the library which was companions of my deferminations,
+and surprise your staying out, or one at Mr. Darcy did the second o...
+
+
+################################################################################
+Checkpoint: cosine
+################################################################################
+
+================================================================================
+PROMPT: 'CHAPTER 1'  SEED: 1
+================================================================================
+
+[greedy]  [loop@11]
+ Chapter 1
+ Chapter 18
+ Chapter XXIII.
+
+[Illustration]
+
+CHAPTER XXXIII.
+
+[Illustration]
+
+CHAPTER XXXII.
+
+[Illustration]
+
+CHAPTER XXXII.
+
+[Illustration]
+
+CHAPTER XXII.
+
+[Illustration]
+
+CHAPTER XXXII.
+
+[Illustration]
+
+CHAPTER XXXIII.
+
+[Illustration]
+
+CHAPTER XXXXII.
+
+[Illustration]
+
+CHAPTER XXXII.
+
+[Illustration]
+
+CHAPTER XXXII.
+
+[Illustration]
+
+CHAPTER XXXII.
+
+[Illustration]
+
+CHAPTER XXXII.
+
+[Illus...
+
+[temp_0.8]  [no_loop]
+
+[Illustration]
+
+Shir William is not called me at a cution see the moment had been
+answered the days were at fillent sights to be in the duty which had former
+been furniture part of that all the meantime from her feelings, as
+it was desired by his friends to describe every consideration. I lost
+distinguished the world of her father’s principle,
+and the chaise; and into almost happy were employed, ...
+
+[rep_penalty_1.3]  [loop@200]
+
+[Illustration]
+
+She was travelly stimacy, I had been the vexeding moment happy with
+devil!”
+
+“Why always a most writing should have been unequallity; the father. Thus
+is was acted an attachment, he could have been ruin; and ever, I desire
+of knowledge youth desirable?”
+
+Kitty, I must be so much distance for the world’s wigns notice which
+Mrs. Bennet had reserved, and was not hope his steps were n...
+
+[no_repeat_4gram]  [no_loop]
+
+[Illustration]
+
+Shir William is not called me at a cutious contribute and deep him to
+have pictures which are likely in sisters a slight weeks, an end for
+her stame of the course on Mary, hardly except off something
+in providing, a desiring who say that his death disence me. He can
+then so much determinative as weighed with high this; anciely,
+a wish to rest; a gone will now hope hidested by home...
+
+[adaptive_full]  [no_loop]
+ Chapter 18
+ Chapter--William had been her too his protectors with my mind. It is
+extremely proposed which I felt the inclination of the day should be
+the farme to me; it was a strange to her resolution. They were expected
+to her particular behaviour for him of being every consideration. I looked
+at all. I have not able to do not think it for his bitter, and all have
+no passion carefully as they a...
+
+[lz_decoder]  [loop@21]
+ Chapter 1
+ Chapter 2
+ Chapter 20
+
+“A little of the cottage of the moment had been and hardly conceived
+in the ladies of servants in the day of which I found with me of the
+country. Not take the most dead, and with real provided with the particular
+consideration was always considered to reflect distinct. One little
+able which not means which she painfully in a pause and talking passion,
+which he s...
+
+================================================================================
+PROMPT: 'It was the best of'  SEED: 2
+================================================================================
+
+[greedy]  [loop@15]
+the subject of the subject of the subject of
+the subject of the subject of the subject of the subject of the subject
+of the subject of the subject of the subject of the subject of the
+consideration of the subject of the subject of the subject of the same
+time of the subject of the subject of the subject of the subject of the
+consideration of the subject of the subject of the subject of the same
+ti...
+
+[temp_0.8]  [loop@323]
+the less of the next of the
+lovely and possessions of the present she was silent so passionally
+imputance. They entreated to see you was more than I ten seemed than the
+constant of the same to hear of whom I think certainly and servement
+livious in the sentement. The dread of them with him and want the
+absence of the house of the honour. The very most love the lady before the
+work of the discapiti...
+
+[rep_penalty_1.3]  [no_loop]
+intruled
+from all you, and discovered enough.”
+
+“All that is you?” replied, “in yet it.’-
+_You_ meant to have wise; and take on readily by the memory existence
+of _a meeting which they saw Mr. Collins was left in Hertfordshire from me
+when I often placed,” replied Elizabeth: “but he meant is even sothers
+was enduced the one who had been accounted.”
+
+The boat of society. Were mentioned, and hearing...
+
+[no_repeat_4gram]  [no_loop]
+this
+were respected. You must go a more often answer.”
+
+The intolerable observation in those who could be so longer; and a sensible
+considerating that sisters when I am conversative he saw Mr. Collins, an
+letter succession; although me to money of
+ threatened together herself, however, his view comment absurded
+itselted on hearing, but pain can particular at thled about to
+admire thy had discapped...
+
+[adaptive_full]  [no_loop]
+the less of feelings, that man she was
+not full speak to him them. But I have not hope to an appearance of
+charming and talking road, and often more than I thought a miserable to
+think of her family. He must think it since him from my return of completent
+of respection when Elizabeth was carriage to consequence in the
+replied of what they could not seek a very life by her return. Everything
+into m...
+
+[lz_decoder]  [no_loop]
+the less of feelings, that man she had not for him
+daughters to him with her own sensation of which there she would not
+have been and servant, in the existence of particular applications which
+I am very more than I could not help in my cousin. Mr. Collins were
+sure Mr. Darcy to the field of its complete by his house to endure the
+house, and can I must as a miserable which I had supposed the father...
+
+================================================================================
+PROMPT: 'Mr. Darcy had never'  SEED: 3
+================================================================================
+
+[greedy]  [loop@28]
+been the same of the subject of the subject of
+the subject of the subject of the subject of the subject of the subject
+of the subject of the subject of the subject of the subject of the
+consideration of the subject of the subject of the subject of the same
+time of the subject of the subject of the subject of the subject of the
+consideration of the subject of the subject of the subject of the same
+...
+
+[temp_0.8]  [no_loop]
+saw it resumernts.”
+
+“That is not suspect in some of improbation to her words, and the
+purpose was less of spirits, for anybody a supperior than they had
+other were to Elizabeth in the love which had not only found to the
+short of every removal before, if he knew how to begin to a long over with
+any discovery of my deferent cousing at the least that he improvement
+of it appearance did the slept of...
+
+[rep_penalty_1.3]  [loop@439]
+spoke the
+life, the country; by amazement with the left insuters together. I could
+discoure in which I possess perceive, but no voice, felt the good-of my
+time was rebans of one in the love which had loud round my attention of
+being pursued, with Lady Catherine, whose but give the long over with
+any discovery of my deferent cousing; the eutenous and desire our
+fortune, and there is son reject her ...
+
+[no_repeat_4gram]  [no_loop]
+saw it resumernts.”
+
+“That is not suspect in some of improbation to her words, and the
+purpose was less often life considerate. The poure that, howeven must
+for my rebanks, borrence, have declared all this own, myself. She has
+been such a most wished on a heak more distantly. To a long over. Till
+you much, though I described towards three against by thus subject. I
+dear up told when I walked your ...
+
+[adaptive_full]  [no_loop]
+saw in resentment.
+
+“I know my father,” said she, “the are of which in her husband, I was
+pleased to him for it is companions. I cannot enter sight to be in former
+that she would remain our regiment by it reflection to consolation. He was
+most with the good deal that they were tranquillity to be at Rosings
+them. But I am not to suppose anything to young me with only my
+deceive to expect the corpse...
+
+[lz_decoder]  [no_loop]
+saw in resentment.
+
+“I know my father,” said she, “the are of which in her husband, I was
+pleased to him for it is companions. I could not have gone of my
+time was reason to be married the mention of the latter most to come to
+be very uncle, with a disappointment which a triumph as on the labours
+of discovery of my despair. It was very address standing in the morning.
+At first the days still which...
+

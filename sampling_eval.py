@@ -1,24 +1,23 @@
 """
 sampling_eval.py
 
-Implements all evaluation requirements:
-  1. Fixed generated-text NLL — evaluated over the whole sample via sliding
-     window, not only the first block.
-  2. Loop-onset treated as censored survival data (Kaplan-Meier). Mean of
-     raw onset values is never reported; only survival AUC and KM curves.
-  3. Both checkpoints run with identical prompt/seed pairs.
-  4. Bootstrap confidence intervals and paired bootstrap tests for every
-     key metric: loop rate, survival AUC, n-gram similarity, repetition
-     rate, NLL, spelling error rate.
-  5. Fair baseline sweeps — temperature, rep_penalty, and nucleus are each
-     run at multiple parameter values so no single fixed value is assumed
-     optimal for baselines while the adaptive decoder was tuned.
-  6. Ablations of the adaptive decoder: fixed alpha vs adaptive alpha,
-     risk-only, entropy-only, top-p on/off, n-min/n-max sensitivity,
-     hard no-repeat vs soft penalty.
+Evaluation requirements addressed:
+  1. Method-vs-method paired comparisons: adaptive_full vs risk_only,
+     adaptive_full vs entropy_only, risk_only vs best baselines,
+     soft methods vs hard no-repeat.
+  2. Survival properly: RMST and survival-AUC differences with CIs,
+     using prompt/seed as the paired unit.
+  3. Key methods run on extended prompt set (15 prompts) for higher power.
+  4. LZRepetitionDecoder added as stronger close baseline.
+  5. Metric-leakage checks: longest repeated substring, compression ratio
+     (zlib), repeated suffix length, rep_ngram_mass at n=2,3,4,5,6.
+  6. Pareto data saved for survival vs NLL, survival vs sim, survival vs
+     spelling. Hard no-repeat flagged separately.
+  7. Matched qualitative examples: same prompt+seed through all key methods.
+  8. Runtime overhead measured in chars/sec per strategy.
 """
 
-import os, sys, argparse, csv, json, math, itertools
+import os, sys, argparse, csv, json, math, zlib
 import numpy as np
 from collections import Counter
 
@@ -27,10 +26,10 @@ import torch
 import torch.nn.functional as F
 from src.utils import set_seed, load_json, ensure_dir
 from src.model import CharTransformerLM
-from src.decoding import generate, RecurrenceAwareDecoder
+from src.decoding import (generate, RecurrenceAwareDecoder, LZRepetitionDecoder)
 
 
-PROMPTS = [
+PROMPTS_STANDARD = [
     ("chapter", "CHAPTER 1\n"),
     ("night",   "The night was "),
     ("she",     "She had never "),
@@ -38,175 +37,134 @@ PROMPTS = [
     ("darcy",   "Mr. Darcy had never "),
 ]
 
-# Shared prompt/seed pairs so every strategy is evaluated on identical inputs.
-# Generated once, reused across all configs and both checkpoints (punkt 3).
-def make_prompt_seed_pairs(n_seeds):
-    return [(p, s) for p in PROMPTS for s in range(1, n_seeds + 1)]
+PROMPTS_EXTENDED = PROMPTS_STANDARD + [
+    ("he",      "He looked at "),
+    ("it",      "It was a dark "),
+    ("from",    "From the moment "),
+    ("years",   "Many years ago "),
+    ("said",    "She said nothing "),
+    ("morning", "The morning light "),
+    ("door",    "The door opened "),
+    ("london",  "In the streets of London "),
+    ("silence", "A long silence "),
+    ("truth",   "The truth was "),
+]
+
+KEY_METHODS = {
+    "adaptive_full", "ablation_risk_only", "ablation_entropy_only",
+    "rep_penalty_1.3", "mirostat_tau5", "temp_0.8",
+    "nucleus_p0.95", "no_repeat_4gram", "lz_decoder",
+}
 
 
-# Baseline sweep configs (punkt 5).
-# Multiple parameter values for temperature, nucleus, rep_penalty so that
-# baselines are not artificially limited to a single fixed setting.
+def make_prompt_seed_pairs(prompts, n_seeds):
+    return [(p, s) for p in prompts for s in range(1, n_seeds + 1)]
+
+
 BASELINE_CONFIGS = [
     {"name": "greedy",
      "temperature": 0.0, "top_k": 0, "top_p": 1.0,
      "typical_p": 1.0, "rep_penalty": 1.0, "no_repeat_ngram": 0,
-     "mirostat_tau": 0.0, "adaptive": None, "category": "baseline"},
-
+     "mirostat_tau": 0.0, "adaptive": None, "lz": False, "category": "baseline"},
     {"name": "temp_0.7",
      "temperature": 0.7, "top_k": 0, "top_p": 1.0,
      "typical_p": 1.0, "rep_penalty": 1.0, "no_repeat_ngram": 0,
-     "mirostat_tau": 0.0, "adaptive": None, "category": "baseline_sweep"},
-
+     "mirostat_tau": 0.0, "adaptive": None, "lz": False, "category": "baseline_sweep"},
     {"name": "temp_0.8",
      "temperature": 0.8, "top_k": 0, "top_p": 1.0,
      "typical_p": 1.0, "rep_penalty": 1.0, "no_repeat_ngram": 0,
-     "mirostat_tau": 0.0, "adaptive": None, "category": "baseline_sweep"},
-
+     "mirostat_tau": 0.0, "adaptive": None, "lz": False, "category": "baseline_sweep"},
     {"name": "temp_0.9",
      "temperature": 0.9, "top_k": 0, "top_p": 1.0,
      "typical_p": 1.0, "rep_penalty": 1.0, "no_repeat_ngram": 0,
-     "mirostat_tau": 0.0, "adaptive": None, "category": "baseline_sweep"},
-
+     "mirostat_tau": 0.0, "adaptive": None, "lz": False, "category": "baseline_sweep"},
     {"name": "temp_1.0",
      "temperature": 1.0, "top_k": 0, "top_p": 1.0,
      "typical_p": 1.0, "rep_penalty": 1.0, "no_repeat_ngram": 0,
-     "mirostat_tau": 0.0, "adaptive": None, "category": "baseline_sweep"},
-
+     "mirostat_tau": 0.0, "adaptive": None, "lz": False, "category": "baseline_sweep"},
     {"name": "nucleus_p0.90",
      "temperature": 1.0, "top_k": 0, "top_p": 0.90,
      "typical_p": 1.0, "rep_penalty": 1.0, "no_repeat_ngram": 0,
-     "mirostat_tau": 0.0, "adaptive": None, "category": "baseline_sweep"},
-
+     "mirostat_tau": 0.0, "adaptive": None, "lz": False, "category": "baseline_sweep"},
     {"name": "nucleus_p0.95",
      "temperature": 1.0, "top_k": 0, "top_p": 0.95,
      "typical_p": 1.0, "rep_penalty": 1.0, "no_repeat_ngram": 0,
-     "mirostat_tau": 0.0, "adaptive": None, "category": "baseline_sweep"},
-
+     "mirostat_tau": 0.0, "adaptive": None, "lz": False, "category": "baseline_sweep"},
     {"name": "nucleus_p0.99",
      "temperature": 1.0, "top_k": 0, "top_p": 0.99,
      "typical_p": 1.0, "rep_penalty": 1.0, "no_repeat_ngram": 0,
-     "mirostat_tau": 0.0, "adaptive": None, "category": "baseline_sweep"},
-
+     "mirostat_tau": 0.0, "adaptive": None, "lz": False, "category": "baseline_sweep"},
     {"name": "rep_penalty_1.1",
      "temperature": 0.8, "top_k": 0, "top_p": 1.0,
      "typical_p": 1.0, "rep_penalty": 1.1, "no_repeat_ngram": 0,
-     "mirostat_tau": 0.0, "adaptive": None, "category": "baseline_sweep"},
-
+     "mirostat_tau": 0.0, "adaptive": None, "lz": False, "category": "baseline_sweep"},
     {"name": "rep_penalty_1.3",
      "temperature": 0.8, "top_k": 0, "top_p": 1.0,
      "typical_p": 1.0, "rep_penalty": 1.3, "no_repeat_ngram": 0,
-     "mirostat_tau": 0.0, "adaptive": None, "category": "baseline_sweep"},
-
+     "mirostat_tau": 0.0, "adaptive": None, "lz": False, "category": "baseline_sweep"},
     {"name": "rep_penalty_1.5",
      "temperature": 0.8, "top_k": 0, "top_p": 1.0,
      "typical_p": 1.0, "rep_penalty": 1.5, "no_repeat_ngram": 0,
-     "mirostat_tau": 0.0, "adaptive": None, "category": "baseline_sweep"},
-
+     "mirostat_tau": 0.0, "adaptive": None, "lz": False, "category": "baseline_sweep"},
     {"name": "mirostat_tau3",
      "temperature": 1.0, "top_k": 0, "top_p": 1.0,
      "typical_p": 1.0, "rep_penalty": 1.0, "no_repeat_ngram": 0,
-     "mirostat_tau": 3.0, "adaptive": None, "category": "probabilistic"},
-
+     "mirostat_tau": 3.0, "adaptive": None, "lz": False, "category": "probabilistic"},
     {"name": "mirostat_tau5",
      "temperature": 1.0, "top_k": 0, "top_p": 1.0,
      "typical_p": 1.0, "rep_penalty": 1.0, "no_repeat_ngram": 0,
-     "mirostat_tau": 5.0, "adaptive": None, "category": "probabilistic"},
-
+     "mirostat_tau": 5.0, "adaptive": None, "lz": False, "category": "probabilistic"},
     {"name": "typical_p0.9",
      "temperature": 1.0, "top_k": 0, "top_p": 1.0,
      "typical_p": 0.9, "rep_penalty": 1.0, "no_repeat_ngram": 0,
-     "mirostat_tau": 0.0, "adaptive": None, "category": "probabilistic"},
-
-    # Hard constraint baseline — mechanically forbids the metric it wins on.
-    # Reported separately; not ranked against probabilistic methods.
+     "mirostat_tau": 0.0, "adaptive": None, "lz": False, "category": "probabilistic"},
+    {"name": "lz_decoder",
+     "temperature": 0.8, "top_k": 0, "top_p": 0.95,
+     "typical_p": 1.0, "rep_penalty": 1.0, "no_repeat_ngram": 0,
+     "mirostat_tau": 0.0, "adaptive": None, "lz": True, "category": "strong_baseline"},
     {"name": "no_repeat_4gram",
      "temperature": 0.8, "top_k": 0, "top_p": 1.0,
      "typical_p": 1.0, "rep_penalty": 1.0, "no_repeat_ngram": 4,
-     "mirostat_tau": 0.0, "adaptive": None, "category": "hard_constraint"},
+     "mirostat_tau": 0.0, "adaptive": None, "lz": False, "category": "hard_constraint"},
 ]
 
-# Ablation configs for the adaptive decoder (punkt 6).
-# Each ablation isolates one component to show what contributes to performance.
+
 def make_ablation_configs():
     base = dict(temperature=0.8, top_k=0, top_p=0.95,
                 typical_p=1.0, rep_penalty=1.0, no_repeat_ngram=0,
-                mirostat_tau=0.0, category="ablation")
+                mirostat_tau=0.0, lz=False, category="ablation")
 
     def adaptive(name, **kwargs):
-        dec_kwargs = dict(
-            temperature=0.8, top_p=0.95,
-            n_min=3, n_max=6,
-            alpha_base=2.0, alpha_max=8.0,
-            lambda_rep=10.0, lambda_ent=1.0,
-            rep_target=0.05, ent_target=3.5,
-            window=100,
-        )
-        dec_kwargs.update(kwargs)
-        cfg = {**base, "name": name, "adaptive": dec_kwargs}
-        return cfg
+        dec = dict(temperature=0.8, top_p=0.95, n_min=3, n_max=6,
+                   alpha_base=2.0, alpha_max=8.0, lambda_rep=10.0,
+                   lambda_ent=1.0, rep_target=0.05, ent_target=3.5, window=100)
+        dec.update(kwargs)
+        return {**base, "name": name, "adaptive": dec}
 
     return [
-        # Full adaptive decoder (novel contribution)
         adaptive("adaptive_full"),
-
-        # Fixed alpha — no online adaptation, just fixed penalty strength
-        adaptive("ablation_fixed_alpha",
-                 lambda_rep=0.0, lambda_ent=0.0),
-
-        # Risk-only — penalty adapts to rep rate but ignores entropy signal
-        adaptive("ablation_risk_only",
-                 lambda_ent=0.0),
-
-        # Entropy-only — penalty adapts to entropy but ignores rep rate signal
-        adaptive("ablation_entropy_only",
-                 lambda_rep=0.0),
-
-        # No top-p after penalty — tests whether nucleus filter adds value
-        adaptive("ablation_no_top_p",
-                 top_p=1.0),
-
-        # Narrow n-gram range (only 3-4) — tests sensitivity to n_min/n_max
-        adaptive("ablation_narrow_ngram",
-                 n_min=3, n_max=4),
-
-        # Wide n-gram range (2-8) — tests sensitivity to n_min/n_max
-        adaptive("ablation_wide_ngram",
-                 n_min=2, n_max=8),
-
-        # Hard no-repeat as part of adaptive (alpha_max = inf equivalent)
-        # Compare: does hard banning help vs soft penalty inside adaptive?
+        adaptive("ablation_fixed_alpha",  lambda_rep=0.0, lambda_ent=0.0),
+        adaptive("ablation_risk_only",    lambda_ent=0.0),
+        adaptive("ablation_entropy_only", lambda_rep=0.0),
+        adaptive("ablation_no_top_p",     top_p=1.0),
+        adaptive("ablation_narrow_ngram", n_min=3, n_max=4),
+        adaptive("ablation_wide_ngram",   n_min=2, n_max=8),
         {**base, "name": "ablation_hard_in_adaptive",
-         "no_repeat_ngram": 4, "adaptive": None,
-         "temperature": 0.8, "top_p": 0.95},
+         "no_repeat_ngram": 4, "adaptive": None, "top_p": 0.95},
     ]
 
 
 ABLATION_CONFIGS = make_ablation_configs()
-ALL_CONFIGS = BASELINE_CONFIGS + ABLATION_CONFIGS
+ALL_CONFIGS      = BASELINE_CONFIGS + ABLATION_CONFIGS
 
 
-def make_adaptive_decoder(cfg):
-    """Build a RecurrenceAwareDecoder from an adaptive config dict."""
-    if cfg.get("adaptive") is None:
-        return None
-    kwargs = cfg["adaptive"]
-    return RecurrenceAwareDecoder(
-        temperature = kwargs.get("temperature", 0.8),
-        top_p       = kwargs.get("top_p", 0.95),
-        n_min       = kwargs.get("n_min", 3),
-        n_max       = kwargs.get("n_max", 6),
-        alpha_base  = kwargs.get("alpha_base", 2.0),
-        alpha_max   = kwargs.get("alpha_max", 8.0),
-        lambda_rep  = kwargs.get("lambda_rep", 10.0),
-        lambda_ent  = kwargs.get("lambda_ent", 1.0),
-        rep_target  = kwargs.get("rep_target", 0.05),
-        ent_target  = kwargs.get("ent_target", 3.5),
-        window      = kwargs.get("window", 100),
-    )
+def make_decoder(cfg):
+    if cfg.get("lz"):
+        return None, LZRepetitionDecoder(temperature=0.8, top_p=0.95)
+    if cfg.get("adaptive") is not None:
+        return RecurrenceAwareDecoder(**cfg["adaptive"]), None
+    return None, None
 
-
-# Metrics
 
 def type_token_ratio(text):
     w = text.split()
@@ -231,7 +189,6 @@ def rep_ngram_mass(text, n):
     return sum(v for v in c.values() if v > 1) / len(gs)
 
 def loop_onset(text, n=10):
-    """Returns position of first loop, or -1 (censored) if none detected."""
     seen = {}
     for i in range(len(text)-n+1):
         g = text[i:i+n]
@@ -256,59 +213,43 @@ def longest_repeated_substring(text, min_len=5):
         else: hi=mid-1
     return res
 
-def entropy_trajectory(text, nw=4, ng=4):
-    L = len(text); w = L//nw
-    if w < ng+1: return [0.0]*nw
-    return [char_ngram_entropy(text[i*w:(i+1)*w], ng) for i in range(nw)]
+def compression_ratio(text):
+    """zlib compression ratio — lower = more repetitive (leakage check)."""
+    raw = text.encode("utf-8")
+    if not raw: return 1.0
+    return round(len(zlib.compress(raw, level=6)) / len(raw), 4)
 
+def repeated_suffix_length(text, n=10):
+    """Length of longest suffix of text that also appears earlier in text."""
+    if len(text) < n: return 0
+    for length in range(min(len(text)//2, 200), n-1, -1):
+        suffix = text[-length:]
+        if text[:-length].find(suffix) >= 0:
+            return length
+    return 0
 
-# Quality metrics
 
 @torch.no_grad()
 def generated_text_nll(model, text_ids, block_size, device):
-    """
-    NLL (BPC) of the generated text under the model.
-
-    Fix for punkt 1: evaluates the whole sample using a sliding window
-    with stride=1 so every token contributes. The previous version only
-    processed the first floor(n/block_size) non-overlapping windows and
-    silently dropped the remainder when the sample was shorter than
-    2*block_size.
-    """
+    """Full-sample NLL: stride=block_size windows covering all tokens."""
     ids = np.array(text_ids, dtype=np.int64)
     n   = len(ids)
-    if n < 2:
-        return float("nan")
-
+    if n < 2: return float("nan")
     all_nll = []
-    # Stride-1 sliding window so no token is skipped.
-    # For efficiency we batch windows that share no overlap in their targets.
-    # We use stride = block_size for speed (same as eval_bpc.py) but pad
-    # the final partial window instead of discarding it.
-    stride = block_size
-    positions = list(range(0, max(1, n - 1), stride))
-
-    for s in positions:
-        end_x = min(s + block_size, n - 1)
-        end_y = end_x + 1
-        x_np = ids[s:end_x]
-        y_np = ids[s+1:end_y]
-        if len(x_np) == 0:
-            continue
+    for s in range(0, max(1, n-1), block_size):
+        end_x = min(s+block_size, n-1)
+        x_np, y_np = ids[s:end_x], ids[s+1:end_x+1]
+        if len(x_np) == 0: continue
         x = torch.tensor(x_np, dtype=torch.long, device=device).unsqueeze(0)
         y = torch.tensor(y_np, dtype=torch.long, device=device).unsqueeze(0)
         logits, _ = model(x)
         lp  = F.log_softmax(logits, dim=-1)
         nll = -lp.gather(2, y.unsqueeze(-1)).squeeze(-1)
         all_nll.extend(nll[0].tolist())
-
-    if not all_nll:
-        return float("nan")
+    if not all_nll: return float("nan")
     return float(np.mean(all_nll) / math.log(2))
 
-
 def ngram_distributional_similarity(gen_text, ref_text, n=4):
-    """1 - JSD between n-gram distributions. Higher = closer to real text."""
     def dist(text):
         gs = [text[i:i+n] for i in range(len(text)-n+1)]
         if not gs: return {}
@@ -316,20 +257,18 @@ def ngram_distributional_similarity(gen_text, ref_text, n=4):
         return {k: v/t for k, v in c.items()}
     p = dist(gen_text); q = dist(ref_text)
     if not p or not q: return 0.0
-    vocab = set(p) | set(q)
+    vocab = set(p)|set(q)
     m = {k: 0.5*(p.get(k,0)+q.get(k,0)) for k in vocab}
     def kl(a, b):
-        return sum(a[k]*math.log2(a[k]/b[k]) for k in a if a[k]>0 and b[k]>0)
+        return sum(a[k]*math.log2(a[k]/b[k]) for k in a if a[k]>0 and b.get(k,0)>0)
     jsd = max(0.0, min(1.0, 0.5*kl(p,m)+0.5*kl(q,m)))
-    return round(1.0 - jsd, 4)
+    return round(1.0-jsd, 4)
 
 def _load_english_wordlist():
     for path in ["/usr/share/dict/words", "/usr/dict/words"]:
         if os.path.exists(path):
             with open(path, encoding="utf-8", errors="ignore") as f:
                 return {w.strip().lower() for w in f if w.strip().isalpha()}
-
-    # Compact fallback for Windows — ~85% coverage of running English text
     COMMON = (
         "the of and a to in is it you that he was for on are with as his they "
         "be at one have this from or had by but not what all were we when your "
@@ -398,85 +337,84 @@ _ENGLISH_WORDS = _load_english_wordlist()
 def spelling_error_rate(text):
     words = [w.lower() for w in text.split() if w.isalpha()]
     if not words: return 0.0
-    return round(sum(1 for w in words if w not in _ENGLISH_WORDS) / len(words), 4)
+    return round(sum(1 for w in words if w not in _ENGLISH_WORDS)/len(words), 4)
 
-
-# Survival analysis
 
 def kaplan_meier_survival(loop_onsets, max_t=500):
-    """
-    Kaplan-Meier estimator. loop_onsets with value -1 are treated as
-    right-censored observations (no loop detected within the sample).
-    Mean of raw onset values is never computed or reported (punkt 2).
-    """
-    events   = sorted([t for t in loop_onsets if t >= 0])
-    n_total  = len(loop_onsets)
+    events  = sorted([t for t in loop_onsets if t >= 0])
+    n_total = len(loop_onsets)
     if not events:
         return list(range(max_t+1)), [1.0]*(max_t+1)
     times = sorted(set(events))
     S, t_out, surv = 1.0, [], []
     n_before = 0
     for t in times:
-        n_ev      = events.count(t)
-        n_at_risk = n_total - n_before
-        if n_at_risk > 0:
-            S *= (1 - n_ev / n_at_risk)
+        n_ev = events.count(t)
+        n_at = n_total - n_before
+        if n_at > 0: S *= (1 - n_ev/n_at)
         n_before += n_ev
         t_out.append(t); surv.append(round(S, 4))
     return t_out, surv
 
 def survival_auc(loop_onsets, max_t=500):
-    """Normalised area under the KM survival curve. Higher = survives longer."""
     ts, S = kaplan_meier_survival(loop_onsets, max_t)
     if not ts: return 1.0
     prev_t, prev_s, area = 0, 1.0, 0.0
     for t, s in zip(ts, S):
-        area += (t - prev_t) * prev_s
-        prev_t, prev_s = t, s
-    area += (max_t - prev_t) * prev_s
-    return round(area / max_t, 4)
+        area += (t-prev_t)*prev_s; prev_t, prev_s = t, s
+    area += (max_t-prev_t)*prev_s
+    return round(area/max_t, 4)
+
+def rmst(loop_onsets, tau=500):
+    """Restricted Mean Survival Time up to tau (expected loop-free chars)."""
+    ts, S = kaplan_meier_survival(loop_onsets, max_t=tau)
+    if not ts: return float(tau)
+    prev_t, prev_s, area = 0, 1.0, 0.0
+    for t, s in zip(ts, S):
+        area += (t-prev_t)*prev_s; prev_t, prev_s = t, s
+    area += (tau-prev_t)*prev_s
+    return round(area, 2)
 
 def loop_rate(loop_onsets):
-    """Fraction of samples that entered a loop (not censored)."""
-    return round(sum(1 for t in loop_onsets if t >= 0) / len(loop_onsets), 4)
-
-
-# Bootstrap CI and paired tests (punkt 4)
+    return round(sum(1 for t in loop_onsets if t >= 0)/len(loop_onsets), 4)
 
 def bootstrap_ci(values, n_boot=1000, seed=0, alpha=0.05):
-    """
-    Non-parametric bootstrap 95% CI for the mean of a scalar metric.
-    Works for any metric including loop_rate, survival_auc, NLL, sim, rep.
-    """
-    rng  = np.random.default_rng(seed)
-    arr  = np.array(values, dtype=float)
+    rng   = np.random.default_rng(seed)
+    arr   = np.array(values, dtype=float)
     boots = [rng.choice(arr, size=len(arr), replace=True).mean()
              for _ in range(n_boot)]
     boots = np.array(boots)
-    lo = float(np.percentile(boots, 100*alpha/2))
-    hi = float(np.percentile(boots, 100*(1-alpha/2)))
-    return round(float(arr.mean()), 4), round(lo, 4), round(hi, 4)
-
+    return (round(float(arr.mean()), 4),
+            round(float(np.percentile(boots, 100*alpha/2)), 4),
+            round(float(np.percentile(boots, 100*(1-alpha/2))), 4))
 
 def paired_bootstrap_test(vals_a, vals_b, n_boot=1000, seed=0):
-    """
-    Paired bootstrap test for H0: mean(A) == mean(B).
-    Requires equal-length arrays from identical prompt/seed pairs (punkt 3).
-    Returns p-value (two-sided).
-    """
     rng   = np.random.default_rng(seed)
     a, b  = np.array(vals_a, float), np.array(vals_b, float)
-    assert len(a) == len(b), "Paired test requires equal-length arrays"
-    delta = a - b
+    n     = min(len(a), len(b))
+    delta = a[:n] - b[:n]
     obs   = delta.mean()
-    boots = [rng.choice(delta, size=len(delta), replace=True).mean()
+    boots = [rng.choice(delta, size=n, replace=True).mean()
              for _ in range(n_boot)]
     boots_c = np.array(boots) - np.mean(boots)
-    p = float(np.mean(np.abs(boots_c) >= abs(obs)))
-    return round(p, 4)
+    return round(float(np.mean(np.abs(boots_c) >= abs(obs))), 4)
 
+def bootstrap_rmst_diff(lo_a, lo_b, tau=500, n_boot=1000, seed=0):
+    """Bootstrap CI for RMST(A)-RMST(B) using prompt/seed as paired unit."""
+    rng = np.random.default_rng(seed)
+    n   = min(len(lo_a), len(lo_b))
+    obs = rmst(lo_a[:n], tau) - rmst(lo_b[:n], tau)
+    idx_all = np.arange(n)
+    boots = []
+    for _ in range(n_boot):
+        idx = rng.choice(idx_all, size=n, replace=True)
+        boots.append(rmst([lo_a[i] for i in idx], tau) -
+                     rmst([lo_b[i] for i in idx], tau))
+    boots = np.array(boots)
+    return (round(float(obs), 2),
+            round(float(np.percentile(boots, 2.5)), 2),
+            round(float(np.percentile(boots, 97.5)), 2))
 
-# Model helpers
 
 def load_model(ckpt_path, device):
     ckpt  = torch.load(ckpt_path, map_location=device, weights_only=False)
@@ -498,65 +436,71 @@ def decode(ids, itos):
     return "".join(itos.get(str(int(i)), "?") for i in ids)
 
 
-# Per-sample evaluation
-
-METRIC_KEYS = [
+SCALAR_KEYS = [
     "ttr", "entropy_4gram", "rep_rate_5",
-    "rep_ngram_mass_2", "rep_ngram_mass_4", "rep_ngram_mass_6",
-    "longest_rep_sub", "gen_nll_bpc", "ngram_sim_4",
-    "spelling_error_rate",
+    "rep_ngram_mass_2", "rep_ngram_mass_3", "rep_ngram_mass_4",
+    "rep_ngram_mass_5", "rep_ngram_mass_6",
+    "longest_rep_sub", "compression_ratio", "repeated_suffix_len",
+    "gen_nll_bpc", "ngram_sim_4", "spelling_error_rate",
 ]
 
 def eval_sample(model, gen_ids, text, block_size, device, ref_text):
     lo = loop_onset(text, 10)
     return lo, {
-        "ttr":                 type_token_ratio(text),
-        "entropy_4gram":       char_ngram_entropy(text, 4),
-        "rep_rate_5":          repetition_rate(text, 5),
-        "rep_ngram_mass_2":    rep_ngram_mass(text, 2),
-        "rep_ngram_mass_4":    rep_ngram_mass(text, 4),
-        "rep_ngram_mass_6":    rep_ngram_mass(text, 6),
-        "longest_rep_sub":     longest_repeated_substring(text),
-        "gen_nll_bpc":         generated_text_nll(model, gen_ids, block_size, device),
-        "ngram_sim_4":         ngram_distributional_similarity(text, ref_text, 4),
-        "spelling_error_rate": spelling_error_rate(text),
+        "ttr":                type_token_ratio(text),
+        "entropy_4gram":      char_ngram_entropy(text, 4),
+        "rep_rate_5":         repetition_rate(text, 5),
+        "rep_ngram_mass_2":   rep_ngram_mass(text, 2),
+        "rep_ngram_mass_3":   rep_ngram_mass(text, 3),
+        "rep_ngram_mass_4":   rep_ngram_mass(text, 4),
+        "rep_ngram_mass_5":   rep_ngram_mass(text, 5),
+        "rep_ngram_mass_6":   rep_ngram_mass(text, 6),
+        "longest_rep_sub":    longest_repeated_substring(text),
+        "compression_ratio":  compression_ratio(text),
+        "repeated_suffix_len":repeated_suffix_length(text),
+        "gen_nll_bpc":        generated_text_nll(model, gen_ids, block_size, device),
+        "ngram_sim_4":        ngram_distributional_similarity(text, ref_text, 4),
+        "spelling_error_rate":spelling_error_rate(text),
     }
 
 
 def run_configs(configs, model, cfg, stoi, itos, ref_text,
-                prompt_seed_pairs, n_chars, device, samples_f, ckpt_name):
-    """Run all configs on identical prompt/seed pairs and return per-config rows."""
+                pairs_std, pairs_ext, n_chars, device, samples_f, ckpt_name):
     block_size = cfg["block_size"]
     rows = []
 
     for c in configs:
-        print(f"    {c['name']:<30}", end="", flush=True)
-        accum       = {k: [] for k in METRIC_KEYS}
+        is_key = c["name"] in KEY_METHODS
+        pairs  = pairs_ext if is_key else pairs_std
+        print(f"    {c['name']:<30}{'[ext]' if is_key else '     '}", end="", flush=True)
+
+        accum       = {k: [] for k in SCALAR_KEYS}
         loop_onsets = []
+        cps_list    = []
 
-        for (prompt_name, prompt_text), seed in prompt_seed_pairs:
+        for (prompt_name, prompt_text), seed in pairs:
             set_seed(seed)
-            idx = encode(prompt_text, stoi).to(device)
-            dec = make_adaptive_decoder(c)
+            idx        = encode(prompt_text, stoi).to(device)
+            adec, ldec = make_decoder(c)
 
-            out_ids = generate(
-                model, idx,
-                max_new_tokens   = n_chars,
-                temperature      = c["temperature"],
-                top_k            = c["top_k"],
-                top_p            = c["top_p"],
-                typical_p        = c["typical_p"],
-                rep_penalty      = c["rep_penalty"],
-                no_repeat_ngram  = c["no_repeat_ngram"],
-                mirostat_tau     = c["mirostat_tau"],
-                adaptive         = dec,
-            )[0].tolist()
+            out, cps = generate(
+                model, idx, max_new_tokens=n_chars,
+                temperature=c["temperature"], top_k=c["top_k"],
+                top_p=c["top_p"], typical_p=c["typical_p"],
+                rep_penalty=c["rep_penalty"],
+                no_repeat_ngram=c["no_repeat_ngram"],
+                mirostat_tau=c["mirostat_tau"],
+                adaptive=adec, lz_decoder=ldec,
+                measure_time=True,
+            )
+            if cps is not None:
+                cps_list.append(cps)
 
-            gen_ids = out_ids[len(prompt_text):]
+            gen_ids = out[0].tolist()[len(prompt_text):]
             text    = decode(gen_ids, itos)
             lo, m   = eval_sample(model, gen_ids, text, block_size, device, ref_text)
             loop_onsets.append(lo)
-            for k in METRIC_KEYS:
+            for k in SCALAR_KEYS:
                 accum[k].append(m[k])
 
             if seed == 1:
@@ -565,55 +509,207 @@ def run_configs(configs, model, cfg, stoi, itos, ref_text,
                     + "-"*60 + "\n" + text + "\n\n"
                 )
 
-        sauc  = survival_auc(loop_onsets)
-        lrate = loop_rate(loop_onsets)
-        km_t, km_s = kaplan_meier_survival(loop_onsets)
+        sauc   = survival_auc(loop_onsets, max_t=n_chars)
+        lrate  = loop_rate(loop_onsets)
+        rmst_v = rmst(loop_onsets, tau=n_chars)
+        km_t, km_s = kaplan_meier_survival(loop_onsets, max_t=n_chars)
 
         row = {
-            "strategy":  c["name"],
-            "category":  c["category"],
-            "checkpoint": ckpt_name,
-            "n_samples":  len(loop_onsets),
-            "n_censored": sum(1 for t in loop_onsets if t < 0),
-            "loop_rate":  lrate,
+            "strategy":     c["name"],
+            "category":     c["category"],
+            "checkpoint":   ckpt_name,
+            "n_samples":    len(loop_onsets),
+            "n_censored":   sum(1 for t in loop_onsets if t < 0),
+            "loop_rate":    lrate,
             "survival_auc": sauc,
-            "km_times":   km_t,
-            "km_survival": km_s,
+            "rmst":         rmst_v,
+            "chars_per_sec": round(float(np.mean(cps_list)), 1) if cps_list else None,
+            "km_times":     km_t,
+            "km_survival":  km_s,
             "loop_onsets_raw": loop_onsets,
         }
 
-        for k in METRIC_KEYS:
+        for k in SCALAR_KEYS:
             mean, lo_ci, hi_ci = bootstrap_ci(accum[k])
-            row[f"{k}_mean"] = mean
+            row[f"{k}_mean"]  = mean
             row[f"{k}_ci_lo"] = lo_ci
             row[f"{k}_ci_hi"] = hi_ci
             row[f"{k}_vals"]  = accum[k]
 
-        # Bootstrap CI for survival_auc and loop_rate
-        # Computed by re-bootstrapping the per-sample loop_onset indicators
         rng = np.random.default_rng(42)
-        boot_sauc, boot_lrate = [], []
         lo_arr = np.array(loop_onsets)
+        boot_sauc, boot_lrate, boot_rmst = [], [], []
         for _ in range(1000):
-            sample = rng.choice(lo_arr, size=len(lo_arr), replace=True).tolist()
-            boot_sauc.append(survival_auc(sample))
-            boot_lrate.append(loop_rate(sample))
+            s = rng.choice(lo_arr, size=len(lo_arr), replace=True).tolist()
+            boot_sauc.append(survival_auc(s, max_t=n_chars))
+            boot_lrate.append(loop_rate(s))
+            boot_rmst.append(rmst(s, tau=n_chars))
         row["survival_auc_ci_lo"] = round(float(np.percentile(boot_sauc, 2.5)), 4)
         row["survival_auc_ci_hi"] = round(float(np.percentile(boot_sauc, 97.5)), 4)
         row["loop_rate_ci_lo"]    = round(float(np.percentile(boot_lrate, 2.5)), 4)
         row["loop_rate_ci_hi"]    = round(float(np.percentile(boot_lrate, 97.5)), 4)
+        row["rmst_ci_lo"]         = round(float(np.percentile(boot_rmst, 2.5)), 2)
+        row["rmst_ci_hi"]         = round(float(np.percentile(boot_rmst, 97.5)), 2)
 
         rows.append(row)
-        print(f"  rep={lrate:.2f}  sauc={sauc:.3f}  "
-              f"nll={row['gen_nll_bpc_mean']:.3f}  "
-              f"sim={row['ngram_sim_4_mean']:.3f}  "
-              f"spell={row['spelling_error_rate_mean']:.3f}  "
-              f"cens={row['n_censored']}/{row['n_samples']}")
+        cps_s = f"  cps={row['chars_per_sec']}" if row['chars_per_sec'] else ""
+        print(f"  lr={lrate:.2f}  sauc={sauc:.3f}  rmst={rmst_v:.0f}"
+              f"  nll={row['gen_nll_bpc_mean']:.3f}"
+              f"  sim={row['ngram_sim_4_mean']:.3f}"
+              f"  comp={row['compression_ratio_mean']:.3f}"
+              f"  cens={row['n_censored']}/{row['n_samples']}{cps_s}")
 
     return rows
 
 
-def eval_checkpoint(ckpt_path, data_dir, n_chars, prompt_seed_pairs, device, out_dir):
+def run_method_vs_method_tests(all_results, out_dir, n_chars):
+    """Method-vs-method paired comparisons using prompt/seed as paired unit."""
+    by_key = {}
+    for ckpt_name, rows in all_results.items():
+        for r in rows:
+            by_key[(ckpt_name, r["strategy"])] = r
+
+    comparisons = []
+    ckpt_names  = list(all_results.keys())
+
+    def compare(ckpt, a, b, label):
+        ra = by_key.get((ckpt, a))
+        rb = by_key.get((ckpt, b))
+        if not ra or not rb: return
+        lo_a = ra["loop_onsets_raw"]
+        lo_b = rb["loop_onsets_raw"]
+        n    = min(len(lo_a), len(lo_b))
+        rmst_d, rmst_lo, rmst_hi = bootstrap_rmst_diff(lo_a[:n], lo_b[:n], tau=n_chars)
+        sauc_a = [survival_auc([x], max_t=n_chars) for x in lo_a[:n]]
+        sauc_b = [survival_auc([x], max_t=n_chars) for x in lo_b[:n]]
+        p_sauc = paired_bootstrap_test(sauc_a, sauc_b)
+        row = {
+            "label": label, "checkpoint": ckpt,
+            "method_a": a, "method_b": b, "n_pairs": n,
+            "rmst_a": ra["rmst"], "rmst_b": rb["rmst"],
+            "rmst_diff_AminusB": rmst_d,
+            "rmst_ci_lo": rmst_lo, "rmst_ci_hi": rmst_hi,
+            "p_survival_auc": p_sauc,
+        }
+        for k in ["gen_nll_bpc", "ngram_sim_4", "rep_rate_5", "spelling_error_rate"]:
+            va = ra.get(f"{k}_vals", [])[:n]
+            vb = rb.get(f"{k}_vals", [])[:n]
+            if va and vb:
+                row[f"p_{k}"]     = paired_bootstrap_test(va, vb)
+                row[f"delta_{k}"] = round(float(np.mean(va))-float(np.mean(vb)), 4)
+        comparisons.append(row)
+        print(f"    {a:<26} vs {b:<26}  "
+              f"RMST_diff={rmst_d:+.1f}[{rmst_lo:+.1f},{rmst_hi:+.1f}]  "
+              f"p_sauc={p_sauc:.3f}")
+
+    print(f"\n  Method-vs-method paired tests")
+    print(f"  {'='*90}")
+    for ckpt in ckpt_names:
+        print(f"\n  [{ckpt}]")
+        compare(ckpt, "adaptive_full",     "ablation_risk_only",   "adaptive vs risk_only")
+        compare(ckpt, "adaptive_full",     "ablation_entropy_only","adaptive vs entropy_only")
+        compare(ckpt, "ablation_risk_only","temp_0.8",             "risk_only vs temp_0.8")
+        compare(ckpt, "ablation_risk_only","nucleus_p0.95",        "risk_only vs nucleus_0.95")
+        compare(ckpt, "ablation_risk_only","typical_p0.9",         "risk_only vs typical_0.9")
+        compare(ckpt, "ablation_risk_only","mirostat_tau5",        "risk_only vs mirostat_tau5")
+        compare(ckpt, "ablation_risk_only","rep_penalty_1.3",      "risk_only vs rep_penalty_1.3")
+        compare(ckpt, "adaptive_full",     "rep_penalty_1.3",      "adaptive vs rep_penalty")
+        compare(ckpt, "adaptive_full",     "mirostat_tau5",        "adaptive vs mirostat")
+        compare(ckpt, "adaptive_full",     "lz_decoder",           "adaptive vs lz_decoder")
+        compare(ckpt, "adaptive_full",     "no_repeat_4gram",
+                "adaptive vs hard_no_repeat [leakage: hard bans measured event]")
+        compare(ckpt, "rep_penalty_1.3",   "no_repeat_4gram",
+                "rep_penalty vs hard_no_repeat [leakage]")
+
+    if comparisons:
+        path = os.path.join(out_dir, "method_vs_method.csv")
+        with open(path, "w", newline="") as f:
+            w = csv.DictWriter(f, fieldnames=list(comparisons[0].keys()))
+            w.writeheader(); w.writerows(comparisons)
+        print(f"\n  Saved -> {path}")
+    return comparisons
+
+
+def save_pareto_data(all_results, out_dir):
+    """Pareto plot data: survival vs NLL/sim/spelling. Hard no-repeat flagged."""
+    pareto = []
+    for ckpt_name, rows in all_results.items():
+        for r in rows:
+            pareto.append({
+                "strategy":        r["strategy"],
+                "category":        r["category"],
+                "checkpoint":      ckpt_name,
+                "survival_auc":    r["survival_auc"],
+                "rmst":            r["rmst"],
+                "gen_nll_bpc":     r.get("gen_nll_bpc_mean"),
+                "ngram_sim_4":     r.get("ngram_sim_4_mean"),
+                "spelling_error":  r.get("spelling_error_rate_mean"),
+                "rep_rate_5":      r.get("rep_rate_5_mean"),
+                "compression":     r.get("compression_ratio_mean"),
+                "chars_per_sec":   r.get("chars_per_sec"),
+                "hard_constraint": r["category"] == "hard_constraint",
+            })
+    path = os.path.join(out_dir, "pareto_data.csv")
+    with open(path, "w", newline="") as f:
+        w = csv.DictWriter(f, fieldnames=list(pareto[0].keys()))
+        w.writeheader(); w.writerows(pareto)
+    print(f"  Pareto data -> {path}")
+
+
+def save_qualitative_examples(all_results, model_map, stoi_map,
+                               itos_map, cfg_map, n_chars, device, out_dir):
+    """
+    Matched qualitative examples using same prompt+seed.
+    Shows: greedy loops, hard no-repeat avoids loop but changes text,
+    soft adaptive avoids loop while preserving quality.
+    """
+    qual_methods = [
+        "greedy", "temp_0.8", "rep_penalty_1.3",
+        "no_repeat_4gram", "adaptive_full", "lz_decoder",
+    ]
+    example_triples = [
+        ("chapter", "CHAPTER 1\n", 1),
+        ("best",    "It was the best of ", 2),
+        ("darcy",   "Mr. Darcy had never ", 3),
+    ]
+    cfg_by_name = {c["name"]: c for c in ALL_CONFIGS}
+    path = os.path.join(out_dir, "qualitative_examples.txt")
+
+    with open(path, "w", encoding="utf-8") as f:
+        for ckpt_name, model in model_map.items():
+            stoi = stoi_map[ckpt_name]
+            itos = itos_map[ckpt_name]
+            f.write(f"\n{'#'*80}\nCheckpoint: {ckpt_name}\n{'#'*80}\n\n")
+
+            for prompt_name, prompt_text, seed in example_triples:
+                f.write(f"{'='*80}\n")
+                f.write(f"PROMPT: '{prompt_text.strip()}'  SEED: {seed}\n")
+                f.write(f"{'='*80}\n\n")
+                for method_name in qual_methods:
+                    c = cfg_by_name.get(method_name)
+                    if not c: continue
+                    set_seed(seed)
+                    idx        = encode(prompt_text, stoi).to(device)
+                    adec, ldec = make_decoder(c)
+                    out, _     = generate(
+                        model, idx, max_new_tokens=n_chars,
+                        temperature=c["temperature"], top_k=c["top_k"],
+                        top_p=c["top_p"], typical_p=c["typical_p"],
+                        rep_penalty=c["rep_penalty"],
+                        no_repeat_ngram=c["no_repeat_ngram"],
+                        mirostat_tau=c["mirostat_tau"],
+                        adaptive=adec, lz_decoder=ldec,
+                    )
+                    gen_ids = out[0].tolist()[len(prompt_text):]
+                    text    = decode(gen_ids, itos)
+                    lo      = loop_onset(text, 10)
+                    lo_str  = f"loop@{lo}" if lo >= 0 else "no_loop"
+                    f.write(f"[{method_name}]  [{lo_str}]\n")
+                    f.write(text[:400] + ("..." if len(text)>400 else "") + "\n\n")
+    print(f"  Qualitative examples -> {path}")
+
+
+def eval_checkpoint(ckpt_path, data_dir, n_chars, pairs_std, pairs_ext, device, out_dir):
     model, cfg = load_model(ckpt_path, device)
     vocab      = load_json(os.path.join(data_dir, "vocab.json"))
     stoi, itos = vocab["stoi"], vocab["itos"]
@@ -626,135 +722,24 @@ def eval_checkpoint(ckpt_path, data_dir, n_chars, prompt_seed_pairs, device, out
     print(f"\n  Checkpoint: {ckpt_path}")
     ensure_dir(out_dir)
     samples_f = open(os.path.join(out_dir, f"samples_{name}.txt"), "w", encoding="utf-8")
-
     rows = run_configs(ALL_CONFIGS, model, cfg, stoi, itos, ref_text,
-                       prompt_seed_pairs, n_chars, device, samples_f, name)
+                       pairs_std, pairs_ext, n_chars, device, samples_f, name)
     samples_f.close()
 
-    csv_skip = {"km_times", "km_survival", "loop_onsets_raw"} | \
-               {f"{k}_vals" for k in METRIC_KEYS}
-    csv_keys = [k for k in rows[0] if k not in csv_skip]
-    csv_path = os.path.join(out_dir, f"metrics_{name}.csv")
-    with open(csv_path, "w", newline="", encoding="utf-8") as f:
+    skip = {"km_times", "km_survival", "loop_onsets_raw"} | \
+           {f"{k}_vals" for k in SCALAR_KEYS}
+    csv_keys = [k for k in rows[0] if k not in skip]
+    with open(os.path.join(out_dir, f"metrics_{name}.csv"), "w", newline="", encoding="utf-8") as f:
         w = csv.DictWriter(f, fieldnames=csv_keys)
         w.writeheader()
         w.writerows([{k: r[k] for k in csv_keys} for r in rows])
 
-    json_path = os.path.join(out_dir, f"metrics_{name}.json")
     json_rows = [{k: v for k, v in r.items()
-                  if k not in {f"{m}_vals" for m in METRIC_KEYS}} for r in rows]
-    with open(json_path, "w") as f:
+                  if k not in {f"{m}_vals" for m in SCALAR_KEYS}} for r in rows]
+    with open(os.path.join(out_dir, f"metrics_{name}.json"), "w") as f:
         json.dump(json_rows, f, indent=2)
 
-    return rows
-
-
-# Comparison and paired tests across two checkpoints
-
-def compare_checkpoints(all_results, out_dir):
-    names  = list(all_results.keys())
-    n0, n1 = names[0], names[1]
-    r0m    = {r["strategy"]: r for r in all_results[n0]}
-    r1m    = {r["strategy"]: r for r in all_results[n1]}
-
-    print(f"\n{'='*110}")
-    print(f"  COMPARISON {n0} vs {n1}  (mean [95% CI])")
-    print(f"  Paired bootstrap p-values in parentheses")
-    print(f"{'='*110}")
-
-    paired_keys = ["rep_rate_5", "gen_nll_bpc", "ngram_sim_4",
-                   "spelling_error_rate", "survival_auc", "loop_rate"]
-
-    combined = []
-    for c in ALL_CONFIGS:
-        st = c["name"]
-        r0 = r0m.get(st); r1 = r1m.get(st)
-        if not r0 or not r1: continue
-
-        flag = ""
-        if c["category"] == "hard_constraint":
-            flag = "  [hard constraint — not comparable]"
-        elif c["category"] == "adaptive":
-            flag = "  [novel]"
-        elif c["category"] == "ablation":
-            flag = "  [ablation]"
-
-        pvals = {}
-        for k in paired_keys:
-            if k in ("survival_auc", "loop_rate"):
-                # Use bootstrap on indicator arrays, not per-sample values
-                v0 = r0.get("loop_onsets_raw", [])
-                v1 = r1.get("loop_onsets_raw", [])
-                if k == "survival_auc":
-                    a0 = [survival_auc([x]) for x in v0]
-                    a1 = [survival_auc([x]) for x in v1]
-                else:
-                    a0 = [0 if x < 0 else 1 for x in v0]
-                    a1 = [0 if x < 0 else 1 for x in v1]
-            else:
-                a0 = r0.get(f"{k}_vals", [])
-                a1 = r1.get(f"{k}_vals", [])
-            if len(a0) == len(a1) and len(a0) > 0:
-                pvals[k] = paired_bootstrap_test(a0, a1)
-            else:
-                pvals[k] = float("nan")
-
-        nll0  = r0["gen_nll_bpc_mean"]
-        nll1  = r1["gen_nll_bpc_mean"]
-        sim0  = r0["ngram_sim_4_mean"]
-        sim1  = r1["ngram_sim_4_mean"]
-        sauc0 = r0["survival_auc"]
-        sauc1 = r1["survival_auc"]
-        rep0  = r0["rep_rate_5_mean"]
-        rep1  = r1["rep_rate_5_mean"]
-
-        print(f"  {st:<30} {c['category']:<16}")
-        print(f"    NLL   {nll0:.3f}[{r0['gen_nll_bpc_ci_lo']:.3f},{r0['gen_nll_bpc_ci_hi']:.3f}]"
-              f" vs {nll1:.3f}[{r1['gen_nll_bpc_ci_lo']:.3f},{r1['gen_nll_bpc_ci_hi']:.3f}]"
-              f"  p={pvals['gen_nll_bpc']:.3f}")
-        print(f"    Sim   {sim0:.3f}[{r0['ngram_sim_4_ci_lo']:.3f},{r0['ngram_sim_4_ci_hi']:.3f}]"
-              f" vs {sim1:.3f}[{r1['ngram_sim_4_ci_lo']:.3f},{r1['ngram_sim_4_ci_hi']:.3f}]"
-              f"  p={pvals['ngram_sim_4']:.3f}")
-        print(f"    Rep   {rep0:.3f}[{r0['rep_rate_5_ci_lo']:.3f},{r0['rep_rate_5_ci_hi']:.3f}]"
-              f" vs {rep1:.3f}[{r1['rep_rate_5_ci_lo']:.3f},{r1['rep_rate_5_ci_hi']:.3f}]"
-              f"  p={pvals['rep_rate_5']:.3f}")
-        print(f"    SAUC  {sauc0:.3f}[{r0['survival_auc_ci_lo']:.3f},{r0['survival_auc_ci_hi']:.3f}]"
-              f" vs {sauc1:.3f}[{r1['survival_auc_ci_lo']:.3f},{r1['survival_auc_ci_hi']:.3f}]"
-              f"{flag}")
-
-        row = {"strategy": st, "category": c["category"]}
-        for k in paired_keys:
-            row[f"{k}_{n0}"] = r0.get(f"{k}_mean", r0.get(k))
-            row[f"{k}_{n1}"] = r1.get(f"{k}_mean", r1.get(k))
-            row[f"p_{k}"]    = pvals[k]
-        combined.append(row)
-
-    comp_path = os.path.join(out_dir, "comparison_paired.csv")
-    with open(comp_path, "w", newline="") as f:
-        w = csv.DictWriter(f, fieldnames=list(combined[0].keys()))
-        w.writeheader(); w.writerows(combined)
-
-    km_out = {}
-    for name_k, rows in all_results.items():
-        km_out[name_k] = {
-            r["strategy"]: {
-                "km_times":    r["km_times"],
-                "km_survival": r["km_survival"],
-                "n_censored":  r["n_censored"],
-                "n_total":     r["n_samples"],
-                "loop_rate":   r["loop_rate"],
-                "survival_auc": r["survival_auc"],
-            } for r in rows
-        }
-    km_path = os.path.join(out_dir, "survival_curves.json")
-    with open(km_path, "w") as f:
-        json.dump(km_out, f, indent=2)
-
-    print(f"\n  Comparison   -> {comp_path}")
-    print(f"  KM curves    -> {km_path}")
-    print(f"\n  NOTE: no_repeat_4gram directly forbids the repetition metric")
-    print(f"  it wins on — reported as hard constraint baseline only.")
-    print(f"  NOTE: ablation_ configs isolate components of adaptive decoder.")
+    return rows, model, stoi, itos, cfg
 
 
 def main():
@@ -762,7 +747,7 @@ def main():
     ap.add_argument("--ckpt",     nargs="+",
                     default=["runs/baseline/best.pt", "runs/cosine/best.pt"])
     ap.add_argument("--data_dir", default="data_out")
-    ap.add_argument("--out_dir",  default="runs/sampling_eval_v4")
+    ap.add_argument("--out_dir",  default="runs/sampling_eval_v5")
     ap.add_argument("--n_chars",  type=int, default=500)
     ap.add_argument("--n_seeds",  type=int, default=10)
     args = ap.parse_args()
@@ -772,36 +757,42 @@ def main():
               torch.device("cuda") if torch.cuda.is_available() else
               torch.device("cpu"))
 
-    # Identical prompt/seed pairs for all configs and checkpoints (punkt 3)
-    prompt_seed_pairs = make_prompt_seed_pairs(args.n_seeds)
-    total = len(ALL_CONFIGS) * len(prompt_seed_pairs) * len(args.ckpt)
+    pairs_std = make_prompt_seed_pairs(PROMPTS_STANDARD, args.n_seeds)
+    pairs_ext = make_prompt_seed_pairs(PROMPTS_EXTENDED, args.n_seeds)
+
     print(f"Device     : {device}")
-    print(f"Configs    : {len(ALL_CONFIGS)}  "
-          f"({len(BASELINE_CONFIGS)} baselines + {len(ABLATION_CONFIGS)} ablations)")
-    print(f"Pairs/cfg  : {len(prompt_seed_pairs)}  "
-          f"({len(PROMPTS)} prompts x {args.n_seeds} seeds)")
+    print(f"Configs    : {len(ALL_CONFIGS)}")
+    print(f"Std pairs  : {len(pairs_std)} per standard config")
+    print(f"Ext pairs  : {len(pairs_ext)} per key config")
     print(f"Checkpoints: {len(args.ckpt)}")
-    print(f"Total runs : {total}")
 
     all_results = {}
+    model_map, stoi_map, itos_map, cfg_map = {}, {}, {}, {}
+
     for ckpt in args.ckpt:
         name = os.path.basename(os.path.dirname(ckpt))
-        rows = eval_checkpoint(ckpt, args.data_dir, args.n_chars,
-                               prompt_seed_pairs, device, args.out_dir)
+        rows, model, stoi, itos, cfg = eval_checkpoint(
+            ckpt, args.data_dir, args.n_chars,
+            pairs_std, pairs_ext, device, args.out_dir)
         all_results[name] = rows
+        model_map[name]   = model
+        stoi_map[name]    = stoi
+        itos_map[name]    = itos
+        cfg_map[name]     = cfg
 
-    if len(all_results) == 2:
-        compare_checkpoints(all_results, args.out_dir)
+    run_method_vs_method_tests(all_results, args.out_dir, args.n_chars)
+    save_pareto_data(all_results, args.out_dir)
+    save_qualitative_examples(all_results, model_map, stoi_map,
+                              itos_map, cfg_map, args.n_chars, device, args.out_dir)
 
-    full_path = os.path.join(args.out_dir, "all_results.json")
-    skip = {f"{k}_vals" for k in METRIC_KEYS}
+    skip = {f"{k}_vals" for k in SCALAR_KEYS}
     serialisable = {
         name: [{k: v for k, v in r.items() if k not in skip} for r in rows]
         for name, rows in all_results.items()
     }
-    with open(full_path, "w") as f:
+    with open(os.path.join(args.out_dir, "all_results.json"), "w") as f:
         json.dump(serialisable, f, indent=2)
-    print(f"  Full results -> {full_path}")
+    print(f"\n  Done -> {args.out_dir}")
 
 
 if __name__ == "__main__":

@@ -1,0 +1,25 @@
+label,checkpoint,method_a,method_b,n_pairs,rmst_a,rmst_b,rmst_diff_AminusB,rmst_ci_lo,rmst_ci_hi,p_survival_auc,p_gen_nll_bpc,delta_gen_nll_bpc,p_ngram_sim_4,delta_ngram_sim_4,p_rep_rate_5,delta_rep_rate_5,p_spelling_error_rate,delta_spelling_error_rate
+adaptive vs risk_only,baseline,adaptive_full,ablation_risk_only,150,465.48,481.22,-15.74,-26.98,-6.61,0.003,0.267,-0.005,0.851,0.0002,0.0,0.0092,0.337,-0.0024
+adaptive vs entropy_only,baseline,adaptive_full,ablation_entropy_only,150,465.48,465.48,0.0,0.0,0.0,1.0,0.127,0.0015,0.051,0.0006,0.041,-0.0011,0.519,0.0003
+risk_only vs temp_0.8,baseline,ablation_risk_only,temp_0.8,150,481.22,412.71,68.51,48.58,89.14,0.0,0.0,-0.126,0.0,0.0197,0.0,-0.0329,0.0,-0.0163
+risk_only vs nucleus_0.95,baseline,ablation_risk_only,nucleus_p0.95,150,481.22,420.62,60.6,41.76,79.93,0.0,0.0,-0.1169,0.0,0.0223,0.0,-0.0283,0.0,-0.0131
+risk_only vs typical_0.9,baseline,ablation_risk_only,typical_p0.9,50,481.22,372.98,71.36,26.61,121.03,0.002,0.0,-0.0607,0.0,0.0217,0.0,-0.0335,0.051,-0.0095
+risk_only vs mirostat_tau5,baseline,ablation_risk_only,mirostat_tau5,150,481.22,459.67,21.55,6.2,37.09,0.005,0.0,-0.3336,0.0,0.0399,0.0,-0.0121,0.0,-0.0487
+risk_only vs rep_penalty_1.3,baseline,ablation_risk_only,rep_penalty_1.3,150,481.22,469.24,11.98,-5.89,28.8,0.175,0.0,-0.4185,0.0,0.0566,0.341,-0.0013,0.0,-0.0586
+adaptive vs rep_penalty,baseline,adaptive_full,rep_penalty_1.3,150,465.48,469.24,-3.76,-24.55,16.69,0.711,0.0,-0.4235,0.0,0.0568,0.0,0.0079,0.0,-0.0611
+adaptive vs mirostat,baseline,adaptive_full,mirostat_tau5,150,465.48,459.67,5.81,-11.63,23.18,0.524,0.0,-0.3386,0.0,0.0402,0.061,-0.0028,0.0,-0.0511
+adaptive vs lz_decoder,baseline,adaptive_full,lz_decoder,150,465.48,387.67,77.81,56.53,98.37,0.0,0.0,0.0282,0.0,0.0052,0.0,-0.0373,0.088,0.0044
+adaptive vs hard_no_repeat [leakage: hard bans measured event],baseline,adaptive_full,no_repeat_4gram,150,465.48,500.0,-34.52,-54.32,-18.02,0.001,0.0,-0.4736,0.0,0.0425,0.0,0.0426,0.0,-0.0762
+rep_penalty vs hard_no_repeat [leakage],baseline,rep_penalty_1.3,no_repeat_4gram,150,469.24,500.0,-30.76,-43.84,-18.25,0.0,0.0,-0.05,0.0,-0.0143,0.0,0.0347,0.001,-0.0152
+adaptive vs risk_only,cosine,adaptive_full,ablation_risk_only,150,482.3,488.01,-5.71,-16.28,4.59,0.29,0.076,-0.0079,0.365,-0.0011,0.0,0.0088,0.707,-0.0008
+adaptive vs entropy_only,cosine,adaptive_full,ablation_entropy_only,150,482.3,475.92,6.38,0.0,15.96,0.178,0.254,0.0016,0.067,0.0005,0.31,-0.0004,0.597,-0.0003
+risk_only vs temp_0.8,cosine,ablation_risk_only,temp_0.8,150,488.01,429.62,58.39,38.42,77.99,0.0,0.0,-0.121,0.0,0.019,0.0,-0.0347,0.0,-0.0168
+risk_only vs nucleus_0.95,cosine,ablation_risk_only,nucleus_p0.95,150,488.01,416.14,71.87,51.18,93.49,0.0,0.0,-0.103,0.0,0.021,0.0,-0.0273,0.0,-0.0113
+risk_only vs typical_0.9,cosine,ablation_risk_only,typical_p0.9,50,488.01,401.4,79.6,46.65,119.94,0.0,0.0,-0.0816,0.0,0.0182,0.0,-0.0338,0.661,-0.0024
+risk_only vs mirostat_tau5,cosine,ablation_risk_only,mirostat_tau5,150,488.01,432.25,55.76,31.65,80.03,0.0,0.0,-0.3196,0.0,0.039,0.0,-0.0118,0.0,-0.0524
+risk_only vs rep_penalty_1.3,cosine,ablation_risk_only,rep_penalty_1.3,150,488.01,458.36,29.65,8.65,48.71,0.002,0.0,-0.3852,0.0,0.0512,0.967,-0.0001,0.0,-0.0469
+adaptive vs rep_penalty,cosine,adaptive_full,rep_penalty_1.3,150,482.3,458.36,23.94,3.49,43.37,0.015,0.0,-0.3931,0.0,0.0501,0.0,0.0087,0.0,-0.0477
+adaptive vs mirostat,cosine,adaptive_full,mirostat_tau5,150,482.3,432.25,50.05,25.89,74.6,0.0,0.0,-0.3275,0.0,0.0379,0.076,-0.003,0.0,-0.0532
+adaptive vs lz_decoder,cosine,adaptive_full,lz_decoder,150,482.3,384.23,98.07,75.89,121.43,0.0,0.0,0.0331,0.0,0.0058,0.0,-0.041,0.034,0.0051
+adaptive vs hard_no_repeat [leakage: hard bans measured event],cosine,adaptive_full,no_repeat_4gram,150,482.3,500.0,-17.7,-30.7,-7.11,0.004,0.0,-0.4749,0.0,0.0373,0.0,0.0414,0.0,-0.0694
+rep_penalty vs hard_no_repeat [leakage],cosine,rep_penalty_1.3,no_repeat_4gram,150,458.36,500.0,-41.64,-58.14,-25.73,0.0,0.0,-0.0819,0.0,-0.0128,0.0,0.0327,0.0,-0.0217
