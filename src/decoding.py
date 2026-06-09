@@ -1,7 +1,9 @@
 """
 src/decoding.py
 
-Decoding strategies for character-level LM:
+Recurrence-Risk Decoding for repetition-loop control, plus standard baselines.
+
+Strategies:
   - Greedy
   - Temperature sampling
   - Top-k filtering
@@ -10,41 +12,55 @@ Decoding strategies for character-level LM:
   - Repetition penalty                 [Keskar et al., 2019]
   - No-repeat n-gram blocking          [Paulus et al., 2018]  -- hard constraint
   - Mirostat v2                        [Basu et al., 2021]
-  - RecurrenceAwareDecoder             -- soft exponential penalty (novel)
-  - LZRepetitionDecoder                -- LZ77-style history-aware baseline
+  - LookBackDecoder (LZ77-style)       -- history-aware baseline
+  - RecurrenceRiskDecoder              -- soft exponential penalty (this work)
 
-Theoretical note on RecurrenceAwareDecoder:
-  The soft penalty can be derived as the solution to a minimum-distortion
-  recurrence-risk control problem:
+Theory (RecurrenceRiskDecoder):
+  The decoder is a KL projection of the model distribution p onto the set of
+  distributions whose expected recurrence risk is bounded:
 
       minimize  KL( q || p )
       subject to  E_q[ risk(v) ] <= epsilon
 
-  By Lagrangian duality the optimal q has the form:
+  By Lagrangian duality the optimal q has the closed form
+
       q(v)  proportional to  p(v) * exp( -lambda * risk(v) )
 
-  which is equivalent to subtracting (lambda * risk(v)) from the log-prob
-  before softmax — exactly what RecurrenceAwareDecoder does with alpha=lambda.
-  The hard no-repeat constraint is the limit as lambda -> infinity.
-  This gives the exponential penalty form a clean theoretical justification.
+  i.e. we subtract (lambda * risk(v)) from each logit before softmax.
+  This is "minimum-distortion": among all distributions meeting the risk
+  bound, q changes p as little as possible (in KL). Two limits:
+    * lambda -> 0     recovers the unmodified model distribution p
+    * lambda -> inf   recovers hard no-repeat-ngram (any risky token banned)
+  The method is softer than hard no-repeat and more local than repetition
+  penalty, which discounts a token everywhere in the history regardless of
+  whether a repeated n-gram is actually imminent.
+
+Implementation note on recurrence risk:
+  risk(v) is computed from an INCREMENTALLY MAINTAINED hash map from each
+  (n-1)-gram context to the set of tokens that have followed it. At every
+  step we (a) read the set for the current context in O(1) per n, and
+  (b) register the newly generated (n-1)-gram -> token edge. We never
+  rescan the full history. This matches the O(1)-amortised-per-step claim
+  in the paper. See RecurrenceRiskDecoder._register / _risk_scores.
 """
 
 import math
 import time
 import torch
 import torch.nn.functional as F
-from collections import Counter, deque
+from collections import Counter, deque, defaultdict
 
 
-def top_k_filtering(logits: torch.Tensor, k: int) -> torch.Tensor:
+def top_k_filtering(logits, k):
     if k <= 0:
         return logits
+    k = min(k, logits.shape[-1])   # clamp to vocab size
     v, _ = torch.topk(logits, k)
     thresh = v[..., -1, None]
     return torch.where(logits < thresh, torch.full_like(logits, float("-inf")), logits)
 
 
-def top_p_filtering(logits: torch.Tensor, p: float) -> torch.Tensor:
+def top_p_filtering(logits, p):
     if p >= 1.0:
         return logits
     sorted_logits, sorted_idx = torch.sort(logits, descending=True)
@@ -56,7 +72,7 @@ def top_p_filtering(logits: torch.Tensor, p: float) -> torch.Tensor:
     return torch.empty_like(sorted_logits).scatter(-1, sorted_idx, sorted_logits)
 
 
-def typical_filtering(logits: torch.Tensor, mass: float = 0.9) -> torch.Tensor:
+def typical_filtering(logits, mass=0.9):
     if mass >= 1.0:
         return logits
     probs        = torch.softmax(logits, dim=-1)
@@ -71,9 +87,11 @@ def typical_filtering(logits: torch.Tensor, mass: float = 0.9) -> torch.Tensor:
     return logits.masked_fill(orig_mask.bool(), float("-inf"))
 
 
-def repetition_penalty_filtering(
-    logits: torch.Tensor, generated_ids: list, penalty: float = 1.3
-) -> torch.Tensor:
+def repetition_penalty_filtering(logits, generated_ids, penalty=1.3):
+    """Global history-based penalty (Keskar et al., 2019).
+    Divides the logit of every previously generated token. This is a GLOBAL
+    penalty (scans set(generated_ids)), in contrast to the local
+    recurrence-risk penalty."""
     if penalty == 1.0 or not generated_ids:
         return logits
     for tid in set(generated_ids):
@@ -84,20 +102,21 @@ def repetition_penalty_filtering(
     return logits
 
 
-def no_repeat_ngram_filtering(
-    logits: torch.Tensor, generated_ids: list, n: int = 4
-) -> torch.Tensor:
+def no_repeat_ngram_filtering(logits, generated_ids, n=4, follower_map=None):
     """Hard constraint — bans tokens that would create a repeated n-gram.
-    This is the infinite-penalty limit of RecurrenceAwareDecoder.
-    Reported as a hard-constraint baseline only; it mechanically eliminates
-    the repetition metric it wins on."""
+    This is the infinite-penalty limit of RecurrenceRiskDecoder. Kept SEPARATE
+    in all analysis because it directly constrains the measured failure event.
+    If follower_map is given (context -> set of followers), uses O(1) lookup."""
     if n <= 0 or len(generated_ids) < n - 1:
         return logits
     context = tuple(generated_ids[-(n - 1):])
-    banned  = set()
-    for i in range(len(generated_ids) - (n - 1)):
-        if tuple(generated_ids[i : i + n - 1]) == context:
-            banned.add(generated_ids[i + n - 1])
+    if follower_map is not None:
+        banned = follower_map.get(context, None)
+    else:
+        banned = set()
+        for i in range(len(generated_ids) - (n - 1)):
+            if tuple(generated_ids[i : i + n - 1]) == context:
+                banned.add(generated_ids[i + n - 1])
     if banned:
         lc = logits.clone()
         for tid in banned:
@@ -108,12 +127,12 @@ def no_repeat_ngram_filtering(
 
 class MirostatSampler:
     """Mirostat v2 (Basu et al., 2021). Keeps surprise near tau bits."""
-    def __init__(self, tau: float = 3.0, eta: float = 0.1, vocab_size: int = 256):
+    def __init__(self, tau=3.0, eta=0.1, vocab_size=256):
         self.tau, self.eta = tau, eta
         self.mu = 2 * tau
         self.vocab_size = vocab_size
 
-    def sample(self, logits: torch.Tensor) -> int:
+    def sample(self, logits):
         sl, si = torch.sort(logits, descending=True)
         probs  = torch.softmax(sl, dim=-1)
         surp   = -torch.log2(probs + 1e-10)
@@ -128,35 +147,19 @@ class MirostatSampler:
         self.mu = 2 * self.tau
 
 
-class LZRepetitionDecoder:
+class LookBackDecoder:
     """
-    LZ77-style history-aware baseline decoder.
+    LZ77-style look-back baseline (history-aware).
 
-    At each step, finds the longest suffix of the current generated sequence
-    that matches anywhere in the history. The length of this match (normalised
-    by a reference length) gives a per-step repetition risk. Candidates that
-    would extend this match are penalised proportionally.
-
-    This is a principled look-back baseline: it penalises not individual
-    repeated n-grams (like no-repeat-ngram) but continuation of the longest
-    currently active repeated suffix — closer to how LZ77 compression detects
-    redundancy.
-
-    Parameters:
-        temperature   : sampling temperature
-        top_p         : nucleus filter after penalty
-        alpha         : penalty strength (logit units per unit match length)
-        max_history   : how many past tokens to search for matches
-        ref_len       : normalisation constant for match length (typ. n_chars/4)
+    Finds the longest suffix of the generated sequence that matches earlier
+    in the history, and penalises tokens that would extend that match.
+    This explicitly SCANS the history for the longest match (no hash table) --
+    cost O(history) per step, reported honestly in the runtime comparison.
+    It is the natural compression-style baseline against which the
+    recurrence-risk hash method is compared.
     """
-    def __init__(
-        self,
-        temperature : float = 0.8,
-        top_p       : float = 0.95,
-        alpha       : float = 3.0,
-        max_history : int   = 400,
-        ref_len     : int   = 20,
-    ):
+    def __init__(self, temperature=0.8, top_p=0.95, alpha=3.0,
+                 max_history=400, ref_len=20):
         self.temperature = temperature
         self.top_p       = top_p
         self.alpha       = alpha
@@ -166,12 +169,7 @@ class LZRepetitionDecoder:
     def reset(self):
         pass
 
-    def _longest_suffix_match(self, generated_ids: list) -> int:
-        """
-        Finds the longest suffix of generated_ids that also appears
-        earlier in generated_ids (within max_history tokens).
-        Returns the length of that suffix (0 if no match).
-        """
+    def _longest_suffix_match(self, generated_ids):
         n    = len(generated_ids)
         hist = generated_ids[max(0, n - self.max_history):]
         h    = len(hist)
@@ -185,7 +183,7 @@ class LZRepetitionDecoder:
                 best = max(best, length)
         return best
 
-    def step(self, logits: torch.Tensor, generated_ids: list) -> int:
+    def step(self, logits, generated_ids):
         if len(generated_ids) < 2:
             logits = logits / max(self.temperature, 1e-6)
             probs  = torch.softmax(top_p_filtering(logits.unsqueeze(0), self.top_p).squeeze(0), dim=-1)
@@ -213,35 +211,32 @@ class LZRepetitionDecoder:
         return int(torch.multinomial(probs, 1).item())
 
 
-class RecurrenceAwareDecoder:
+class RecurrenceRiskDecoder:
     """
-    Online recurrence-aware decoder with soft exponential penalty.
+    Recurrence-Risk Decoding (this work).
 
-    Derived from minimum-distortion recurrence-risk control:
-      q(v) proportional to p(v) * exp(-alpha * risk(v))
+    KL projection of p onto {q : E_q[risk(v)] <= eps}, giving
+        q(v)  proportional to  p(v) * exp(-alpha * risk(v))
+    where
+        risk(v) = (1/N) * sum_{n=n_min}^{n_max}
+                  1[ token v has followed the current (n-1)-gram context before ]
 
-    where risk(v) = fraction of n-gram sizes in {n_min..n_max} for which
-    appending v creates a repeated suffix. alpha adapts online:
-      alpha_t = alpha_base
-                + lambda_rep * max(0, rep_rate_window - rep_target)
-                - lambda_ent * max(0, entropy_window  - ent_target)
+    risk(v) is read from an incrementally maintained hash map
+    (context -> set of follower tokens), one map per n. After each token is
+    emitted we register the new edge. No full-history rescan, so per-step
+    cost is O(N) hash ops plus O(#risky) logit writes.
 
-    Hard no-repeat-ngram is the limit as alpha -> infinity.
+    Modes:
+      * adaptive=True  (main configuration): alpha adapts online from recent
+        repetition rate and entropy.
+      * adaptive=False (risk-only ablation): alpha fixed at alpha_base; this
+        isolates the recurrence-risk signal.
+
+    Hard no-repeat-ngram is the limit alpha -> infinity.
     """
-    def __init__(
-        self,
-        temperature : float = 0.8,
-        top_p       : float = 0.95,
-        n_min       : int   = 3,
-        n_max       : int   = 6,
-        alpha_base  : float = 2.0,
-        alpha_max   : float = 8.0,
-        lambda_rep  : float = 10.0,
-        lambda_ent  : float = 1.0,
-        rep_target  : float = 0.05,
-        ent_target  : float = 3.5,
-        window      : int   = 100,
-    ):
+    def __init__(self, temperature=0.8, top_p=0.95, n_min=3, n_max=6,
+                 alpha_base=2.0, alpha_max=8.0, lambda_rep=10.0, lambda_ent=1.0,
+                 rep_target=0.05, ent_target=3.5, window=100, adaptive=True):
         self.temperature = temperature
         self.top_p       = top_p
         self.n_min       = n_min
@@ -254,14 +249,35 @@ class RecurrenceAwareDecoder:
         self.rep_target  = rep_target
         self.ent_target  = ent_target
         self.window      = window
-        self._recent: deque = deque(maxlen=window)
-        self.alpha_history: list = []
+        self.adaptive    = adaptive
+        self._recent     = deque(maxlen=window)
+        self._all_ids    = []
+        self._followers  = {n: defaultdict(set) for n in range(n_min, n_max + 1)}
+        self.alpha_history = []
 
     def reset(self):
         self._recent.clear()
-        self.alpha_history.clear()
+        self._all_ids = []
+        self._followers = {n: defaultdict(set) for n in range(self.n_min, self.n_max + 1)}
+        self.alpha_history = []
 
-    def _rep_rate(self) -> float:
+    def prime(self, prompt_ids):
+        """Register the prompt's n-gram edges so risk is correct from step 1."""
+        for tid in prompt_ids:
+            self._register(tid)
+
+    def _register(self, token):
+        """Add n-gram edges ending at the newly appended token, O(N)."""
+        self._all_ids.append(token)
+        L = len(self._all_ids)
+        for n in range(self.n_min, self.n_max + 1):
+            if L >= n:
+                context  = tuple(self._all_ids[L - n : L - 1])
+                follower = self._all_ids[L - 1]
+                self._followers[n][context].add(follower)
+        self._recent.append(token)
+
+    def _rep_rate(self):
         seq = list(self._recent)
         if len(seq) < 5:
             return 0.0
@@ -269,73 +285,70 @@ class RecurrenceAwareDecoder:
         c = Counter(grams)
         return sum(v-1 for v in c.values() if v > 1) / len(grams)
 
-    def _entropy(self) -> float:
+    def _entropy(self):
         seq = list(self._recent)
         if not seq:
             return 0.0
         c = Counter(seq); t = len(seq)
         return -sum((v/t)*math.log2(v/t) for v in c.values())
 
-    def _current_alpha(self) -> float:
+    def _current_alpha(self):
+        if not self.adaptive:
+            return self.alpha_base
         alpha = (self.alpha_base
                  + self.lambda_rep * max(0.0, self._rep_rate() - self.rep_target)
                  - self.lambda_ent * max(0.0, self._entropy() - self.ent_target))
         return float(max(0.0, min(self.alpha_max, alpha)))
 
-    def _risk_scores(self, generated_ids: list, vocab_size: int) -> torch.Tensor:
+    def _risk_scores(self, vocab_size):
+        """O(N) hash lookups using incrementally maintained follower maps."""
         risk = torch.zeros(vocab_size)
-        if len(generated_ids) < self.n_min:
+        L = len(self._all_ids)
+        if L < self.n_min - 1:
             return risk
         for n in range(self.n_min, self.n_max + 1):
-            if len(generated_ids) < n - 1:
+            if L < n - 1:
                 continue
-            context    = tuple(generated_ids[-(n - 1):])
-            seen_after = set()
-            for i in range(len(generated_ids) - (n - 1)):
-                if tuple(generated_ids[i : i + n - 1]) == context:
-                    seen_after.add(generated_ids[i + n - 1])
-            for tid in seen_after:
-                risk[tid] += 1.0 / self.n_sizes
+            context   = tuple(self._all_ids[L - (n - 1):])
+            followers = self._followers[n].get(context)
+            if followers:
+                inc = 1.0 / self.n_sizes
+                for tid in followers:
+                    risk[tid] += inc
         return risk
 
-    def step(self, logits: torch.Tensor, generated_ids: list) -> int:
+    def step(self, logits, generated_ids=None):
         vocab_size = logits.shape[-1]
         alpha      = self._current_alpha()
         self.alpha_history.append(alpha)
-        risk   = self._risk_scores(generated_ids, vocab_size).to(logits.device)
+
+        risk   = self._risk_scores(vocab_size).to(logits.device)
         logits = logits - alpha * risk
         logits = logits / max(self.temperature, 1e-6)
         logits = top_p_filtering(logits.unsqueeze(0), self.top_p).squeeze(0)
         probs  = torch.softmax(logits, dim=-1)
         token  = int(torch.multinomial(probs, 1).item())
-        self._recent.append(token)
+
+        self._register(token)
         return token
 
 
+# Backwards-compatible aliases
+RecurrenceAwareDecoder = RecurrenceRiskDecoder
+LZRepetitionDecoder    = LookBackDecoder
+
+
 @torch.no_grad()
-def generate(
-    model,
-    idx,
-    max_new_tokens  : int,
-    temperature     : float = 1.0,
-    top_k           : int   = 0,
-    top_p           : float = 1.0,
-    typical_p       : float = 1.0,
-    rep_penalty     : float = 1.0,
-    no_repeat_ngram : int   = 0,
-    mirostat_tau    : float = 0.0,
-    mirostat_eta    : float = 0.1,
-    adaptive        = None,
-    lz_decoder      = None,
-    measure_time    : bool  = False,
-) -> tuple:
+def generate(model, idx, max_new_tokens, temperature=1.0, top_k=0, top_p=1.0,
+             typical_p=1.0, rep_penalty=1.0, no_repeat_ngram=0,
+             mirostat_tau=0.0, mirostat_eta=0.1, adaptive=None,
+             lz_decoder=None, measure_time=False):
     """
     Unified autoregressive generation.
-
-    Returns (token_tensor, chars_per_sec) where chars_per_sec is None
-    unless measure_time=True.
-
-    Priority: adaptive > lz_decoder > mirostat > greedy > stochastic.
+    Returns (token_tensor, chars_per_sec). chars_per_sec is None unless
+    measure_time=True. Priority: adaptive > lz_decoder > mirostat > greedy >
+    stochastic. The stochastic no_repeat_ngram path uses an incrementally
+    maintained follower map (O(1) per step).
     """
     model.eval()
     device = next(model.parameters()).device
@@ -351,8 +364,17 @@ def generate(
 
     if adaptive is not None:
         adaptive.reset()
+        adaptive.prime(generated_ids)
     if lz_decoder is not None:
         lz_decoder.reset()
+
+    nr_followers = None
+    if no_repeat_ngram > 0 and adaptive is None and lz_decoder is None and mirostat is None:
+        nr_followers = defaultdict(set)
+        ids = generated_ids
+        for i in range(len(ids) - (no_repeat_ngram - 1)):
+            ctx = tuple(ids[i : i + no_repeat_ngram - 1])
+            nr_followers[ctx].add(ids[i + no_repeat_ngram - 1])
 
     t0 = time.perf_counter() if measure_time else None
 
@@ -392,14 +414,19 @@ def generate(
         if rep_penalty != 1.0 and B == 1:
             logits[0] = repetition_penalty_filtering(logits[0], generated_ids, rep_penalty)
         if no_repeat_ngram > 0 and B == 1:
-            logits[0] = no_repeat_ngram_filtering(logits[0], generated_ids, no_repeat_ngram)
+            logits[0] = no_repeat_ngram_filtering(
+                logits[0], generated_ids, no_repeat_ngram, follower_map=nr_followers)
         logits  = top_k_filtering(logits, top_k)
         logits  = top_p_filtering(logits, top_p)
         logits  = typical_filtering(logits, typical_p)
         probs   = torch.softmax(logits, dim=-1)
         next_id = torch.multinomial(probs, num_samples=1)
+        tid = int(next_id[0, 0].item())
         if B == 1:
-            generated_ids.append(int(next_id[0, 0].item()))
+            generated_ids.append(tid)
+            if nr_followers is not None and len(generated_ids) >= no_repeat_ngram:
+                ctx = tuple(generated_ids[-no_repeat_ngram:-1])
+                nr_followers[ctx].add(generated_ids[-1])
         idx = torch.cat([idx, next_id], dim=1)
 
     cps = None
