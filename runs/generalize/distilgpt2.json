@@ -1,0 +1,98 @@
+{
+  "model": "distilgpt2",
+  "n_seeds": 5,
+  "n_tokens": 200,
+  "results": {
+    "greedy": {
+      "loop_rate_tok3": 1.0,
+      "survival_auc_tok3": 0.0625,
+      "loop_rate_char20": 1.0,
+      "survival_auc_char20": 0.4037,
+      "rep_rate_tok3": 0.8984,
+      "distinct_3": 0.1016,
+      "compression": 0.1121,
+      "mc_nll_nats": 0.3271,
+      "chars_per_sec": 135.6,
+      "n_samples": 40,
+      "category": "baseline"
+    },
+    "temp_0.9": {
+      "loop_rate_tok3": 1.0,
+      "survival_auc_tok3": 0.3087,
+      "loop_rate_char20": 0.55,
+      "survival_auc_char20": 1.9538,
+      "rep_rate_tok3": 0.0855,
+      "distinct_3": 0.9145,
+      "compression": 0.5548,
+      "mc_nll_nats": 2.9021,
+      "chars_per_sec": 126.6,
+      "n_samples": 40,
+      "category": "baseline"
+    },
+    "nucleus_p0.95": {
+      "loop_rate_tok3": 0.825,
+      "survival_auc_tok3": 0.4339,
+      "loop_rate_char20": 0.35,
+      "survival_auc_char20": 1.3462,
+      "rep_rate_tok3": 0.0939,
+      "distinct_3": 0.9061,
+      "compression": 0.5459,
+      "mc_nll_nats": 2.9791,
+      "chars_per_sec": 118.9,
+      "n_samples": 40,
+      "category": "baseline"
+    },
+    "rep_penalty_1.3": {
+      "loop_rate_tok3": 0.0,
+      "survival_auc_tok3": 1.0,
+      "loop_rate_char20": 0.0,
+      "survival_auc_char20": 1.0,
+      "rep_rate_tok3": 0.0,
+      "distinct_3": 1.0,
+      "compression": 0.6274,
+      "mc_nll_nats": 4.7252,
+      "chars_per_sec": 31.5,
+      "n_samples": 40,
+      "category": "baseline"
+    },
+    "no_repeat_3gram": {
+      "loop_rate_tok3": 0.0,
+      "survival_auc_tok3": 1.0,
+      "loop_rate_char20": 0.1,
+      "survival_auc_char20": 1.0959,
+      "rep_rate_tok3": 0.0,
+      "distinct_3": 1.0,
+      "compression": 0.5713,
+      "mc_nll_nats": 3.1154,
+      "chars_per_sec": 118.8,
+      "n_samples": 40,
+      "category": "hard_constraint"
+    },
+    "risk_only": {
+      "loop_rate_tok3": 0.75,
+      "survival_auc_tok3": 0.5194,
+      "loop_rate_char20": 0.1,
+      "survival_auc_char20": 1.1006,
+      "rep_rate_tok3": 0.0144,
+      "distinct_3": 0.9856,
+      "compression": 0.5702,
+      "mc_nll_nats": 2.6763,
+      "chars_per_sec": 114.5,
+      "n_samples": 40,
+      "category": "recurrence_risk"
+    },
+    "adaptive": {
+      "loop_rate_tok3": 0.875,
+      "survival_auc_tok3": 0.4686,
+      "loop_rate_char20": 0.275,
+      "survival_auc_char20": 1.4416,
+      "rep_rate_tok3": 0.0192,
+      "distinct_3": 0.9808,
+      "compression": 0.5643,
+      "mc_nll_nats": 2.6921,
+      "chars_per_sec": 115.4,
+      "n_samples": 40,
+      "category": "recurrence_risk"
+    }
+  }
+}
