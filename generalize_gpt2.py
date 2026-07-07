@@ -232,15 +232,24 @@ def compression_ratio(text):
     return len(zlib.compress(raw, 9))/max(1, len(raw))
 
 @torch.no_grad()
-def mc_nll(model, ids, device):
-    """Model-consistency NLL in nats/token under the same model."""
-    if len(ids) < 2: return float("nan")
-    x = torch.tensor([ids[:-1]], device=device)
-    y = torch.tensor([ids[1:]], device=device)
+def mc_nll_bits(model, full_ids, prompt_len, device):
+    """
+    Model-consistency NLL in BITS per token, scored on the GENERATED tokens
+    only (positions >= prompt_len). The prompt provides context but its tokens
+    are not counted, so the value reflects the continuation the decoder
+    produced, not the fixed prompt.
+    """
+    if len(full_ids) < prompt_len + 2:
+        return float("nan")
+    x = torch.tensor([full_ids[:-1]], device=device)
+    y = torch.tensor([full_ids[1:]], device=device)
     out = model(x)
     lp = F.log_softmax(out.logits, dim=-1)
-    nll = -lp.gather(2, y.unsqueeze(-1)).squeeze(-1).mean().item()
-    return nll
+    tok_nll = -lp.gather(2, y.unsqueeze(-1)).squeeze(-1)[0]    # nats per position
+    gen_nll = tok_nll[prompt_len - 1:]                        # generated only
+    if gen_nll.numel() == 0:
+        return float("nan")
+    return float(gen_nll.mean().item() / math.log(2))          # nats -> bits
 
 
 def survival_auc(onsets, max_t):
@@ -297,36 +306,46 @@ def main():
     tok = AutoTokenizer.from_pretrained(args.model)
     model = AutoModelForCausalLM.from_pretrained(args.model).to(device).eval()
 
-    max_t = args.n_tokens
+    max_t_tok = args.n_tokens
     results = {}
 
     def run(name, genfn):
         ot, oc = [], []
         rr, dn, comp, nll = [], [], [], []
+        gen_char_lens = []
         cps_v = None
         for p in PROMPTS:
             enc = tok(p, return_tensors="pt").input_ids
+            prompt_len = enc.shape[1]
             for seed in range(1, args.n_seeds+1):
                 torch.manual_seed(seed); np.random.seed(seed)
                 ids, cps = genfn(enc)
                 cps_v = cps
-                gen = ids[enc.shape[1]:]
+                gen = ids[prompt_len:]
                 text = tok.decode(gen)
+                gen_char_lens.append(len(text))
                 ot.append(loop_onset_tokens(gen, 3))
                 oc.append(loop_onset_chars(text, 20))
                 rr.append(rep_rate_tokens(gen, 3))
                 dn.append(distinct_n(gen, 3))
                 comp.append(compression_ratio(text))
-                nll.append(mc_nll(model, ids, device))
+                nll.append(mc_nll_bits(model, ids, prompt_len, device))
+        # Character horizon: shortest generated character length, the common
+        # window every sample reaches. Any loop onsetting beyond it is censored.
+        # (Fixes SAUC>1: char onsets were previously normalised by the TOKEN
+        #  horizon, ~4x smaller than the character lengths.)
+        max_t_char = int(min(gen_char_lens)) if gen_char_lens else (max_t_tok * 4)
+        oc_censored = [o if (0 <= o < max_t_char) else -1 for o in oc]
         return {
             "loop_rate_tok3": loop_rate(ot),
-            "survival_auc_tok3": survival_auc(ot, max_t),
-            "loop_rate_char20": loop_rate(oc),
-            "survival_auc_char20": survival_auc(oc, max_t),
+            "survival_auc_tok3": survival_auc(ot, max_t_tok),
+            "loop_rate_char20": loop_rate(oc_censored),
+            "survival_auc_char20": survival_auc(oc_censored, max_t_char),
+            "char_horizon": max_t_char,
             "rep_rate_tok3": round(float(np.mean(rr)), 4),
             "distinct_3": round(float(np.mean(dn)), 4),
             "compression": round(float(np.mean(comp)), 4),
-            "mc_nll_nats": round(float(np.nanmean(nll)), 4),
+            "mc_nll_bits_gen": round(float(np.nanmean(nll)), 4),
             "chars_per_sec": round(cps_v, 1) if cps_v else None,
             "n_samples": len(ot),
         }
@@ -337,7 +356,7 @@ def main():
         r["category"] = "hard_constraint" if "no_repeat" in name else "baseline"
         results[name] = r
         print(f"  loop_tok={r['loop_rate_tok3']:.2f}  SAUC={r['survival_auc_tok3']:.3f}  "
-              f"rep={r['rep_rate_tok3']:.3f}  mcnll={r['mc_nll_nats']:.3f}")
+              f"rep={r['rep_rate_tok3']:.3f}  mcnll={r['mc_nll_bits_gen']:.3f}")
 
     for name, adaptive in [("risk_only", False), ("adaptive", True)]:
         print(f"  {name:<20}", end="", flush=True)
@@ -345,7 +364,7 @@ def main():
         r["category"] = "recurrence_risk"
         results[name] = r
         print(f"  loop_tok={r['loop_rate_tok3']:.2f}  SAUC={r['survival_auc_tok3']:.3f}  "
-              f"rep={r['rep_rate_tok3']:.3f}  mcnll={r['mc_nll_nats']:.3f}")
+              f"rep={r['rep_rate_tok3']:.3f}  mcnll={r['mc_nll_bits_gen']:.3f}")
 
     os.makedirs(os.path.dirname(args.out) or ".", exist_ok=True)
     with open(args.out, "w") as f:
@@ -358,3 +377,5 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+    

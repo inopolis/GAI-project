@@ -106,33 +106,47 @@ def build_configs():
         add(f"no_repeat_{n}gram", "hard_constraint", key=(n == 4),
             temperature=0.8, no_repeat_ngram=n)
 
-    # recurrence-risk: risk-only (fixed alpha) — isolates the signal
+    # recurrence-risk: risk-only — fixed penalty, isolates the risk signal
     add("risk_only", "recurrence_risk", key=True,
         risk=dict(temperature=0.8, top_p=0.95, n_min=3, n_max=6,
-                  alpha_base=2.0, adaptive=False))
+                  alpha_base=2.0, adaptive=False, use_risk=True))
 
-    # recurrence-risk: adaptive — main configuration
+    # recurrence-risk: adaptive — main configuration (alpha adapts online)
     add("adaptive", "recurrence_risk", key=True,
         risk=dict(temperature=0.8, top_p=0.95, n_min=3, n_max=6,
                   alpha_base=2.0, alpha_max=8.0, lambda_rep=10.0, lambda_ent=1.0,
-                  rep_target=0.05, ent_target=3.5, window=100, adaptive=True))
+                  rep_target=0.05, ent_target=3.5, window=100,
+                  adaptive=True, use_risk=True))
 
-    # ablations of the recurrence-risk decoder
-    add("rr_fixed_alpha", "ablation",
-        risk=dict(temperature=0.8, top_p=0.95, n_min=3, n_max=6,
-                  alpha_base=2.0, adaptive=False))
+    # Ablations. Each removes exactly one component relative to a reference.
+    #
+    # entropy-only (NO RISK): removes the recurrence-risk signal entirely and
+    # controls repetition only by raising temperature when entropy drops. This
+    # is the genuine no-risk baseline (fixes the earlier bug where the entropy
+    # variant still subtracted alpha*risk).
     add("rr_entropy_only", "ablation",
         risk=dict(temperature=0.8, top_p=0.95, n_min=3, n_max=6,
-                  alpha_base=2.0, lambda_rep=0.0, lambda_ent=1.0, adaptive=True))
+                  use_risk=False, entropy_temp=True,
+                  ent_target=3.5, temp_gain=0.6, temp_max=1.6, window=100))
+
+    # no top-p: adaptive risk but without the nucleus filter after the penalty.
     add("rr_no_top_p", "ablation",
         risk=dict(temperature=0.8, top_p=1.0, n_min=3, n_max=6,
-                  alpha_base=2.0, adaptive=True))
+                  alpha_base=2.0, alpha_max=8.0, lambda_rep=10.0, lambda_ent=1.0,
+                  rep_target=0.05, ent_target=3.5, window=100,
+                  adaptive=True, use_risk=True))
+
+    # narrow / wide n-gram band: adaptive risk with a different risk band.
     add("rr_narrow_ngram", "ablation",
         risk=dict(temperature=0.8, top_p=0.95, n_min=3, n_max=4,
-                  alpha_base=2.0, adaptive=True))
+                  alpha_base=2.0, alpha_max=8.0, lambda_rep=10.0, lambda_ent=1.0,
+                  rep_target=0.05, ent_target=3.5, window=100,
+                  adaptive=True, use_risk=True))
     add("rr_wide_ngram", "ablation",
         risk=dict(temperature=0.8, top_p=0.95, n_min=2, n_max=8,
-                  alpha_base=2.0, adaptive=True))
+                  alpha_base=2.0, alpha_max=8.0, lambda_rep=10.0, lambda_ent=1.0,
+                  rep_target=0.05, ent_target=3.5, window=100,
+                  adaptive=True, use_risk=True))
     return C
 
 

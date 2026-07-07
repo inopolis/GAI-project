@@ -169,19 +169,35 @@ class LookBackDecoder:
     def reset(self):
         pass
 
-    def _longest_suffix_match(self, generated_ids):
-        n    = len(generated_ids)
-        hist = generated_ids[max(0, n - self.max_history):]
-        h    = len(hist)
-        best = 0
-        for start in range(h - 1):
-            length = 0
-            while (start + length < h - 1 and
-                   length < h - start - 1 and
-                   hist[start + length] == hist[h - 1 - length]):
-                length += 1
-                best = max(best, length)
-        return best
+    def _longest_suffix_match(self, hist):
+        """
+        Length of the longest suffix of `hist` that also occurs, in the SAME
+        left-to-right orientation, ending at some earlier position. Returns
+        (match_len, followers), where followers are the tokens that appeared
+        immediately AFTER each earlier occurrence of that suffix.
+
+        Fixed: the previous version compared the forward window
+        hist[start+k] against the reversed suffix hist[h-1-k], which matched a
+        mirror image of the suffix rather than the suffix itself.
+        """
+        h = len(hist)
+        if h < 2:
+            return 0, set()
+        best_len, followers = 0, set()
+        # For each earlier end position e (< h-1), measure how many trailing
+        # tokens ending at e match the trailing tokens ending at h-1.
+        for e in range(h - 2, -1, -1):
+            k = 0
+            while (k <= e and k < h - 1 and
+                   hist[e - k] == hist[h - 1 - k]):
+                k += 1
+            if k > best_len:
+                best_len = k
+                followers = set()
+            if k == best_len and k > 0 and e + 1 < h:
+                # token that followed this earlier occurrence of the suffix
+                followers.add(hist[e + 1])
+        return best_len, followers
 
     def step(self, logits, generated_ids):
         if len(generated_ids) < 2:
@@ -189,21 +205,14 @@ class LookBackDecoder:
             probs  = torch.softmax(top_p_filtering(logits.unsqueeze(0), self.top_p).squeeze(0), dim=-1)
             return int(torch.multinomial(probs, 1).item())
 
-        match_len = self._longest_suffix_match(generated_ids)
-        if match_len > 0:
-            hist    = generated_ids[max(0, len(generated_ids) - self.max_history):]
-            h       = len(hist)
+        hist = generated_ids[max(0, len(generated_ids) - self.max_history):]
+        match_len, risky = self._longest_suffix_match(hist)
+        if match_len > 0 and risky:
             penalty = self.alpha * match_len / self.ref_len
-            suffix  = tuple(hist[h - match_len:])
-            risky   = set()
-            for i in range(h - match_len):
-                if tuple(hist[i : i + match_len]) == suffix and i + match_len < h:
-                    risky.add(hist[i + match_len])
-            if risky:
-                lc = logits.clone()
-                for tid in risky:
-                    lc[tid] -= penalty
-                logits = lc
+            lc = logits.clone()
+            for tid in risky:
+                lc[tid] -= penalty
+            logits = lc
 
         logits = logits / max(self.temperature, 1e-6)
         logits = top_p_filtering(logits.unsqueeze(0), self.top_p).squeeze(0)
@@ -226,17 +235,26 @@ class RecurrenceRiskDecoder:
     emitted we register the new edge. No full-history rescan, so per-step
     cost is O(N) hash ops plus O(#risky) logit writes.
 
-    Modes:
-      * adaptive=True  (main configuration): alpha adapts online from recent
-        repetition rate and entropy.
-      * adaptive=False (risk-only ablation): alpha fixed at alpha_base; this
-        isolates the recurrence-risk signal.
+    Configurations (set by flags, so ablations are genuinely distinct):
+      * use_risk=True,  adaptive=False  -> RISK-ONLY: fixed penalty alpha_base
+        on the recurrence-risk signal. Isolates the risk mechanism.
+      * use_risk=True,  adaptive=True   -> ADAPTIVE (main): alpha adapts online
+        from recent repetition rate and entropy.
+      * use_risk=False, entropy_temp=True -> ENTROPY-ONLY (no risk): applies NO
+        recurrence-risk penalty; instead raises sampling temperature when recent
+        entropy falls. The genuine no-risk repetition-control baseline.
 
-    Hard no-repeat-ngram is the limit alpha -> infinity.
+    Note: a "fixed-alpha" variant with adaptive=True but lambda_rep=lambda_ent=0
+    is mathematically identical to risk-only (adaptive=False), so it is not used
+    as a separate ablation. The meaningful contrast is risk-only vs adaptive.
+
+    Hard no-repeat-ngram is the limit alpha -> infinity of the risk penalty.
     """
     def __init__(self, temperature=0.8, top_p=0.95, n_min=3, n_max=6,
                  alpha_base=2.0, alpha_max=8.0, lambda_rep=10.0, lambda_ent=1.0,
-                 rep_target=0.05, ent_target=3.5, window=100, adaptive=True):
+                 rep_target=0.05, ent_target=3.5, window=100, adaptive=True,
+                 use_risk=True, entropy_temp=False,
+                 temp_gain=0.6, temp_max=1.6):
         self.temperature = temperature
         self.top_p       = top_p
         self.n_min       = n_min
@@ -250,6 +268,10 @@ class RecurrenceRiskDecoder:
         self.ent_target  = ent_target
         self.window      = window
         self.adaptive    = adaptive
+        self.use_risk    = use_risk
+        self.entropy_temp= entropy_temp
+        self.temp_gain   = temp_gain
+        self.temp_max    = temp_max
         self._recent     = deque(maxlen=window)
         self._all_ids    = []
         self._followers  = {n: defaultdict(set) for n in range(n_min, n_max + 1)}
@@ -317,8 +339,30 @@ class RecurrenceRiskDecoder:
                     risk[tid] += inc
         return risk
 
+    def _current_temperature(self):
+        """Entropy-only mode: raise temperature when recent entropy is low."""
+        if not self.entropy_temp:
+            return self.temperature
+        ent = self._entropy()
+        bump = self.temp_gain * max(0.0, self.ent_target - ent)
+        return float(min(self.temp_max, self.temperature + bump))
+
     def step(self, logits, generated_ids=None):
         vocab_size = logits.shape[-1]
+
+        if not self.use_risk:
+            # Entropy-only ablation: NO recurrence-risk penalty at all.
+            # Repetition is controlled purely by raising temperature when the
+            # recent entropy drops. This isolates "no risk signal".
+            self.alpha_history.append(0.0)
+            temperature = self._current_temperature()
+            logits = logits / max(temperature, 1e-6)
+            logits = top_p_filtering(logits.unsqueeze(0), self.top_p).squeeze(0)
+            probs  = torch.softmax(logits, dim=-1)
+            token  = int(torch.multinomial(probs, 1).item())
+            self._register(token)
+            return token
+
         alpha      = self._current_alpha()
         self.alpha_history.append(alpha)
 
