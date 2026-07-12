@@ -1,0 +1,7 @@
+strategy,category,checkpoint,hard_constraint,survival_auc_ngram10,rmst_ngram10,loop_rate_ngram10,mc_nll_bpc,ngram_sim_4,spelling_error,compression,longest_rep_sub,chars_per_sec
+rep_penalty_1.5,sweep_reppen,baseline,False,0.9654,482.7,0.16,1.9953,0.1899,0.1453,0.695,7.6533,
+lookback_a5.0,sweep_lookback,baseline,False,0.9412,470.6,0.1067,1.3331,0.273,0.0568,0.6209,8.0333,
+rr_entropy_only,ablation,baseline,False,0.6542,327.1,0.7067,1.3047,0.2672,0.0551,0.5851,11.68,
+rep_penalty_1.5,sweep_reppen,cosine,False,0.9706,485.3,0.0933,1.9645,0.1924,0.1433,0.6889,7.48,
+lookback_a5.0,sweep_lookback,cosine,False,0.9519,475.95,0.12,1.3085,0.2707,0.0587,0.6171,7.74,
+rr_entropy_only,ablation,cosine,False,0.6931,346.55,0.66,1.2801,0.262,0.0573,0.5861,11.1333,

@@ -89,7 +89,8 @@ def build_configs():
 
     # repetition penalty sweep
     for r in (1.1, 1.3, 1.5):
-        add(f"rep_penalty_{r}", "sweep_reppen", key=(abs(r-1.3) < 1e-9),
+        # 1.3 and 1.5 are both Pareto-relevant -> full sample budget
+        add(f"rep_penalty_{r}", "sweep_reppen", key=(abs(r-1.3) < 1e-9 or abs(r-1.5) < 1e-9),
             temperature=0.8, rep_penalty=r)
 
     # mirostat sweep
@@ -98,7 +99,8 @@ def build_configs():
 
     # look-back sweep (alpha)
     for a in (2.0, 3.0, 5.0):
-        add(f"lookback_a{a}", "sweep_lookback", key=(abs(a-3.0) < 1e-9),
+        # alpha=3 and alpha=5 are both Pareto-relevant -> full sample budget
+        add(f"lookback_a{a}", "sweep_lookback", key=(abs(a-3.0) < 1e-9 or abs(a-5.0) < 1e-9),
             lookback=dict(temperature=0.8, top_p=0.95, alpha=a, max_history=400, ref_len=20))
 
     # hard no-repeat — kept separate (directly forbids the measured event)
@@ -124,7 +126,7 @@ def build_configs():
     # controls repetition only by raising temperature when entropy drops. This
     # is the genuine no-risk baseline (fixes the earlier bug where the entropy
     # variant still subtracted alpha*risk).
-    add("rr_entropy_only", "ablation",
+    add("rr_entropy_only", "ablation", key=True,
         risk=dict(temperature=0.8, top_p=0.95, n_min=3, n_max=6,
                   use_risk=False, entropy_temp=True,
                   ent_target=3.5, temp_gain=0.6, temp_max=1.6, window=100))
@@ -429,7 +431,7 @@ SCALARS = ["ttr", "entropy_4gram", "rep_rate_5",
 
 
 def eval_checkpoint(ckpt_path, data_dir, n_chars, n_seeds, device, out_dir,
-                    measure_runtime_for):
+                    measure_runtime_for, only=None):
     model, cfg = load_model(ckpt_path, device)
     vocab = load_json(os.path.join(data_dir, "vocab.json"))
     stoi, itos = vocab["stoi"], vocab["itos"]
@@ -445,7 +447,8 @@ def eval_checkpoint(ckpt_path, data_dir, n_chars, n_seeds, device, out_dir,
     samples_f = open(os.path.join(out_dir, f"samples_{name}.txt"), "w", encoding="utf-8")
 
     rows = []
-    for c in CONFIGS:
+    configs = CONFIGS if not only else [c for c in CONFIGS if c["name"] in set(only)]
+    for c in configs:
         prompts = PROMPTS if c["key"] else PROMPTS[:5]
         print(f"    {c['name']:<22} ({len(prompts)*n_seeds:>3} samples)", end="", flush=True)
 
@@ -646,6 +649,9 @@ def main():
     ap.add_argument("--out_dir", default="runs/sampling_eval_v6")
     ap.add_argument("--n_chars", type=int, default=500)
     ap.add_argument("--n_seeds", type=int, default=10)
+    ap.add_argument("--only", nargs="*", default=None,
+                    help="Run only these strategy names (e.g. --only rep_penalty_1.5 lookback_a5.0). "
+                         "Useful for topping up a config to the full sample budget.")
     args = ap.parse_args()
 
     ensure_dir(args.out_dir)
@@ -667,13 +673,17 @@ def main():
     for ckpt in args.ckpt:
         name = os.path.basename(os.path.dirname(ckpt))
         rows, max_t = eval_checkpoint(ckpt, args.data_dir, args.n_chars,
-                                      args.n_seeds, device, args.out_dir, runtime_for)
+                                      args.n_seeds, device, args.out_dir, runtime_for,
+                                      only=args.only)
         all_results[name] = rows
 
     write_pareto(all_results, args.out_dir)
     write_loop_robustness(all_results, args.out_dir)
     write_survival_curves(all_results, args.out_dir, max_t)
-    if len(all_results) >= 1:
+    if args.only:
+        print("\n  --only mode: skipping method_vs_method (needs the full config set).")
+        print("  Merge these rows into the full run's CSVs, then recompute comparisons.")
+    else:
         write_method_vs_method(all_results, args.out_dir, max_t)
 
     # Full JSON (drop per-sample arrays to keep size reasonable, keep onsets)
