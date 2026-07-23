@@ -15,25 +15,51 @@ Strategies:
   - LookBackDecoder (LZ77-style)       -- history-aware baseline
   - RecurrenceRiskDecoder              -- soft exponential penalty (this work)
 
-Theory (RecurrenceRiskDecoder):
-  The decoder is a KL projection of the model distribution p onto the set of
-  distributions whose expected recurrence risk is bounded:
+Theory (RecurrenceRiskDecoder) -- stated precisely:
 
-      minimize  KL( q || p )
-      subject to  E_q[ risk(v) ] <= epsilon
+  Let p be the model next-token distribution and define the recurrence risk
+  risk(v) in [0,1]. Consider the risk-bounded projection
 
-  By Lagrangian duality the optimal q has the closed form
+      minimize  KL(q || p)   subject to   E_q[risk] <= eps,  q in simplex.      (P)
 
-      q(v)  proportional to  p(v) * exp( -lambda * risk(v) )
+  This is convex. By Lagrangian duality its solution has the exponential form
 
-  i.e. we subtract (lambda * risk(v)) from each logit before softmax.
-  This is "minimum-distortion": among all distributions meeting the risk
-  bound, q changes p as little as possible (in KL). Two limits:
-    * lambda -> 0     recovers the unmodified model distribution p
-    * lambda -> inf   recovers hard no-repeat-ngram (any risky token banned)
-  The method is softer than hard no-repeat and more local than repetition
-  penalty, which discounts a token everywhere in the history regardless of
-  whether a repeated n-gram is actually imminent.
+      q_lambda(v)  proportional to  p(v) * exp(-lambda * risk(v)),              (F)
+
+  but (F) solves (P) ONLY when lambda is the optimal dual variable, i.e. the
+  lambda >= 0 satisfying complementary slackness:
+        E_{q_lambda}[risk] = eps      (if the constraint is active), or
+        lambda = 0                    (if E_p[risk] <= eps already).
+  For an arbitrary hand-chosen lambda, (F) is the solution of the DIFFERENT,
+  KL-REGULARIZED problem
+      minimize  KL(q || p) + lambda * E_q[risk],                               (R)
+  which bounds no risk level in advance. The two coincide only at lambda*(eps).
+
+  Accordingly this module separates three modes and does not conflate them:
+    mode="dual"     : lambda is SOLVED from eps by bisection on the dual at every
+                      step (g(lambda)=E_{q_lambda}[risk] is non-increasing), so
+                      the sampled q is the exact solution of (P). This is the
+                      only mode entitled to the "minimum-distortion projection"
+                      claim.
+    mode="fixed"    : fixed lambda. Solves (R), NOT (P). Reported as a
+                      KL-regularized decoder, with the achieved E_q[risk] logged
+                      rather than guaranteed.
+    mode="adaptive" : heuristic controller that moves lambda from online signals.
+                      It has NO projection guarantee. lambda is clipped to
+                      [0, lambda_max]; the clip at 0 is required because a
+                      negative multiplier is infeasible for (P) -- it would
+                      REWARD recurrence -- and the entropy term can drive the
+                      raw update negative.
+
+  Infinite-penalty limit -- corrected statement:
+  With a multi-order risk risk(v) = (1/N) sum_n 1[v completes a repeated n-gram],
+  letting lambda -> infinity concentrates q on argmin_v risk(v) (reweighted by p),
+  NOT on the complement of a single order's blocked set. When some token has
+  risk = 0 the limit is a hard block of the UNION over orders n_min..n_max; when
+  every token has positive risk the limit keeps the minimum-risk tokens instead
+  of being undefined. The limit therefore reproduces STANDARD no-repeat-n-gram
+  only in the single-order case n_min = n_max. This is stated as such; the
+  earlier blanket claim was wrong.
 
 Implementation note on recurrence risk:
   risk(v) is computed from an INCREMENTALLY MAINTAINED hash map from each
@@ -254,7 +280,18 @@ class RecurrenceRiskDecoder:
                  alpha_base=2.0, alpha_max=8.0, lambda_rep=10.0, lambda_ent=1.0,
                  rep_target=0.05, ent_target=3.5, window=100, adaptive=True,
                  use_risk=True, entropy_temp=False,
-                 temp_gain=0.6, temp_max=1.6):
+                 temp_gain=0.6, temp_max=1.6,
+                 mode=None, eps=0.05, dual_iters=30, dual_lambda_max=50.0):
+        # mode: "dual" | "fixed" | "adaptive" | "entropy_only".
+        # Back-compat: if mode is None it is inferred from the old flags.
+        if mode is None:
+            if not use_risk:      mode = "entropy_only"
+            elif adaptive:        mode = "adaptive"
+            else:                 mode = "fixed"
+        self.mode            = mode
+        self.eps             = eps
+        self.dual_iters      = dual_iters
+        self.dual_lambda_max = dual_lambda_max
         self.temperature = temperature
         self.top_p       = top_p
         self.n_min       = n_min
@@ -276,12 +313,19 @@ class RecurrenceRiskDecoder:
         self._all_ids    = []
         self._followers  = {n: defaultdict(set) for n in range(n_min, n_max + 1)}
         self.alpha_history = []
+        # Exact per-step diagnostics (filled by step()):
+        self.kl_history   = []   # KL(q||p) in bits, p = temperature-scaled model dist
+        self.hq_history   = []   # H(q) in bits
+        self.hp_history   = []   # H(p) in bits
+        self.risk_history = []   # E_q[risk] actually achieved
 
     def reset(self):
         self._recent.clear()
         self._all_ids = []
         self._followers = {n: defaultdict(set) for n in range(self.n_min, self.n_max + 1)}
         self.alpha_history = []
+        self.kl_history = []; self.hq_history = []
+        self.hp_history = []; self.risk_history = []
 
     def prime(self, prompt_ids):
         """Register the prompt's n-gram edges so risk is correct from step 1."""
@@ -315,7 +359,13 @@ class RecurrenceRiskDecoder:
         return -sum((v/t)*math.log2(v/t) for v in c.values())
 
     def _current_alpha(self):
-        if not self.adaptive:
+        # Gate on self.mode, not the legacy self.adaptive flag: a config that
+        # requests mode="fixed" must return alpha_base regardless of what the
+        # (deprecated) adaptive= kwarg defaulted to. This was previously gated
+        # on self.adaptive alone, so a "fixed" config that forgot to also pass
+        # adaptive=False silently ran the adaptive formula instead -- caught
+        # when lt_risk_only came back bit-identical to lt_adaptive.
+        if self.mode != "adaptive":
             return self.alpha_base
         alpha = (self.alpha_base
                  + self.lambda_rep * max(0.0, self._rep_rate() - self.rep_target)
@@ -340,41 +390,126 @@ class RecurrenceRiskDecoder:
         return risk
 
     def _current_temperature(self):
-        """Entropy-only mode: raise temperature when recent entropy is low."""
+        """entropy_only mode: raise temperature when recent entropy is low."""
         if not self.entropy_temp:
             return self.temperature
         ent = self._entropy()
         bump = self.temp_gain * max(0.0, self.ent_target - ent)
         return float(min(self.temp_max, self.temperature + bump))
 
+    @staticmethod
+    def _q_of_lambda(p, risk, lam):
+        """q_lambda(v) proportional to p(v)*exp(-lam*risk(v)), computed stably."""
+        logits = torch.log(p + 1e-40) - lam * risk
+        return torch.softmax(logits, dim=-1)
+
+    def _solve_dual_lambda(self, p, risk):
+        """
+        Exact dual calibration: return the smallest lambda >= 0 with
+        E_{q_lambda}[risk] <= eps.  g(lambda) = E_{q_lambda}[risk] is
+        non-increasing, so bisection on [0, lambda_max] is valid.
+
+        Returns (lambda_star, achieved_risk, feasible_flag).
+        If E_p[risk] <= eps the constraint is inactive and lambda* = 0 (q = p,
+        zero distortion). If even lambda_max cannot reach eps the problem is
+        infeasible under the cap and lambda_max is returned with feasible=False.
+        """
+        g0 = float((p * risk).sum())
+        if g0 <= self.eps:
+            return 0.0, g0, True                      # constraint inactive
+        hi = self.dual_lambda_max
+        q_hi = self._q_of_lambda(p, risk, hi)
+        g_hi = float((q_hi * risk).sum())
+        if g_hi > self.eps:
+            return hi, g_hi, False                    # infeasible under cap
+        lo = 0.0
+        for _ in range(self.dual_iters):
+            mid = 0.5 * (lo + hi)
+            q_m = self._q_of_lambda(p, risk, mid)
+            g_m = float((q_m * risk).sum())
+            if g_m > self.eps: lo = mid
+            else:              hi = mid
+        q_hi = self._q_of_lambda(p, risk, hi)
+        return hi, float((q_hi * risk).sum()), True
+
+    @staticmethod
+    def _kl_bits(q, p):
+        m = q > 0
+        return float((q[m] * (torch.log2(q[m] + 1e-40) - torch.log2(p[m] + 1e-40))).sum())
+
+    @staticmethod
+    def _entropy_bits(d):
+        m = d > 0
+        return float(-(d[m] * torch.log2(d[m] + 1e-40)).sum())
+
     def step(self, logits, generated_ids=None):
+        """
+        One decoding step. Records exact KL(q||p) and entropies every step, so
+        the minimum-distortion claim is measured directly rather than inferred
+        from a downstream NLL.
+
+        p is the temperature-scaled model distribution -- the reference the
+        projection is taken from.
+        """
         vocab_size = logits.shape[-1]
 
-        if not self.use_risk:
-            # Entropy-only ablation: NO recurrence-risk penalty at all.
-            # Repetition is controlled purely by raising temperature when the
-            # recent entropy drops. This isolates "no risk signal".
+        # ---- entropy_only: no recurrence risk anywhere ----
+        if self.mode == "entropy_only":
             self.alpha_history.append(0.0)
             temperature = self._current_temperature()
-            logits = logits / max(temperature, 1e-6)
-            logits = top_p_filtering(logits.unsqueeze(0), self.top_p).squeeze(0)
-            probs  = torch.softmax(logits, dim=-1)
-            token  = int(torch.multinomial(probs, 1).item())
+            p = torch.softmax(logits / max(self.temperature, 1e-6), dim=-1)
+            q_logits = logits / max(temperature, 1e-6)
+            q_logits = top_p_filtering(q_logits.unsqueeze(0), self.top_p).squeeze(0)
+            q = torch.softmax(q_logits, dim=-1)
+            self.kl_history.append(self._kl_bits(q, p))
+            self.hq_history.append(self._entropy_bits(q))
+            self.hp_history.append(self._entropy_bits(p))
+            self.risk_history.append(0.0)
+            token = int(torch.multinomial(q, 1).item())
             self._register(token)
             return token
 
-        alpha      = self._current_alpha()
-        self.alpha_history.append(alpha)
+        # p = reference distribution the projection starts from
+        p    = torch.softmax(logits / max(self.temperature, 1e-6), dim=-1)
+        risk = self._risk_scores(vocab_size).to(logits.device)
 
-        risk   = self._risk_scores(vocab_size).to(logits.device)
-        logits = logits - alpha * risk
-        logits = logits / max(self.temperature, 1e-6)
-        logits = top_p_filtering(logits.unsqueeze(0), self.top_p).squeeze(0)
-        probs  = torch.softmax(logits, dim=-1)
-        token  = int(torch.multinomial(probs, 1).item())
+        if self.mode == "dual":
+            # Exact solution of  min KL(q||p) s.t. E_q[risk] <= eps
+            lam, achieved, feasible = self._solve_dual_lambda(p, risk)
+            q = self._q_of_lambda(p, risk, lam)
+            if self.top_p < 1.0:
+                # NOTE: top-p after the projection voids exactness; off by default
+                q_l = torch.log(q + 1e-40)
+                q_l = top_p_filtering(q_l.unsqueeze(0), self.top_p).squeeze(0)
+                q = torch.softmax(q_l, dim=-1)
+            self.alpha_history.append(lam)
+        else:
+            # "fixed" (KL-regularized) or "adaptive" (heuristic controller)
+            lam = self._current_alpha()          # already clipped to [0, alpha_max]
+            self.alpha_history.append(lam)
+            q = self._q_of_lambda(p, risk, lam)
+            if self.top_p < 1.0:
+                q_l = torch.log(q + 1e-40)
+                q_l = top_p_filtering(q_l.unsqueeze(0), self.top_p).squeeze(0)
+                q = torch.softmax(q_l, dim=-1)
+            achieved = float((q * risk).sum())
 
+        self.kl_history.append(self._kl_bits(q, p))
+        self.hq_history.append(self._entropy_bits(q))
+        self.hp_history.append(self._entropy_bits(p))
+        self.risk_history.append(achieved)
+
+        token = int(torch.multinomial(q, 1).item())
         self._register(token)
         return token
+
+    def diagnostics(self):
+        """Mean exact distortion/entropy/risk over the generation."""
+        import statistics as st
+        f = lambda a: (float(st.fmean(a)) if a else float("nan"))
+        return {"kl_bits": f(self.kl_history), "entropy_q": f(self.hq_history),
+                "entropy_p": f(self.hp_history), "risk_achieved": f(self.risk_history),
+                "lambda_mean": f(self.alpha_history)}
 
 
 # Backwards-compatible aliases

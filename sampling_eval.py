@@ -37,23 +37,42 @@ from src.decoding import generate, RecurrenceRiskDecoder, LookBackDecoder
 
 
 # 15 prompts; key methods use all 15, sweep configs use first 5.
-PROMPTS = [
+# ---------------------------------------------------------------------------
+# PROMPT PROTOCOL (declared, not ad hoc).
+#   DEV_PROMPTS  : the only prompts used while designing the method and choosing
+#                  hyper-parameters (n-gram band, eps/lambda, window, targets).
+#   TEST_PROMPTS : written afterwards from a fixed recipe (openers of narration,
+#                  dialogue, description, and exposition), never inspected while
+#                  tuning, and used ONLY for the reported numbers.
+# Headline results must be produced with --prompt_set test.
+# ---------------------------------------------------------------------------
+DEV_PROMPTS = [
     ("chapter",  "CHAPTER 1\n"),
     ("night",    "The night was "),
     ("she",      "She had never "),
     ("best",     "It was the best of "),
     ("darcy",    "Mr. Darcy had never "),
-    ("morning",  "In the morning she "),
-    ("letter",   "The letter arrived "),
-    ("london",   "The streets of London "),
-    ("he_said",  "\"I cannot,\" he said, "),
-    ("years",    "Many years later "),
-    ("house",    "The old house stood "),
-    ("doctor",   "The doctor examined "),
-    ("window",   "Through the window "),
-    ("road",     "Along the road they "),
-    ("fire",     "The fire had burned "),
 ]
+
+TEST_PROMPTS = [
+    ("t_road",    "The road turned sharply where "),
+    ("t_letter",  "He folded the letter and "),
+    ("t_window",  "Rain struck the window as "),
+    ("t_say",     "\"You must understand,\" she began, "),
+    ("t_market",  "At the market that morning "),
+    ("t_years",   "Three years afterwards, when "),
+    ("t_room",    "The room smelled of "),
+    ("t_doctor",  "The doctor set down his bag and "),
+    ("t_river",   "Beyond the river lay "),
+    ("t_ask",     "\"And what,\" he asked, \"became of "),
+    ("t_winter",  "That winter the family "),
+    ("t_ship",    "The ship had been at sea for "),
+    ("t_garden",  "In the garden behind the house "),
+    ("t_debt",    "His debts had grown until "),
+    ("t_dawn",    "By dawn the streets were "),
+]
+
+PROMPTS = DEV_PROMPTS   # replaced at runtime by --prompt_set
 
 
 # Equal-budget sweeps. Each baseline family is swept over several settings so
@@ -70,6 +89,40 @@ def build_configs():
         C.append(d)
 
     add("greedy", "baseline", temperature=0.0)
+
+    # ---------------------------------------------------------------------
+    # LOOP REGIME (the regime the method is actually for).
+    # Measured with the validated persistent-loop event, this model produces
+    # persistent loops only at T <= ~0.1: greedy fires on 80% of samples and
+    # T=0.1 on ~65%, while T>=0.2 fires on 0% even at 1200 chars. Comparing
+    # decoders at T=0.8 therefore compares zeros. Every configuration below is
+    # held at T=0.1 so that the loop pathology is present and the decoders can
+    # be separated; the question is which of them removes the loops, and at what
+    # exact KL cost relative to the model distribution p.
+    # ---------------------------------------------------------------------
+    for t in (0.05, 0.10, 0.15):
+        add(f"lt_temp_{t}", "loop_regime", key=(abs(t-0.10) < 1e-9), temperature=t)
+
+    add("lt_rep_penalty_1.3", "loop_regime", key=True,
+        temperature=0.10, rep_penalty=1.3)
+    add("lt_no_repeat_4gram", "loop_regime_hard", key=True,
+        temperature=0.10, no_repeat_ngram=4)
+    add("lt_lookback_a3.0", "loop_regime", key=True,
+        lookback=dict(temperature=0.10, top_p=1.0, alpha=3.0,
+                      max_history=400, ref_len=20))
+    add("lt_risk_only", "loop_regime_rr", key=True,
+        risk=dict(temperature=0.10, top_p=1.0, n_min=3, n_max=6,
+                  mode="fixed", alpha_base=2.0))
+    add("lt_adaptive", "loop_regime_rr", key=True,
+        risk=dict(temperature=0.10, top_p=1.0, n_min=3, n_max=6,
+                  mode="adaptive", alpha_base=2.0, alpha_max=8.0,
+                  lambda_rep=10.0, lambda_ent=1.0, rep_target=0.05,
+                  ent_target=3.5, window=100))
+    for e in (0.01, 0.05):
+        add(f"lt_dual_eps{e}", "loop_regime_rr", key=True,
+            risk=dict(temperature=0.10, top_p=1.0, n_min=3, n_max=6,
+                      mode="dual", eps=e))
+
 
     # temperature sweep
     for t in (0.7, 0.8, 0.9, 1.0):
@@ -107,6 +160,14 @@ def build_configs():
     for n in (3, 4):
         add(f"no_repeat_{n}gram", "hard_constraint", key=(n == 4),
             temperature=0.8, no_repeat_ngram=n)
+
+    # DUAL-CALIBRATED recurrence risk: lambda solved from eps at every step.
+    # These are the only configurations that solve the risk-BOUNDED problem and
+    # are therefore the only ones the minimum-distortion claim may rest on.
+    for e in (0.02, 0.05, 0.10):
+        add(f"rr_dual_eps{e}", "recurrence_risk", key=(abs(e-0.05) < 1e-9),
+            risk=dict(temperature=0.8, top_p=1.0, n_min=3, n_max=6,
+                      mode="dual", eps=e))
 
     # recurrence-risk: risk-only — fixed penalty, isolates the risk signal
     add("risk_only", "recurrence_risk", key=True,
@@ -208,6 +269,36 @@ def compression_ratio(text):
 # Each returns the first character position where the loop condition first
 # holds, or -1 (right-censored) if it never holds in the sample.
 
+def persistent_loop_onset(text, P_max=60, R=3, min_p=2):
+    """
+    PRIMARY loop event: onset of a PERSISTENT cycle.
+
+    Returns the earliest position e at which the text ending at e consists of a
+    span of length P repeated R times consecutively and exactly, i.e. the
+    generation has entered a cycle. -1 (right-censored) if it never happens.
+
+    Why this replaces "first repeated n-gram":
+      the old event fires on ordinary language. Measured on held-out HUMAN text
+      (150 x 500-char windows) it fires on 54% (Doyle) and 72% (Dickens) of
+      windows at n=10 -- i.e. more often than on several of our own decoders, so
+      it could not have been a pathology detector. This event, with R=3, fires on
+      0.0% of the same human windows while still catching 80% of greedy
+      generations (median onset ~104 chars). validate_loop_event.py reproduces
+      both figures.
+    """
+    n = len(text)
+    for e in range(min_p * R, n + 1):
+        for P in range(min_p, min(P_max, e // R) + 1):
+            span = text[e - P:e]
+            ok = True
+            for r in range(2, R + 1):
+                if text[e - r * P:e - (r - 1) * P] != span:
+                    ok = False; break
+            if ok:
+                return e
+    return -1
+
+
 def loop_onset_ngram(text, n=10):
     seen = {}
     for i in range(len(text)-n+1):
@@ -237,6 +328,11 @@ def loop_onset_compression(text, window=60, thresh=0.45, step=10):
     return -1
 
 LOOP_DEFS = {
+    # PRIMARY -- validated: 0.0% false-positive rate on held-out human text.
+    "persistent": lambda t: persistent_loop_onset(t),
+    # SECONDARY / diagnostic only. These are NOT pathology detectors: on human
+    # text they fire on 54-72% (ngram10) of windows. Retained to show how the
+    # ranking changes once a valid event is used; never used for headline claims.
     "ngram8":   lambda t: loop_onset_ngram(t, 8),
     "ngram10":  lambda t: loop_onset_ngram(t, 10),
     "ngram12":  lambda t: loop_onset_ngram(t, 12),
@@ -339,6 +435,13 @@ def kaplan_meier(onsets, max_t):
     return t_out, surv
 
 def survival_auc(onsets, max_t):
+    """
+    NOTE: survival_auc(onsets, T) == rmst(onsets, T) / T exactly -- it is RMST in
+    units of the horizon, not independent evidence. Reports should quote RMST
+    (interpretable: expected loop-free characters) and may mention SAUC only as
+    the normalised form. Both are retained here for backward compatibility.
+    """
+
     ts, S = kaplan_meier(onsets, max_t)
     if not ts: return 1.0
     prev_t, prev_s, area = 0, 1.0, 0.0
@@ -357,6 +460,76 @@ def loop_rate(onsets):
 
 
 # ---- Bootstrap ----
+
+# ---------------------------------------------------------------------------
+# CLUSTERED INFERENCE.
+# Samples are nested inside prompts (n_seeds draws per prompt). Draws that share
+# a prompt are correlated, so an i.i.d. bootstrap over all samples understates
+# the variance. Every interval and p-value below resamples PROMPTS (the
+# clusters) with replacement and keeps all seeds within a drawn prompt.
+# `groups[i]` is the prompt index of sample i.
+# ---------------------------------------------------------------------------
+
+def _cluster_indices(groups, rng):
+    """Resample clusters with replacement; return the concatenated sample idx."""
+    uniq = sorted(set(groups))
+    by = {g: [i for i, gg in enumerate(groups) if gg == g] for g in uniq}
+    drawn = rng.choice(len(uniq), size=len(uniq), replace=True)
+    out = []
+    for d in drawn:
+        out.extend(by[uniq[d]])
+    return out
+
+
+def cluster_bootstrap_ci(values, groups, n_boot=1000, seed=0):
+    """95% CI for a mean, resampling prompts (clusters)."""
+    rng = np.random.default_rng(seed)
+    arr = np.asarray(values, dtype=float)
+    boots = []
+    for _ in range(n_boot):
+        idx = _cluster_indices(groups, rng)
+        boots.append(arr[idx].mean())
+    boots = np.asarray(boots)
+    return (round(float(arr.mean()), 4),
+            round(float(np.percentile(boots, 2.5)), 4),
+            round(float(np.percentile(boots, 97.5)), 4))
+
+
+def cluster_paired_rmst(onsets_a, onsets_b, groups, max_t, n_boot=1000, seed=0):
+    """
+    Paired, prompt-clustered bootstrap for the RMST difference.
+    Returns (diff, lo, hi, p) where p is the two-sided bootstrap p-value for the
+    SAME statistic the CI is built on -- so the CI and p can never disagree.
+    """
+    rng = np.random.default_rng(seed)
+    a = np.asarray(onsets_a); b = np.asarray(onsets_b)
+    obs = rmst(a.tolist(), max_t) - rmst(b.tolist(), max_t)
+    diffs = []
+    for _ in range(n_boot):
+        idx = _cluster_indices(groups, rng)
+        diffs.append(rmst(a[idx].tolist(), max_t) - rmst(b[idx].tolist(), max_t))
+    diffs = np.asarray(diffs)
+    lo = float(np.percentile(diffs, 2.5)); hi = float(np.percentile(diffs, 97.5))
+    centred = diffs - diffs.mean()
+    p = float(np.mean(np.abs(centred) >= abs(obs)))
+    return round(float(obs), 2), round(lo, 2), round(hi, 2), round(p, 4)
+
+
+def cluster_paired_p(vals_a, vals_b, groups, n_boot=1000, seed=0):
+    """Prompt-clustered paired bootstrap p-value for a mean difference."""
+    rng = np.random.default_rng(seed)
+    a = np.asarray(vals_a, float); b = np.asarray(vals_b, float)
+    n = min(len(a), len(b)); a, b = a[:n], b[:n]
+    g = groups[:n]
+    d = a - b
+    obs = d.mean()
+    boots = []
+    for _ in range(n_boot):
+        idx = _cluster_indices(g, rng)
+        boots.append(d[idx].mean())
+    boots = np.asarray(boots)
+    return round(float(np.mean(np.abs(boots - boots.mean()) >= abs(obs))), 4)
+
 
 def bootstrap_ci(values, n_boot=1000, seed=0):
     rng = np.random.default_rng(seed)
@@ -454,9 +627,12 @@ def eval_checkpoint(ckpt_path, data_dir, n_chars, n_seeds, device, out_dir,
 
         acc = {k: [] for k in SCALARS}
         onsets = {ld: [] for ld in LOOP_DEFS}
+        groups = []          # prompt index per sample -> clustered inference
+        diag = {"kl_bits": [], "entropy_q": [], "entropy_p": [],
+                "risk_achieved": [], "lambda_mean": []}
         cps_val = None
 
-        for (pname, ptext) in prompts:
+        for pi, (pname, ptext) in enumerate(prompts):
             for seed in range(1, n_seeds+1):
                 set_seed(seed)
                 idx = encode(ptext, stoi).to(device)
@@ -472,6 +648,11 @@ def eval_checkpoint(ckpt_path, data_dir, n_chars, n_seeds, device, out_dir,
                     cps_val = cps
                 gen_ids = out[0].tolist()[len(ptext):]
                 text = decode(gen_ids, itos)
+
+                groups.append(pi)                       # cluster id = prompt
+                if risk is not None:
+                    dg = risk.diagnostics()
+                    for k in diag: diag[k].append(dg.get(k, float("nan")))
 
                 for ld, fn in LOOP_DEFS.items():
                     onsets[ld].append(fn(text))
@@ -494,10 +675,16 @@ def eval_checkpoint(ckpt_path, data_dir, n_chars, n_seeds, device, out_dir,
         row = {"strategy": c["name"], "category": c["category"],
                "checkpoint": name, "key": c["key"],
                "n_samples": len(acc["ttr"])}
+        row["groups"] = groups
         for k in SCALARS:
-            m, lo, hi = bootstrap_ci(acc[k])
+            m, lo, hi = cluster_bootstrap_ci(acc[k], groups)   # prompt-clustered
             row[f"{k}_mean"] = m; row[f"{k}_lo"] = lo; row[f"{k}_hi"] = hi
             row[f"{k}_vals"] = acc[k]
+        # exact distortion diagnostics (decoder-side, recurrence-risk configs only)
+        for k, v in diag.items():
+            if v and not all(x != x for x in v):
+                m, lo, hi = cluster_bootstrap_ci(v, groups)
+                row[f"{k}_mean"] = m; row[f"{k}_lo"] = lo; row[f"{k}_hi"] = hi
         for ld in LOOP_DEFS:
             row[f"loop_rate_{ld}"]    = loop_rate(onsets[ld])
             row[f"survival_auc_{ld}"] = survival_auc(onsets[ld], n_chars)
@@ -507,16 +694,18 @@ def eval_checkpoint(ckpt_path, data_dir, n_chars, n_seeds, device, out_dir,
             row["chars_per_sec"] = cps_val
         rows.append(row)
 
-        print(f"  loop10={row['loop_rate_ngram10']:.2f}  "
-              f"rmst10={row['rmst_ngram10']:.0f}  "
-              f"mcnll={row['mc_nll_bpc_mean']:.3f}  "
-              f"sim={row['ngram_sim_4_mean']:.3f}"
-              + (f"  cps={cps_val}" if cps_val else ""))
+        kl_s = f"  KL={row['kl_bits_mean']:.3f}b" if 'kl_bits_mean' in row else ""
+        print(f"  PERSIST loop={row['loop_rate_persistent']:.2f} "
+              f"rmst={row['rmst_persistent']:.0f} | "
+              f"[old ngram10 loop={row['loop_rate_ngram10']:.2f}] "
+              f"mcnll={row['mc_nll_bpc_mean']:.3f} "
+              f"sim={row['ngram_sim_4_mean']:.3f}{kl_s}"
+              + (f" cps={cps_val}" if cps_val else ""))
 
     samples_f.close()
 
     # CSV (drop big arrays). Union of keys across rows; fill missing with "".
-    skip = {f"{k}_vals" for k in SCALARS} | {f"onsets_{ld}" for ld in LOOP_DEFS}
+    skip = {f"{k}_vals" for k in SCALARS} | {f"onsets_{ld}" for ld in LOOP_DEFS} | {"groups"}
     keys = []
     for r in rows:
         for k in r:
@@ -559,8 +748,21 @@ def write_pareto(all_results, out_dir):
 
 
 def write_method_vs_method(all_results, out_dir, max_t):
-    """Paired method-vs-method comparisons (punkt 1) on shared prompt/seed pairs."""
+    """
+    Paired, prompt-clustered method-vs-method comparisons.
+
+    Fixes applied here:
+      * the primary event is the VALIDATED persistent-loop event, not the
+        n-gram event that fires on ordinary human text;
+      * the CI and the p-value are computed from the SAME statistic on the SAME
+        clustered resamples, so they cannot contradict each other (previously
+        the column labelled p(SAUC) was in fact a p-value for the loop-RATE
+        indicator, which is why it could disagree with the RMST interval);
+      * resampling is over prompts (clusters), not over individual samples.
+    """
     PAIRS = [
+        ("rr_dual_eps0.05", "risk_only"),
+        ("rr_dual_eps0.05", "adaptive"),
         ("adaptive", "risk_only"),
         ("adaptive", "rr_entropy_only"),
         ("risk_only", "temp_0.8"),
@@ -568,12 +770,10 @@ def write_method_vs_method(all_results, out_dir, max_t):
         ("risk_only", "typical_p0.9"),
         ("risk_only", "mirostat_tau5.0"),
         ("risk_only", "rep_penalty_1.3"),
+        ("risk_only", "rep_penalty_1.5"),
         ("risk_only", "lookback_a3.0"),
-        ("adaptive", "rep_penalty_1.3"),
-        ("adaptive", "mirostat_tau5.0"),
-        ("adaptive", "lookback_a3.0"),
+        ("risk_only", "lookback_a5.0"),
         ("adaptive", "no_repeat_4gram"),
-        ("rep_penalty_1.3", "no_repeat_4gram"),
     ]
     out = []
     for name, rows in all_results.items():
@@ -582,24 +782,26 @@ def write_method_vs_method(all_results, out_dir, max_t):
             ra, rb = rmap.get(a), rmap.get(b)
             if not ra or not rb:
                 continue
-            leak = "  [leakage: hard bans measured event]" if "no_repeat" in b else ""
-            d, lo, hi = paired_rmst_diff_ci(ra["onsets_ngram10"], rb["onsets_ngram10"], max_t)
+            groups = ra.get("groups") or list(range(len(ra["onsets_persistent"])))
+            leak = " [leakage: hard-bans the measured event]" if "no_repeat" in b else ""
+            d, lo, hi, p = cluster_paired_rmst(
+                ra["onsets_persistent"], rb["onsets_persistent"], groups, max_t)
             rec = {
-                "label": f"{a} vs {b}{leak}",
-                "checkpoint": name, "method_a": a, "method_b": b,
-                "n_pairs": min(len(ra["onsets_ngram10"]), len(rb["onsets_ngram10"])),
-                "rmst_a": ra["rmst_ngram10"], "rmst_b": rb["rmst_ngram10"],
+                "label": f"{a} vs {b}{leak}", "checkpoint": name,
+                "method_a": a, "method_b": b,
+                "n_pairs": len(ra["onsets_persistent"]),
+                "n_prompts": len(set(groups)),
+                "event": "persistent_loop",
+                "rmst_a": ra["rmst_persistent"], "rmst_b": rb["rmst_persistent"],
                 "rmst_diff_AminusB": d, "rmst_ci_lo": lo, "rmst_ci_hi": hi,
-                "p_survival_auc": paired_bootstrap_p(
-                    [1 if x>=0 else 0 for x in ra["onsets_ngram10"]],
-                    [1 if x>=0 else 0 for x in rb["onsets_ngram10"]]),
-                "p_mc_nll": paired_bootstrap_p(ra["mc_nll_bpc_vals"], rb["mc_nll_bpc_vals"]),
+                "p_rmst": p,                      # same statistic as the CI
                 "delta_mc_nll": round(ra["mc_nll_bpc_mean"] - rb["mc_nll_bpc_mean"], 4),
-                "p_ngram_sim": paired_bootstrap_p(ra["ngram_sim_4_vals"], rb["ngram_sim_4_vals"]),
+                "p_mc_nll": cluster_paired_p(ra["mc_nll_bpc_vals"], rb["mc_nll_bpc_vals"], groups),
                 "delta_ngram_sim": round(ra["ngram_sim_4_mean"] - rb["ngram_sim_4_mean"], 4),
-                "p_spelling": paired_bootstrap_p(ra["spelling_error_vals"], rb["spelling_error_vals"]),
-                "delta_spelling": round(ra["spelling_error_mean"] - rb["spelling_error_mean"], 4),
+                "p_ngram_sim": cluster_paired_p(ra["ngram_sim_4_vals"], rb["ngram_sim_4_vals"], groups),
             }
+            if "kl_bits_mean" in ra and "kl_bits_mean" in rb:
+                rec["delta_kl_bits"] = round(ra["kl_bits_mean"] - rb["kl_bits_mean"], 4)
             out.append(rec)
     if out:
         with open(os.path.join(out_dir, "method_vs_method.csv"), "w", newline="") as f:
@@ -649,10 +851,18 @@ def main():
     ap.add_argument("--out_dir", default="runs/sampling_eval_v6")
     ap.add_argument("--n_chars", type=int, default=500)
     ap.add_argument("--n_seeds", type=int, default=10)
+    ap.add_argument("--prompt_set", choices=["dev","test"], default="test",
+                    help="dev = the 5 prompts used while tuning; test = the 15 "
+                         "untouched prompts. Headline numbers must use test.")
     ap.add_argument("--only", nargs="*", default=None,
                     help="Run only these strategy names (e.g. --only rep_penalty_1.5 lookback_a5.0). "
                          "Useful for topping up a config to the full sample budget.")
     args = ap.parse_args()
+
+    global PROMPTS
+    PROMPTS = TEST_PROMPTS if args.prompt_set == "test" else DEV_PROMPTS
+    print(f"Prompt set : {args.prompt_set} ({len(PROMPTS)} prompts)"
+          + ("  [untouched during tuning]" if args.prompt_set=="test" else "  [used for tuning]"))
 
     ensure_dir(args.out_dir)
     device = (torch.device("mps") if torch.backends.mps.is_available() else
