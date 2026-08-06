@@ -1,0 +1,66 @@
+{
+    "raw_loop_rate": 0.684,
+    "T0": 0.6,
+    "H": 6,
+    "W": 2,
+    "S": 20,
+    "eps_grid": [
+        0.3,
+        0.2,
+        0.1,
+        0.05,
+        0.02,
+        0.01
+    ],
+    "rows": [
+        {
+            "eps": 0.3,
+            "local_loop_rate": 0.4513333333333333,
+            "local_kl": 0.3445456100886599,
+            "hazard_loop_rate": 0.246,
+            "hazard_kl": 0.2661439562374637
+        },
+        {
+            "eps": 0.2,
+            "local_loop_rate": 0.4106666666666667,
+            "local_kl": 0.3844087923450885,
+            "hazard_loop_rate": 0.17866666666666667,
+            "hazard_kl": 0.23815528169284406
+        },
+        {
+            "eps": 0.1,
+            "local_loop_rate": 0.38333333333333336,
+            "local_kl": 0.4249204543931043,
+            "hazard_loop_rate": 0.05566666666666667,
+            "hazard_kl": 0.3919574181867136
+        },
+        {
+            "eps": 0.05,
+            "local_loop_rate": 0.21933333333333332,
+            "local_kl": 0.47225519569734514,
+            "hazard_loop_rate": 0.013,
+            "hazard_kl": 0.6314501054982481
+        },
+        {
+            "eps": 0.02,
+            "local_loop_rate": 0.094,
+            "local_kl": 0.5361786704856842,
+            "hazard_loop_rate": 0.003,
+            "hazard_kl": 0.8099458827689611
+        },
+        {
+            "eps": 0.01,
+            "local_loop_rate": 0.049,
+            "local_kl": 0.5657908424113967,
+            "hazard_loop_rate": 0.0026666666666666666,
+            "hazard_kl": 0.8771114803796137
+        }
+    ],
+    "matched_distortion_check": {
+        "target_kl_per_step": 0.6314501054982481,
+        "local_eps_matched": 0.001,
+        "local_loop_rate": 0.005,
+        "local_kl": 0.588184935426109,
+        "hazard_loop_rate": 0.013
+    }
+}

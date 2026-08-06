@@ -1,0 +1,12 @@
+strategy,category,checkpoint,rmst_persistent,rmst_ngram8,rmst_ngram10,rmst_ngram12,rmst_ngram16,rmst_lrs20,rmst_compress,loop_rate_persistent,loop_rate_ngram8,loop_rate_ngram10,loop_rate_ngram12,loop_rate_ngram16,loop_rate_lrs20,loop_rate_compress
+greedy,baseline,cosine,500.0,33.4,33.4,33.4,35.6,66.0,130.0,0.0,1.0,1.0,1.0,1.0,1.0,1.0
+lt_temp_0.05,loop_regime,cosine,500.0,33.3,35.25,35.25,37.75,66.4,229.2,0.0,1.0,1.0,1.0,1.0,1.0,0.78
+lt_temp_0.1,loop_regime,cosine,500.0,32.85,38.5,41.35,46.8,83.4,433.15,0.0,1.0,1.0,1.0,1.0,1.0,0.2133
+lt_temp_0.15,loop_regime,cosine,500.0,40.4,57.4,63.65,84.3,129.5,500.0,0.0,1.0,1.0,1.0,1.0,1.0,0.0
+lt_rep_penalty_1.3,loop_regime,cosine,500.0,87.15,101.75,110.55,138.2,185.95,481.15,0.0,1.0,1.0,1.0,1.0,1.0,0.08
+lt_no_repeat_4gram,loop_regime_hard,cosine,500.0,500.0,500.0,500.0,500.0,500.0,500.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0
+lt_lookback_a3.0,loop_regime,cosine,500.0,92.8,380.0,466.6,480.15,494.6,500.0,0.0,1.0,0.8933,0.5733,0.4067,0.1933,0.0
+lt_risk_only,loop_regime_rr,cosine,500.0,43.8,70.25,80.7,99.4,162.35,491.25,0.0,1.0,1.0,1.0,1.0,1.0,0.0267
+lt_adaptive,loop_regime_rr,cosine,500.0,44.4,85.65,106.05,142.5,238.05,500.0,0.0,1.0,1.0,1.0,1.0,0.9733,0.0
+lt_dual_eps0.01,loop_regime_rr,cosine,500.0,500.0,500.0,500.0,500.0,500.0,500.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0
+lt_dual_eps0.05,loop_regime_rr,cosine,500.0,500.0,500.0,500.0,500.0,500.0,500.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0

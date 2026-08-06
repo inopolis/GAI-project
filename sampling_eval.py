@@ -112,7 +112,10 @@ def build_configs():
                       max_history=400, ref_len=20))
     add("lt_risk_only", "loop_regime_rr", key=True,
         risk=dict(temperature=0.10, top_p=1.0, n_min=3, n_max=6,
-                  mode="fixed", alpha_base=2.0))
+                  mode="fixed", alpha_base=2.0, include_prompt_context=True))
+    add("lt_risk_only_genonly", "loop_regime_rr", key=True,
+        risk=dict(temperature=0.10, top_p=1.0, n_min=3, n_max=6,
+                  mode="fixed", alpha_base=2.0, include_prompt_context=False))
     add("lt_adaptive", "loop_regime_rr", key=True,
         risk=dict(temperature=0.10, top_p=1.0, n_min=3, n_max=6,
                   mode="adaptive", alpha_base=2.0, alpha_max=8.0,
@@ -269,23 +272,65 @@ def compression_ratio(text):
 # Each returns the first character position where the loop condition first
 # holds, or -1 (right-censored) if it never holds in the sample.
 
-def persistent_loop_onset(text, P_max=60, R=3, min_p=2):
+import re as _re_loopcheck
+
+def _normalize_whitespace_for_loop_check(text):
+    """Collapse any run of whitespace (space, newline, tab, ...) to a single
+    space before periodicity matching. See persistent_loop_onset docstring
+    for why this is necessary: irregular line-wrapping otherwise breaks
+    exact-match detection of an obviously-repeating phrase."""
+    return _re_loopcheck.sub(r"\s+", " ", text)
+
+
+def persistent_loop_onset(text, P_max=60, R=5, min_p=2, catch_period_one=True,
+                           period_one_min_run=8):
     """
     PRIMARY loop event: onset of a PERSISTENT cycle.
 
-    Returns the earliest position e at which the text ending at e consists of a
-    span of length P repeated R times consecutively and exactly, i.e. the
-    generation has entered a cycle. -1 (right-censored) if it never happens.
+    Returns the earliest position e (in NORMALIZED-text coordinates, see
+    below) at which the text ending at e consists of a span of length P
+    repeated R times consecutively and exactly, i.e. the generation has
+    entered a cycle. -1 (right-censored) if it never happens.
 
-    Why this replaces "first repeated n-gram":
-      the old event fires on ordinary language. Measured on held-out HUMAN text
-      (150 x 500-char windows) it fires on 54% (Doyle) and 72% (Dickens) of
-      windows at n=10 -- i.e. more often than on several of our own decoders, so
-      it could not have been a pathology detector. This event, with R=3, fires on
-      0.0% of the same human windows while still catching 80% of greedy
-      generations (median onset ~104 chars). validate_loop_event.py reproduces
-      both figures.
+    WHITESPACE NORMALIZATION (added after a real miss was found): the model
+    inserts newlines at positions that are not perfectly periodic even while
+    it is unambiguously repeating the same phrase -- e.g.
+    "...the subject of the\\nconsideration of the subject of the subject..."
+    wraps a newline into an otherwise-repeating span at an irregular offset.
+    Matched byte-for-byte, this breaks EXACT periodicity at R=5 even though
+    R=3/R=4 (needing fewer consecutive exact repeats, so less exposed to one
+    irregular linebreak) still find it, and the old n-gram-based check (kept
+    only as a secondary diagnostic) also still fires. Requiring exact
+    equality on raw text therefore risks UNDER-counting genuine degenerate
+    repetition whenever the model's line-wrapping is irregular, which is a
+    validity problem, not a feature: a human reading this text has no
+    trouble seeing it as one repeating loop regardless of where the line
+    happens to wrap. All whitespace runs (spaces, newlines, tabs) are
+    collapsed to a single space before the periodicity search so trivial
+    formatting variation cannot mask or create a match either way. This
+    changes the false-positive rate on real prose (which wraps at newlines
+    constantly) and REQUIRES re-running validate_loop_event_v2.py's
+    calibrate/freeze/validate protocol with this normalization in place --
+    the (R=5, P_max=60) values here are provisional until that is redone.
+
+    catch_period_one adds a separate, DECOUPLED threshold (period_one_min_run,
+    default 8) for single-character runs, since using R itself as that
+    threshold made the detector trip on ordinary short typesetting
+    conventions (e.g. a 5-dash scene-break divider trips at R=5 if R is
+    reused as the period-1 threshold). 8 sits above ordinary divider/ellipsis
+    lengths and well below genuine degenerate model output.
     """
+    text = _normalize_whitespace_for_loop_check(text)
+
+    if catch_period_one:
+        run = 1
+        for i in range(1, len(text)):
+            if text[i] == text[i-1]:
+                run += 1
+                if run >= period_one_min_run:
+                    return i - period_one_min_run + 2
+            else:
+                run = 1
     n = len(text)
     for e in range(min_p * R, n + 1):
         for P in range(min_p, min(P_max, e // R) + 1):
@@ -345,33 +390,55 @@ LOOP_DEFS = {
 # ---- Quality metrics ----
 
 @torch.no_grad()
-def model_consistency_nll(model, text_ids, block_size, device):
+def model_consistency_nll(model, gen_ids, block_size, device, prompt_ids=None):
     """
-    Model-consistency NLL (BPC): NLL of the generated text under the SAME
-    model that produced it. This is NOT an external quality measure — it only
-    says how probable the model finds its own output. Reported as a
-    consistency / in-distribution proxy, never as quality on its own.
-    Evaluated over the WHOLE sample via sliding windows (stride=block_size,
-    final partial window included).
+    Model-consistency NLL (BPC): NLL of the GENERATED tokens under the SAME
+    model that produced them, correctly conditioned on the prompt.
+
+    Fixes a bug where this function was called with the generated portion
+    alone: the first sliding window then started at position 0 of the
+    generated text with no prompt in context, which (a) silently OMITTED the
+    first generated token's own likelihood entirely -- position 0 was only
+    ever used as the input x[0] predicting position 1, never itself scored
+    as a target -- and (b) understated every early token's true conditional
+    probability, since the model was not shown the prompt that the tokens
+    were actually generated in response to.
+
+    Now the model input is (prompt_ids + gen_ids); scoring is restricted to
+    positions >= len(prompt_ids) so only generated tokens contribute to the
+    mean, but every one of them, including the first, is scored with its
+    correct prompt-conditioned context. If prompt_ids is not supplied (back-
+    compat) the previous, biased behaviour is used and a flag is returned so
+    callers can tell which convention produced a given number.
     """
-    ids = np.array(text_ids, dtype=np.int64)
-    n = len(ids)
-    if n < 2:
+    prompt_ids = prompt_ids or []
+    full = np.array(list(prompt_ids) + list(gen_ids), dtype=np.int64)
+    plen = len(prompt_ids)
+    n = len(full)
+    if n < 2 or len(gen_ids) < 1:
         return float("nan")
+
     all_nll = []
     stride = block_size
+    # Slide over the FULL (prompt+generated) sequence so every window has
+    # real preceding context; only accumulate loss at generated positions.
     for s in range(0, max(1, n - 1), stride):
         end_x = min(s + block_size, n - 1)
-        x_np = ids[s:end_x]
-        y_np = ids[s+1:end_x+1]
+        x_np = full[s:end_x]
+        y_np = full[s+1:end_x+1]
         if len(x_np) == 0:
             continue
         x = torch.tensor(x_np, dtype=torch.long, device=device).unsqueeze(0)
         y = torch.tensor(y_np, dtype=torch.long, device=device).unsqueeze(0)
         logits, _ = model(x)
         lp  = F.log_softmax(logits, dim=-1)
-        nll = -lp.gather(2, y.unsqueeze(-1)).squeeze(-1)
-        all_nll.extend(nll[0].tolist())
+        nll = (-lp.gather(2, y.unsqueeze(-1)).squeeze(-1))[0].tolist()
+        # y[i] corresponds to full position s+1+i; keep it only if that
+        # position is a GENERATED token (index >= plen), i.e. y-index >= plen-1
+        for i, v in enumerate(nll):
+            target_pos = s + 1 + i
+            if target_pos >= plen:
+                all_nll.append(v)
     if not all_nll:
         return float("nan")
     return float(np.mean(all_nll) / math.log(2))
@@ -664,7 +731,9 @@ def eval_checkpoint(ckpt_path, data_dir, n_chars, n_seeds, device, out_dir,
                     acc[f"rep_mass_{nn}"].append(rep_ngram_mass(text, nn))
                 acc["longest_rep_sub"].append(longest_repeated_substring(text))
                 acc["compression"].append(compression_ratio(text))
-                acc["mc_nll_bpc"].append(model_consistency_nll(model, gen_ids, block_size, device))
+                prompt_id_list = idx[0].tolist()
+                acc["mc_nll_bpc"].append(model_consistency_nll(
+                    model, gen_ids, block_size, device, prompt_ids=prompt_id_list))
                 acc["ngram_sim_4"].append(ngram_js_similarity(text, ref_text, 4))
                 acc["spelling_error"].append(spelling_error_rate(text))
 

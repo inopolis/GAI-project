@@ -281,7 +281,8 @@ class RecurrenceRiskDecoder:
                  rep_target=0.05, ent_target=3.5, window=100, adaptive=True,
                  use_risk=True, entropy_temp=False,
                  temp_gain=0.6, temp_max=1.6,
-                 mode=None, eps=0.05, dual_iters=30, dual_lambda_max=50.0):
+                 mode=None, eps=0.05, dual_iters=30, dual_lambda_max=50.0,
+                 include_prompt_context=True):
         # mode: "dual" | "fixed" | "adaptive" | "entropy_only".
         # Back-compat: if mode is None it is inferred from the old flags.
         if mode is None:
@@ -292,6 +293,11 @@ class RecurrenceRiskDecoder:
         self.eps             = eps
         self.dual_iters      = dual_iters
         self.dual_lambda_max = dual_lambda_max
+        # Whether prime() registers the prompt's tokens into the recurrence
+        # hash maps (prompt-inclusive, the previous silent default) or leaves
+        # them unregistered so risk reacts only to repeats the model itself
+        # produced (generation-only). See prime().
+        self.include_prompt_context = include_prompt_context
         self.temperature = temperature
         self.top_p       = top_p
         self.n_min       = n_min
@@ -318,6 +324,11 @@ class RecurrenceRiskDecoder:
         self.hq_history   = []   # H(q) in bits
         self.hp_history   = []   # H(p) in bits
         self.risk_history = []   # E_q[risk] actually achieved
+        self.feasible_history = []   # dual mode only: was eps attainable under lambda_max
+        self.cap_hit_history  = []   # dual mode only: did lambda hit dual_lambda_max
+        self.min_risk_history = []   # dual mode only: min_v risk(v) that step (achievable floor)
+        self.violation_history = []  # dual mode only: max(0, achieved-eps)
+        self.tolerance_history = []  # dual mode only: bisection window width at termination
 
     def reset(self):
         self._recent.clear()
@@ -326,9 +337,25 @@ class RecurrenceRiskDecoder:
         self.alpha_history = []
         self.kl_history = []; self.hq_history = []
         self.hp_history = []; self.risk_history = []
+        self.feasible_history = []; self.cap_hit_history = []
+        self.min_risk_history = []; self.violation_history = []
+        self.tolerance_history = []
 
     def prime(self, prompt_ids):
-        """Register the prompt's n-gram edges so risk is correct from step 1."""
+        """
+        Register the prompt's tokens into the recurrence hash maps before
+        generation starts, IF self.include_prompt_context is True (the
+        default). This makes recurrence risk sensitive to n-grams that repeat
+        the PROMPT, not only n-grams that repeat something the model itself
+        generated -- a real choice with a real effect, not a bookkeeping
+        detail, and was previously made silently. Call with
+        include_prompt_context=False at construction to score risk against
+        generated-output history only, leaving prompt content unregistered
+        (the prompt still conditions the model's logits as context in the
+        usual way; only its presence in the recurrence hash maps is toggled).
+        """
+        if not self.include_prompt_context:
+            return
         for tid in prompt_ids:
             self._register(tid)
 
@@ -409,28 +436,61 @@ class RecurrenceRiskDecoder:
         E_{q_lambda}[risk] <= eps.  g(lambda) = E_{q_lambda}[risk] is
         non-increasing, so bisection on [0, lambda_max] is valid.
 
-        Returns (lambda_star, achieved_risk, feasible_flag).
+        Returns a dict with everything needed to audit the step, not just the
+        multiplier:
+          lambda        : the calibrated multiplier.
+          achieved       : E_{q_lambda}[risk] at that multiplier.
+          feasible       : whether the target eps was reachable within
+                           dual_lambda_max at all.
+          cap_hit        : True iff lambda == dual_lambda_max was returned
+                           (whether or not that also happens to be feasible --
+                           logged separately from `feasible` since a run can
+                           hit the cap and still land under eps by coincidence
+                           at the cap, which should still be visible).
+          min_attainable_risk : min_v risk(v) reweighted by p among the
+                           lowest-risk tokens -- the floor E_q[risk] cannot
+                           go below no matter how large lambda is, since mass
+                           always concentrates on argmin risk, never to zero
+                           if the minimum risk itself is >0.
+          violation      : max(0, achieved - eps), i.e. how much the
+                           constraint is actually violated when infeasible;
+                           0 when feasible.
+          tolerance       : the bisection window width at termination
+                           (hi - lo), the numerical precision the calibration
+                           is accurate to.
         If E_p[risk] <= eps the constraint is inactive and lambda* = 0 (q = p,
-        zero distortion). If even lambda_max cannot reach eps the problem is
-        infeasible under the cap and lambda_max is returned with feasible=False.
+        zero distortion, reported as feasible with tolerance 0).
         """
+        min_attainable_risk = float(risk.min())
         g0 = float((p * risk).sum())
         if g0 <= self.eps:
-            return 0.0, g0, True                      # constraint inactive
+            return {"lambda": 0.0, "achieved": g0, "feasible": True,
+                    "cap_hit": False, "min_attainable_risk": min_attainable_risk,
+                    "violation": 0.0, "tolerance": 0.0}
+
         hi = self.dual_lambda_max
-        q_hi = self._q_of_lambda(p, risk, hi)
-        g_hi = float((q_hi * risk).sum())
+        g_hi = float((self._q_of_lambda(p, risk, hi) * risk).sum())
         if g_hi > self.eps:
-            return hi, g_hi, False                    # infeasible under cap
+            # Infeasible under the cap: report the violation honestly instead
+            # of silently returning as if the constraint had been met.
+            return {"lambda": hi, "achieved": g_hi, "feasible": False,
+                    "cap_hit": True, "min_attainable_risk": min_attainable_risk,
+                    "violation": max(0.0, g_hi - self.eps), "tolerance": float("nan")}
+
         lo = 0.0
         for _ in range(self.dual_iters):
             mid = 0.5 * (lo + hi)
-            q_m = self._q_of_lambda(p, risk, mid)
-            g_m = float((q_m * risk).sum())
-            if g_m > self.eps: lo = mid
-            else:              hi = mid
-        q_hi = self._q_of_lambda(p, risk, hi)
-        return hi, float((q_hi * risk).sum()), True
+            g_m = float((self._q_of_lambda(p, risk, mid) * risk).sum())
+            if g_m > self.eps:
+                lo = mid
+            else:
+                hi = mid
+        achieved = float((self._q_of_lambda(p, risk, hi) * risk).sum())
+        return {"lambda": hi, "achieved": achieved, "feasible": True,
+                "cap_hit": (hi >= self.dual_lambda_max - 1e-9),
+                "min_attainable_risk": min_attainable_risk,
+                "violation": max(0.0, achieved - self.eps),
+                "tolerance": float(hi - lo)}
 
     @staticmethod
     def _kl_bits(q, p):
@@ -475,7 +535,8 @@ class RecurrenceRiskDecoder:
 
         if self.mode == "dual":
             # Exact solution of  min KL(q||p) s.t. E_q[risk] <= eps
-            lam, achieved, feasible = self._solve_dual_lambda(p, risk)
+            d = self._solve_dual_lambda(p, risk)
+            lam, achieved = d["lambda"], d["achieved"]
             q = self._q_of_lambda(p, risk, lam)
             if self.top_p < 1.0:
                 # NOTE: top-p after the projection voids exactness; off by default
@@ -483,6 +544,11 @@ class RecurrenceRiskDecoder:
                 q_l = top_p_filtering(q_l.unsqueeze(0), self.top_p).squeeze(0)
                 q = torch.softmax(q_l, dim=-1)
             self.alpha_history.append(lam)
+            self.feasible_history.append(d["feasible"])
+            self.cap_hit_history.append(d["cap_hit"])
+            self.min_risk_history.append(d["min_attainable_risk"])
+            self.violation_history.append(d["violation"])
+            self.tolerance_history.append(d["tolerance"])
         else:
             # "fixed" (KL-regularized) or "adaptive" (heuristic controller)
             lam = self._current_alpha()          # already clipped to [0, alpha_max]
@@ -504,12 +570,23 @@ class RecurrenceRiskDecoder:
         return token
 
     def diagnostics(self):
-        """Mean exact distortion/entropy/risk over the generation."""
+        """Mean exact distortion/entropy/risk over the generation, plus, for
+        mode="dual", the feasibility and tolerance record required to audit
+        the projection rather than assume it always succeeded silently."""
         import statistics as st
         f = lambda a: (float(st.fmean(a)) if a else float("nan"))
-        return {"kl_bits": f(self.kl_history), "entropy_q": f(self.hq_history),
-                "entropy_p": f(self.hp_history), "risk_achieved": f(self.risk_history),
-                "lambda_mean": f(self.alpha_history)}
+        out = {"kl_bits": f(self.kl_history), "entropy_q": f(self.hq_history),
+               "entropy_p": f(self.hp_history), "risk_achieved": f(self.risk_history),
+               "lambda_mean": f(self.alpha_history)}
+        if self.mode == "dual":
+            n = len(self.feasible_history)
+            out["dual_feasible_rate"] = (sum(self.feasible_history) / n) if n else float("nan")
+            out["dual_cap_hit_rate"]  = (sum(self.cap_hit_history) / n) if n else float("nan")
+            out["dual_min_risk_mean"] = f(self.min_risk_history)
+            out["dual_violation_mean"] = f(self.violation_history)
+            out["dual_violation_max"]  = (max(self.violation_history) if self.violation_history else float("nan"))
+            out["dual_tolerance_mean"] = f([t for t in self.tolerance_history if t == t])  # drop NaNs
+        return out
 
 
 # Backwards-compatible aliases

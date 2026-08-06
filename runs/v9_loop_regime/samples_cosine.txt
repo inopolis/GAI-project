@@ -1,0 +1,66 @@
+[greedy][cosine] prompt='The road turned sharply where'
+------------------------------------------------------------
+they were all the subject of the
+consideration of the subject of the subject of the subject of the subject
+of the subject of the subject of the subject of the subject of the
+consideration of the subject of the subject of the subject of the same
+time of the subject of the subject of the subject of the subject of the
+consideration of the subject of the subject of the subject of the same
+time of the subject of the subject of the subject of the subject of the
+consideration of the subject of the subj
+
+[greedy][cosine] prompt='He folded the letter and'
+------------------------------------------------------------
+the subject of the subject of the subject of
+the subject of the subject of the subject of the subject of the subject
+of the subject of the subject of the subject of the subject of the
+consideration of the subject of the subject of the subject of the same
+time of the subject of the subject of the subject of the subject of the
+consideration of the subject of the subject of the subject of the same
+time of the subject of the subject of the subject of the subject of the
+consideration of the subject o
+
+[greedy][cosine] prompt='Rain struck the window as'
+------------------------------------------------------------
+the same of the subject of the subject of
+the subject of the subject of the subject of the subject of the subject
+of the subject of the subject of the subject of the subject of the
+consideration of the subject of the subject of the subject of the same
+time of the subject of the subject of the subject of the subject of the
+consideration of the subject of the subject of the subject of the same
+time of the subject of the subject of the subject of the subject of the
+consideration of the subject of t
+
+[greedy][cosine] prompt='"You must understand," she began,'
+------------------------------------------------------------
+and the same of the subject of
+the subject of the subject of the subject of the subject of the subject
+of the subject of the subject of the subject of the subject of the
+consideration of the subject of the subject of the subject of the same
+time of the subject of the subject of the subject of the subject of the
+consideration of the subject of the subject of the subject of the same
+time of the subject of the subject of the subject of the subject of the
+consideration of the subject of the subject 
+
+[greedy][cosine] prompt='At the market that morning'
+------------------------------------------------------------
+than the same of the subject of the
+consideration of the subject of the subject of the subject of the subject
+of the subject of the subject of the subject of the subject of the
+consideration of the subject of the subject of the subject of the same
+time of the subject of the subject of the subject of the subject of the
+consideration of the subject of the subject of the subject of the same
+time of the subject of the subject of the subject of the subject of the
+consideration of the subject of the s
+
+[lt_temp_0.05][cosine] prompt='The road turned sharply where'
+------------------------------------------------------------
+they were all the same of the
+consideration of the present of the subject of the subject of the
+considerable of the subject of the subject of the subject of the same
+time of the subject of the subject of the most and the subject of the
+conversation of the subject of the consideration of the subject of the
+consideration of the subject of the subject of the sense of the same
+time and the sensation of the subject of the subject of the subject of
+the sense of the subject of the subject of the subjec
+
