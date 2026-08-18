@@ -1,0 +1,32 @@
+{
+  "cosine": {
+    "lt_dual_eps0.01": {
+      "km_times": [
+        0,
+        500
+      ],
+      "km_survival": [
+        1.0,
+        1.0
+      ],
+      "n_censored": 150,
+      "n_total": 150,
+      "rmst": 500.0,
+      "survival_auc": 1.0
+    },
+    "lt_dual_eps0.05": {
+      "km_times": [
+        0,
+        500
+      ],
+      "km_survival": [
+        1.0,
+        1.0
+      ],
+      "n_censored": 150,
+      "n_total": 150,
+      "rmst": 500.0,
+      "survival_auc": 1.0
+    }
+  }
+}

@@ -1,0 +1,9 @@
+comparison,method_a,method_b,n_prompts,obs_dRMST,p_exact_signflip,is_exact_enumeration,cluster_ci_lo,cluster_ci_hi
+lt_risk_only vs lt_temp_0.1,lt_risk_only,lt_temp_0.1,15,88.43,0.0001,True,66.39,113.85
+lt_risk_only vs lt_rep_penalty_1.3,lt_risk_only,lt_rep_penalty_1.3,15,6.46,0.2461,True,-3.67,15.86
+lt_risk_only vs lt_lookback_a3.0,lt_risk_only,lt_lookback_a3.0,15,-7.13,0.125,True,-14.41,-1.07
+lt_risk_only vs lt_dual_eps0.05,lt_risk_only,lt_dual_eps0.05,15,-7.13,0.125,True,-14.41,-1.07
+lt_risk_only vs lt_adaptive,lt_risk_only,lt_adaptive,15,-7.13,0.125,True,-14.41,-1.07
+lt_adaptive vs lt_dual_eps0.05,lt_adaptive,lt_dual_eps0.05,15,0.0,1.0,True,0.0,0.0
+lt_adaptive vs lt_rep_penalty_1.3,lt_adaptive,lt_rep_penalty_1.3,15,13.59,0.0156,True,6.09,21.9
+lt_dual_eps0.01 vs lt_dual_eps0.05,lt_dual_eps0.01,lt_dual_eps0.05,15,0.0,1.0,True,0.0,0.0

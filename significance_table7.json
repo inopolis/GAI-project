@@ -1,0 +1,90 @@
+[
+  {
+    "comparison": "lt_risk_only vs lt_temp_0.1",
+    "method_a": "lt_risk_only",
+    "method_b": "lt_temp_0.1",
+    "n_prompts": 15,
+    "obs_dRMST": 88.43,
+    "p_exact_signflip": 0.0001,
+    "is_exact_enumeration": true,
+    "cluster_ci_lo": 66.39,
+    "cluster_ci_hi": 113.85
+  },
+  {
+    "comparison": "lt_risk_only vs lt_rep_penalty_1.3",
+    "method_a": "lt_risk_only",
+    "method_b": "lt_rep_penalty_1.3",
+    "n_prompts": 15,
+    "obs_dRMST": 6.46,
+    "p_exact_signflip": 0.2461,
+    "is_exact_enumeration": true,
+    "cluster_ci_lo": -3.67,
+    "cluster_ci_hi": 15.86
+  },
+  {
+    "comparison": "lt_risk_only vs lt_lookback_a3.0",
+    "method_a": "lt_risk_only",
+    "method_b": "lt_lookback_a3.0",
+    "n_prompts": 15,
+    "obs_dRMST": -7.13,
+    "p_exact_signflip": 0.125,
+    "is_exact_enumeration": true,
+    "cluster_ci_lo": -14.41,
+    "cluster_ci_hi": -1.07
+  },
+  {
+    "comparison": "lt_risk_only vs lt_dual_eps0.05",
+    "method_a": "lt_risk_only",
+    "method_b": "lt_dual_eps0.05",
+    "n_prompts": 15,
+    "obs_dRMST": -7.13,
+    "p_exact_signflip": 0.125,
+    "is_exact_enumeration": true,
+    "cluster_ci_lo": -14.41,
+    "cluster_ci_hi": -1.07
+  },
+  {
+    "comparison": "lt_risk_only vs lt_adaptive",
+    "method_a": "lt_risk_only",
+    "method_b": "lt_adaptive",
+    "n_prompts": 15,
+    "obs_dRMST": -7.13,
+    "p_exact_signflip": 0.125,
+    "is_exact_enumeration": true,
+    "cluster_ci_lo": -14.41,
+    "cluster_ci_hi": -1.07
+  },
+  {
+    "comparison": "lt_adaptive vs lt_dual_eps0.05",
+    "method_a": "lt_adaptive",
+    "method_b": "lt_dual_eps0.05",
+    "n_prompts": 15,
+    "obs_dRMST": 0.0,
+    "p_exact_signflip": 1.0,
+    "is_exact_enumeration": true,
+    "cluster_ci_lo": 0.0,
+    "cluster_ci_hi": 0.0
+  },
+  {
+    "comparison": "lt_adaptive vs lt_rep_penalty_1.3",
+    "method_a": "lt_adaptive",
+    "method_b": "lt_rep_penalty_1.3",
+    "n_prompts": 15,
+    "obs_dRMST": 13.59,
+    "p_exact_signflip": 0.0156,
+    "is_exact_enumeration": true,
+    "cluster_ci_lo": 6.09,
+    "cluster_ci_hi": 21.9
+  },
+  {
+    "comparison": "lt_dual_eps0.01 vs lt_dual_eps0.05",
+    "method_a": "lt_dual_eps0.01",
+    "method_b": "lt_dual_eps0.05",
+    "n_prompts": 15,
+    "obs_dRMST": 0.0,
+    "p_exact_signflip": 1.0,
+    "is_exact_enumeration": true,
+    "cluster_ci_lo": 0.0,
+    "cluster_ci_hi": 0.0
+  }
+]

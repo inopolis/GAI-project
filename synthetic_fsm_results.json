@@ -56,11 +56,60 @@
             "hazard_kl": 0.8771114803796137
         }
     ],
-    "matched_distortion_check": {
-        "target_kl_per_step": 0.6314501054982481,
-        "local_eps_matched": 0.001,
-        "local_loop_rate": 0.005,
-        "local_kl": 0.588184935426109,
-        "hazard_loop_rate": 0.013
-    }
+    "matched_distortion_all_eps": [
+        {
+            "hazard_eps": 0.3,
+            "hazard_kl": 0.2661439562374637,
+            "hazard_loop_rate": 0.246,
+            "local_eps_matched": 0.45771186440677963,
+            "local_kl_at_match": 0.2645089839819628,
+            "local_loop_rate_at_match": 0.508,
+            "loop_rate_gap_local_minus_hazard": 0.262
+        },
+        {
+            "hazard_eps": 0.2,
+            "hazard_kl": 0.23815528169284406,
+            "hazard_loop_rate": 0.17866666666666667,
+            "local_eps_matched": 0.5,
+            "local_kl_at_match": 0.24139012850737884,
+            "local_loop_rate_at_match": 0.5145,
+            "loop_rate_gap_local_minus_hazard": 0.3358333333333333
+        },
+        {
+            "hazard_eps": 0.1,
+            "hazard_kl": 0.3919574181867136,
+            "hazard_loop_rate": 0.05566666666666667,
+            "local_eps_matched": 0.17861016949152542,
+            "local_kl_at_match": 0.39153354492405484,
+            "local_loop_rate_at_match": 0.4115,
+            "loop_rate_gap_local_minus_hazard": 0.35583333333333333
+        },
+        {
+            "hazard_eps": 0.05,
+            "hazard_kl": 0.6314501054982481,
+            "hazard_loop_rate": 0.013,
+            "local_eps_matched": 0.001,
+            "local_kl_at_match": 0.603474507882287,
+            "local_loop_rate_at_match": 0.006,
+            "loop_rate_gap_local_minus_hazard": -0.006999999999999999
+        },
+        {
+            "hazard_eps": 0.02,
+            "hazard_kl": 0.8099458827689611,
+            "hazard_loop_rate": 0.003,
+            "local_eps_matched": 0.001,
+            "local_kl_at_match": 0.603474507882287,
+            "local_loop_rate_at_match": 0.006,
+            "loop_rate_gap_local_minus_hazard": 0.003
+        },
+        {
+            "hazard_eps": 0.01,
+            "hazard_kl": 0.8771114803796137,
+            "hazard_loop_rate": 0.0026666666666666666,
+            "local_eps_matched": 0.001,
+            "local_kl_at_match": 0.603474507882287,
+            "local_loop_rate_at_match": 0.006,
+            "loop_rate_gap_local_minus_hazard": 0.0033333333333333335
+        }
+    ]
 }

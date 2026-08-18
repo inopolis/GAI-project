@@ -1,0 +1,1657 @@
+[greedy][nonfiction_baseline] prompt='The road turned sharply where'
+------------------------------------------------------------
+the same manner as the same manner as
+ the produce of the same manner as the produce of the same manner as the
+ produce of the same manner as the production of the same manner as the
+ proprietors of the country, and the produce of the produce of the produce
+ of the produce of the produce of the produce of the produce of the produce
+ of the produce of the produce of the produce of the produce of the produce
+ of the produce of the produce of the produce of the produce of the produce
+ of the produc
+
+[greedy][nonfiction_baseline] prompt='He folded the letter and'
+------------------------------------------------------------
+subsistence of the same manner as they are
+ considerable to the same manner as the same manner as the same manner
+ as the same manner as the same manner as the same manner as the same
+ manner as the same manner as the same manner as the same manner as the
+ produce of the same manner as the same manner as the produce of the
+ country, and the produce of the produce of the produce of the produce of
+ the produce of the produce of the produce of the produce of the produce of
+ the produce of the produ
+
+[greedy][nonfiction_baseline] prompt='Rain struck the window as'
+------------------------------------------------------------
+the same manner as the same manner as they
+ have been supposed to be so much less than the same manner as they are
+ considered as the same manner as the same manner as the same manner as
+ the proprietors of the same manner as the produce of the same manner as
+ the produce of the produce of the produce of the produce of the produce
+ of the produce of the produce of the produce of the produce of the produce
+ of the produce of the produce of the produce of the produce of the produce
+ of the produce
+
+[greedy][nonfiction_baseline] prompt='"You must understand," she began,'
+------------------------------------------------------------
+and the same manner as they are
+ considered as the same manner as the same manner as the same manner as
+ the production of the same manner as the same manner as the same manner,
+ and the profits of the same manner as the produce of the produce of the
+ country, and the produce of the produce of the produce of the produce of
+ the produce of the produce of the produce of the produce of the produce of
+ the produce of the produce of the produce of the produce of the produce of
+ the produce of the pro
+
+[greedy][nonfiction_baseline] prompt='At the market that morning'
+------------------------------------------------------------
+of the same manner as the same manner as
+ the produce of the same manner as the produce of the same manner as the
+ proprietors of the same manner as the same manner as the same manner as
+ the proprietors of the country, and the produce of the produce of the
+ country, and the produce of the produce of the produce of the produce of
+ the produce of the produce of the produce of the produce of the produce of
+ the produce of the produce of the produce of the produce of the produce of
+ the produce of 
+
+[greedy][nonfiction_baseline] prompt='Three years afterwards, when'
+------------------------------------------------------------
+the same manner as the same manner as
+ the produce of the same manner as the same manner as the same manner as
+ the same manner as the same manner as the same manner as the same manner
+ as the same manner as the same manner as the same manner as the same
+ manner as the produce of the produce of the produce of the produce of
+ the produce of the produce of the produce of the produce of the produce of
+ the produce of the produce of the produce of the produce of the produce of
+ the produce of the pr
+
+[greedy][nonfiction_baseline] prompt='The room smelled of'
+------------------------------------------------------------
+the same manner as the same manner as they are
+ considerable to the same manner as the same manner as the same manner,
+ and the same manner as the same manner as the same manner as the same
+ manner as the same manner as the same manner as the same manner as the
+ produce of the produce of the produce of the produce of the produce of
+ the produce of the produce of the produce of the produce of the produce of
+ the produce of the produce of the produce of the produce of the produce of
+ the produce o
+
+[greedy][nonfiction_baseline] prompt='The doctor set down his bag and'
+------------------------------------------------------------
+some of the same manner as they are
+ considered as the same manner as the same manner as the same manner as
+ the production of the same manner as the same manner as the same manner as
+ the produce of the same manner as the produce of the produce of the
+ country, and the produce of the produce of the produce of the produce of
+ the produce of the produce of the produce of the produce of the produce of
+ the produce of the produce of the produce of the produce of the produce of
+ the produce of the p
+
+[greedy][nonfiction_baseline] prompt='Beyond the river lay'
+------------------------------------------------------------
+of the same manner as the same manner as they
+ could be considered as the same manner as the same manner as the same
+ manner as the same manner as the same manner as the same manner as the
+ proprietors of the same manner as the produce of the same manner as the
+ produce of the produce of the produce of the produce of the produce of
+ the produce of the produce of the produce of the produce of the produce of
+ the produce of the produce of the produce of the produce of the produce of
+ the produce o
+
+[greedy][nonfiction_baseline] prompt='"And what," he asked, "became of'
+------------------------------------------------------------
+the same manner as the produce of
+ the produce of the country, and the profits of the country, the price of
+ the country which they have been a common part of the country, and the
+ profits of the country, the price of the country, the price of the country,
+ the price of the produce of the produce of the produce of the produce of
+ the produce of the produce of the produce of the produce of the produce of
+ the produce of the produce of the produce of the produce of the produce of
+ the produce of t
+
+[greedy][nonfiction_baseline] prompt='That winter the family'
+------------------------------------------------------------
+of the same manner as the same manner as they
+ have been supposed to be so much less than the same manner as they are
+ considered as the same manner as the same manner as the same manner as
+ the produce of the country, and the produce of the produce of the produce
+ of the produce of the produce of the produce of the produce of the produce
+ of the produce of the produce of the produce of the produce of the produce
+ of the produce of the produce of the produce of the produce of the produce
+ of the
+
+[greedy][nonfiction_baseline] prompt='The ship had been at sea for'
+------------------------------------------------------------
+the same manner as the same manner as the
+ produce of the country, and the profits of the country, the price of the
+ country which they have been a common profit to the produce of the country.
+ The produce of the produce of the produce of the produce of the produce of
+ the produce of the produce of the produce of the produce of the produce of
+ the produce of the produce of the produce of the produce of the produce of
+ the produce of the produce of the produce of the produce of the produce of
+ th
+
+[greedy][nonfiction_baseline] prompt='In the garden behind the house'
+------------------------------------------------------------
+of the same manner as the same manner as
+ the produce of the same manner as the same manner as the same manner as
+ the production of the same manner as the same manner as the same manner,
+ and the profits of the country, and the produce of the produce of the
+ country, and the produce of the produce of the produce of the produce of
+ the produce of the produce of the produce of the produce of the produce of
+ the produce of the produce of the produce of the produce of the produce of
+ the produce of
+
+[greedy][nonfiction_baseline] prompt='His debts had grown until'
+------------------------------------------------------------
+the same manner as the same manner as the
+ produce of the same manner as the same manner as the same manner as
+ the same manner as the same manner as the same manner as the same manner
+ as the same manner as the same manner as the produce of the produce of
+ the produce of the produce of the produce of the produce of the produce
+ of the produce of the produce of the produce of the produce of the produce
+ of the produce of the produce of the produce of the produce of the produce
+ of the produce of
+
+[greedy][nonfiction_baseline] prompt='By dawn the streets were'
+------------------------------------------------------------
+the same manner as the same manner as the
+ produce of the same manner as the same manner as the same manner as the
+ proprietors of the same manner as the same manner as the same manner as
+ the proprietors of the same manner as the produce of the produce of the
+ country, and the produce of the produce of the produce of the produce of
+ the produce of the produce of the produce of the produce of the produce of
+ the produce of the produce of the produce of the produce of the produce of
+ the produce 
+
+[lt_temp_0.05][nonfiction_baseline] prompt='The road turned sharply where'
+------------------------------------------------------------
+the same manner as the same manner as
+ the produce of the same manner as the produce of the same manner as the
+ produce of the country, and the country which they have been a common part
+ of the country, and the profits of the same manner as the produce of the
+ produce of the produce of the produce of the produce of the produce of the
+ country, the price of the country which they have been exported to the
+ produce of the country, and the produce of the produce of the produce of
+ the produce of t
+
+[lt_temp_0.05][nonfiction_baseline] prompt='He folded the letter and'
+------------------------------------------------------------
+subsistence of the same manner as they
+ have been supposed to be so much as the same manner as the same manner
+ as the production of the same manner as the same manner as the same manner
+ as the proprietors of the same manner as the produce of the produce of
+ the produce of the produce of the produce of the produce of the produce of
+ the produce of the produce of the produce of the produce of the produce of
+ the produce of the produce of the produce of the produce of the produce of
+ the produce 
+
+[lt_temp_0.05][nonfiction_baseline] prompt='Rain struck the window as'
+------------------------------------------------------------
+the same manner as the same manner as the
+ produce of the same manner as the production of the same manner as the
+ proprietors of the same manner as the same manner as the same manner as
+ the proprietors of the same manner as the produce of the produce of the
+ country, and the produce of the produce of the produce of the produce of
+ the produce of the produce of the country, and the produce of the produce
+ of the produce of the produce of the produce of the produce of the produce
+ of the produce
+
+[lt_temp_0.05][nonfiction_baseline] prompt='"You must understand," she began,'
+------------------------------------------------------------
+and the same manner as they are
+ considered as the same manner as the same manner as the same manner as
+ the same manner as the same manner as the same manner as the same manner
+ as the production of the same manner as the same manner as the produce
+ of the produce of the produce of the produce of the produce of the same
+ manner as the proprietors of the same manner as the same manner as the
+ proprietors of the produce of the produce of the produce of the produce of
+ the produce of the produce o
+
+[lt_temp_0.05][nonfiction_baseline] prompt='At the market that morning'
+------------------------------------------------------------
+of the same manner as the same manner as
+ the produce of the same manner as the same manner as the same manner as
+ the production of the same manner as the same manner as the same manner as
+ the produce of the country, and the produce of the produce of the produce
+ of the produce of the produce of the produce of the produce of the produce
+ of the produce of the country. The produce of the produce of the produce of
+ the produce of the produce of the produce of the produce of the produce of
+ the p
+
+[lt_temp_0.1][nonfiction_baseline] prompt='The road turned sharply where'
+------------------------------------------------------------
+the same manner as the same manner as the
+ produce of the country which they have been expected to the same manner,
+ and the same manner as the same proportion of the same manner as they are
+ the produce of the country which they have been a proportion to the
+ country. The produce of the country which they are commonly produced by
+ the proprietors of the same manner as the same manner as the produce of
+ the country, the price of the produce of the country, the price of the
+ country, the price of
+
+[lt_temp_0.1][nonfiction_baseline] prompt='He folded the letter and'
+------------------------------------------------------------
+subsistence of the same manner as the same
+ manner as the same manner as the same manner as the same manner as
+ the same species of the same manner as the same species of the same
+ conditions of life and subsistence of the same manner as the produce of
+ the produce of the produce of the produce of the same manner as they
+ are the same manner as the same manner as the same manner as the same
+ manner as the produce of the country, and the produce of the country, and
+ the price of the produce of th
+
+[lt_temp_0.1][nonfiction_baseline] prompt='Rain struck the window as'
+------------------------------------------------------------
+the same manner as the same manner as the
+ produce of the same manner as the production of the same manner, and
+ the country which it is not always be so much as the same manner as the
+ produce of the country, and the produce of the produce of the produce of
+ the produce of the produce of the produce of the produce of the produce of
+ the produce of the produce of the produce of the produce of the produce of
+ the produce of the produce of the country. The produce of the produce of
+ the produce of
+
+[lt_temp_0.1][nonfiction_baseline] prompt='"You must understand," she began,'
+------------------------------------------------------------
+and the same manner as the same
+ manner as the common price of the country, and the same manner as the
+ proprietors of the same manner, and the same manner as the same manner, and
+ the profits of the country, and the produce of the country, and the produce
+ of the country, the price of the landlord. The produce of the produce of
+ the produce of the produce of the country, the price of the landlord and
+ country, the price of the produce of the produce of the produce of the
+ country, and the produ
+
+[lt_temp_0.1][nonfiction_baseline] prompt='At the market that morning'
+------------------------------------------------------------
+of the same manner as the same manner as
+ the produce of the same manner as the same manner as the same manner as
+ the production of the same manner as the same manner as the same manner as
+ the produce of the country, and the produce of the produce of the country,
+ the produce of the produce of the country, and the proprietors of the
+ country, the price of the country which they have been exported to the
+ produce of the country, and the produce of the produce of the produce of
+ the produce of t
+
+[lt_temp_0.1][nonfiction_baseline] prompt='Three years afterwards, when'
+------------------------------------------------------------
+the same manner as the same manner as the
+ produce of the same manner as the same manner as the same manner as
+ the same manner as the common price of the country, and the produce of
+ the same manner as the produce of the same manner as the produce of the
+ country which they have been exported to the produce of the country. The
+ produce of the produce of the country, therefore, which is the produce of
+ the produce of the country, and the produce of the produce of the produce
+ of the produce of t
+
+[lt_temp_0.1][nonfiction_baseline] prompt='The room smelled of'
+------------------------------------------------------------
+the same manner as the same manner as they are
+ considerable to the produce of the country, and the produce of the
+ country, the price of the country which they have been supposed to be a
+ small proportion of the same manner as the same manner as the produce of
+ the country, and the produce of the produce of the country, and the produce
+ of the country which they have been so much as the profit of the country,
+ the price of the produce of the country which they have been exported to
+ the produce
+
+[lt_temp_0.1][nonfiction_baseline] prompt='The doctor set down his bag and'
+------------------------------------------------------------
+some of the same manner, and the
+ country which had been expected to be a considerable productive labourers
+ of the country, and the same species of the same manner as the same manner
+ as the proprietors of the same manner as the profits of the same manner,
+ and the country which the same manner as the produce of the country, and
+ the produce of the country which they have been exported to the produce of
+ the country. The produce of the produce of the country, the price of the
+ country, the pric
+
+[lt_temp_0.1][nonfiction_baseline] prompt='Beyond the river lay'
+------------------------------------------------------------
+of the same manner as the same manner as they
+ could be supposed to be a profit of the produce of the same manner as
+ the produce of the country, and the profits of the country, and the produce
+ of the country, and the country which is the price of the produce of the
+ country, and the produce of the country, the price of the produce of the
+ country, it was the price of the produce of the produce of the produce of
+ the produce of the produce of the produce of the country, the price of the
+ countr
+
+[lt_temp_0.1][nonfiction_baseline] prompt='"And what," he asked, "became of'
+------------------------------------------------------------
+the same manner as the proprietors of
+ the produce of the country, and the produce of the society which they
+ have been exported to the same manner as the profits of the country. The
+ country which is the produce of the country, the price of the country, the
+ produce of the produce of the produce of the produce of the produce of the
+ country, the produce of the country which they have been exported to the
+ produce of the country, and the produce of the produce of the produce of
+ the produce of t
+
+[lt_temp_0.1][nonfiction_baseline] prompt='That winter the family'
+------------------------------------------------------------
+of the same manner as the same manner as they
+ could be supposed to be a profit of the country. The produce of the
+ country, therefore, which is not be so much as the proprietors of the same
+ manner as the proprietors of the produce of the produce of the produce of
+ the produce of the produce of the country, the price of the produce of the
+ country, it was the price of the country, and the profits of the produce of
+ the country, the produce of the produce of the country, the price of the
+ countr
+
+[lt_temp_0.1][nonfiction_baseline] prompt='The ship had been at sea for'
+------------------------------------------------------------
+the same manner as the same manner as the
+ produce of the country, and the produce of the society which they have
+ been considered as the same manner as the proprietors of the country, and
+ the profits of the country, which is the produce of the produce of the
+ produce of the produce of the produce of the produce of the produce of the
+ country. The produce of the country which they are considered as the produce
+ of the produce of the produce of the produce of the produce of the produce
+ of the c
+
+[lt_temp_0.1][nonfiction_baseline] prompt='In the garden behind the house'
+------------------------------------------------------------
+of the same manner as the same manner as
+ the produce of the same manner as the same manner as the same manner as
+ the production of the same manner as the same manner as the same manner as
+ the produce of the country, and the same manner as the produce of the
+ produce of the produce of the produce of the produce of the produce of the
+ country. The produce of the country which they are considered as they are
+ considered as the produce of the country, the price of the produce of the
+ country, and
+
+[lt_temp_0.1][nonfiction_baseline] prompt='His debts had grown until'
+------------------------------------------------------------
+the same manner as the same manner as the
+ produce of the same manner as the production of the same manner, and
+ the country which it is not always be so much as the same manner as the
+ produce of the same manner as the proprietors of the same manner as the
+ produce of the produce of the produce of the produce of the country. The
+ produce of the produce of the produce of the produce of the produce of the
+ country, the produce of the produce of the produce of the country, the
+ produce of the coun
+
+[lt_temp_0.1][nonfiction_baseline] prompt='By dawn the streets were'
+------------------------------------------------------------
+the same manner as the same manner as the
+ produce of the same manner as the production of the same manner as the
+ proprietors of the same manner as the same manner as the produce of the
+ same manner as the proprietors of the same manner as the produce of the
+ country. The produce of the country which they are commonly produced by
+ the produce of the produce of the produce of the produce of the produce of
+ the produce of the produce of the produce of the produce of the produce of
+ the produce of
+
+[lt_temp_0.15][nonfiction_baseline] prompt='The road turned sharply where'
+------------------------------------------------------------
+the same manner as the same manner as the
+ produce of the country which they have been exchanged for the country,
+ the price of the country, and the price of the country, the country, of the
+ country, and the profits of the produce of the produce of the produce of
+ the present country, and the proprietors of the country which they have
+ been the produce of the country, the same manner as the produce of the
+ country, and the proprietors of the country which they have been exported
+ to the produce
+
+[lt_temp_0.15][nonfiction_baseline] prompt='He folded the letter and'
+------------------------------------------------------------
+subsistence of the same manner as the common
+ price of the country, and the produce of the same manner as the same
+ manner as the same considerable production of the same manner as they are
+ the produce of the country, and the same manner as the proprietors of the
+ produce of the produce of the produce of the produce of the produce of
+ the produce of the landlord. The proprietors of the greater part of the
+ country, the price of the land and the produce of the produce of the land
+ trade of the c
+
+[lt_temp_0.15][nonfiction_baseline] prompt='Rain struck the window as'
+------------------------------------------------------------
+the same manner as the same manner as the
+ produce of the same manner as the production of the same manner. In
+ the country, therefore, therefore, the same manner as the company of the
+ produce of the country, the price of the country, the price of the landlord
+ the country which they are considered as the produce of the country, the
+ produce of the country which they are consist of the greater part of the
+ country, and the proprietors of the country which they have been exported
+ to the produce
+
+[lt_temp_0.15][nonfiction_baseline] prompt='"You must understand," she began,'
+------------------------------------------------------------
+and the same manner as the same
+ manner as they have been supposed to be the latter profit of the same
+ manner as the profits of the same species of the same manner as they
+ have been considered as the same manner as they are the same manner as
+ the same manner as they have been exported to the same manner as they
+ consider the produce of the produce of the country, and the same manner
+ as the same manner as the price of corn which it was the produce of the
+ country, and the produce of the produ
+
+[lt_temp_0.15][nonfiction_baseline] prompt='At the market that morning'
+------------------------------------------------------------
+of the country, and the price of the
+ country, the real value of the country which they have been employed in
+ the country which they have been a proportion to the profits of the produce
+ of the country, the price of the country, the price of the country, and
+ the price of the produce of the produce of the produce of the country, the
+ proprietors of the country, which is the produce of the produce of the
+ country, the produce of the produce of the produce of the country, it was
+ the produce of t
+
+[lt_rep_penalty_1.3][nonfiction_baseline] prompt='The road turned sharply where'
+------------------------------------------------------------
+it is
+ compared, and the same great part of the country. It is not be so much
+ more than the profits of the country; and the same manner as the same manner
+ as the profits of the produce of the country, the price of the country, the
+ price of the country, the price of the produce of the produce of the produce
+ of the country, the price of the produce of the country, and the produce of
+ the project of the produce of the produce of the produce of the country. But
+ the proprietors of the produce of
+
+[lt_rep_penalty_1.3][nonfiction_baseline] prompt='He folded the letter and'
+------------------------------------------------------------
+subject of the
+ price of the common people, who have been supposed to be the greater part
+ of the produce. They have been a considerable production of the country,
+ which is the same manner as the proprietors of the country; and the produce
+ of the produce of the country, or the produce of the produce of the produce
+ of the produce of the produce of the produce of the produce of the produce
+ of the produce of the country, the price of the produce of the produce of
+ the produce of the produce of 
+
+[lt_rep_penalty_1.3][nonfiction_baseline] prompt='Rain struck the window as'
+------------------------------------------------------------
+they
+ may be considered, and the profits of the land. The produce of the
+ country which it is not belong to the same manner, and the same species
+ of the same manner as a very small part of the country, and the profits of
+ the same manner as the proprietors of the country; and the produce of the
+ country, and the same manner as the produce of the produce of the country.
+
+ In the country, the price of the produce of the country, the price of the
+ country, the price of the country, the price of th
+
+[lt_rep_penalty_1.3][nonfiction_baseline] prompt='"You must understand," she began,'
+------------------------------------------------------------
+if
+ we can be provided in the same manner. They have been supply the same
+ manner as the country which they have been a considerable degree of the
+ same kind of the same manner as the common price of the country; and
+ the produce of the country which he had been a common profit of the
+ same manner as the produce of the produce of the same manner as the same
+ manner as the same manner as the proprietors of the country, the price of
+ the country, the price of the country, and the produce of the pr
+
+[lt_rep_penalty_1.3][nonfiction_baseline] prompt='At the market that morning'
+------------------------------------------------------------
+of
+ the same class, which have been purchased by the same manner. The profits
+ of the same manner as the country which it has been a standing of the
+ same manner. It is a considerable degree of the same manner as the
+ proprietors of the same manner as the profits of the country; and the
+ same manner as the price of the produce of the same manner as the same
+ manner as the same manner as the same manner as the same manner as the
+ produce of the same manner as they are allowed to be the price of t
+
+[lt_rep_penalty_1.3][nonfiction_baseline] prompt='Three years afterwards, when'
+------------------------------------------------------------
+it
+ complex and country, but the price of the country. In the country, the
+ produce of the country which they have been exported to the same manner; and
+ it is not be so great as a considerable degree of the same kind which the
+ produce of the produce of the produce of the produce of the same manner,
+ the price of the produce of the produce of the produce of the same manner
+ as the produce of the produce of the produce of the produce of the country.
+ But the produce of the produce of the produce
+
+[lt_rep_penalty_1.3][nonfiction_baseline] prompt='The room smelled of'
+------------------------------------------------------------
+their
+ country, and which the produce of the same manner. It is the produce of
+ the same kingdom, the same manner as the same manner as the produce of
+ the same manner as the same manner as the same manner as the same manner
+ as the produce of the produce of the produce of the present country; but
+ the profits of the country which they have been a small quantity of labour
+ which they have been a profit of the same manner as the same manner as the
+ produce of the country, and the produce of the c
+
+[lt_rep_penalty_1.3][nonfiction_baseline] prompt='The doctor set down his bag and'
+------------------------------------------------------------
+plants,
+and they are frequently more than the same manner. It is not only the
+ produce of the produce of the country; and the profits of the same kind
+ which they have been expected to the same manner as the produce of the
+ country, the produce of the produce of the country, the greater part of
+ the country, the price of the produce of the country, and the produce of
+ the produce of the produce of the country, and the produce of the produce of
+ the produce of the country, the price of the produc
+
+[lt_rep_penalty_1.3][nonfiction_baseline] prompt='Beyond the river lay'
+------------------------------------------------------------
+of
+ the same country, which is not be proportioned to the produce of the
+ country. The produce of the country which they have been a greater quantity
+ of labour and manufacturers; and the profits of the same kind which it
+ could be a proportion to the produce of the country, the price of the
+ country which they have been a company of the present country, the price of
+ the produce of the produce of the country, and the produce of the produce of
+ the produce of the country, the price of the produc
+
+[lt_rep_penalty_1.3][nonfiction_baseline] prompt='"And what," he asked, "became of'
+------------------------------------------------------------
+the
+ private country. The proprietors of the land and labour of the country,
+ the greater part of Europe, the same manner as the country which it was
+ not before the produce of the country; and the profits of the country, the
+ price of the country, the price of the produce of the produce of the same
+ manner as the produce of the sovereigns of the produce of the country, and
+ the country, the price of the produce of the country, and the same manner
+ as the price of the country. It is the produce 
+
+[lt_rep_penalty_1.3][nonfiction_baseline] prompt='That winter the family'
+------------------------------------------------------------
+of
+ the same country. It is the price of the great body, the proprietors of
+ the same kind of the same species; and the country which the same manner
+ as the same manner as the proprietors of the country, the price of the
+ country which they are considered as the produce of the produce of the
+ country, the price of the produce of the country, and the profits of the
+ country, and the produce of the country, it was not only the produce of the
+ country, and the produce of the produce of the produce
+
+[lt_rep_penalty_1.3][nonfiction_baseline] prompt='The ship had been at sea for'
+------------------------------------------------------------
+the
+ country, which is not belong to the most provided and subject of the
+ country. It is not be sold to be the same manner as the proprietors of
+ the same kind which it was the same proportion of the country; and the
+ country which is the price of the produce of the produce of the country, the
+ price of the country, the price of the country, and the profits of the
+ country, and the produce of the country, in the country, the price of the
+ country which is the produce of the produce of the produ
+
+[lt_rep_penalty_1.3][nonfiction_baseline] prompt='In the garden behind the house'
+------------------------------------------------------------
+of
+ the company, and which it is not belong to the same manner. The proprietor
+ of the country, therefore, which have been supposed to be so much as the
+ same manner as the proprietors of the country; and the profits of the
+ produce of the produce of the produce of the present country, and the
+ proprietors of the same manner as the produce of the produce of the country.
+ But the produce of the produce of the country, the country which they have
+ been exported to the produce of the produce of the
+
+[lt_rep_penalty_1.3][nonfiction_baseline] prompt='His debts had grown until'
+------------------------------------------------------------
+the
+ profit, and they compare the produce of the country. The produce of the
+ country which they have been so much as the same manner as the produce of
+ the country; and the proprietors of the country, the proprietor of the
+ produce of the produce of the produce of the present country, and the produce
+ of the produce of the produce of the produce of the produce of the produce
+ of the country, the price of the country which they have been exported to
+ the produce of the produce of the produce of 
+
+[lt_rep_penalty_1.3][nonfiction_baseline] prompt='By dawn the streets were'
+------------------------------------------------------------
+complex in the
+ country, but the price of the country. The produce of the country, the
+ country which is the produce of the country, the greater part of the country
+ which they have been considered as the proprietors of the produce of the
+ country, the price of the produce of the produce of the produce of the
+ produce of the produce of the produce of the landlord. It is the produce of
+ the produce of the produce of the produce of the produce of the country; and
+ the proprietors of the produce of
+
+[lt_no_repeat_4gram][nonfiction_baseline] prompt='The road turned sharply where'
+------------------------------------------------------------
+the same manner as that of this
+ country, and though three we have been a considerable productive labourers
+ of
+ thus tax upon thlow thwo such a particular commodity of, assessed to had
+ before it is too be tolerated any other capital offspring thy hardly be
+ sold taken place of. Their price was not only thE great payment or often
+ can be, at thhe political present, are no practice, th towards times two
+ per different. To thbe paid of; an anciently prudentic islands arts ofcer
+ animals annually 
+
+[lt_no_repeat_4gram][nonfiction_baseline] prompt='He folded the letter and'
+------------------------------------------------------------
+subsistence of those who have been allowed
+them to be so much as that this country which thus produced in three
+ present company, an accouragement, assismited by thle facts of
+things, are thy army often shilling thhe same manner thwo supposed any
+ particular consumption of, at least times too buy two per cent. th tin
+ thEast, thAmerican colonies or carrying, a state ordinary price in
+
+ tit would be, actually below th. The prudentices when twenty people on
+ another paymency or, togetheth whatever
+
+[lt_no_repeat_4gram][nonfiction_baseline] prompt='Rain struck the window as'
+------------------------------------------------------------
+that of this country, and those of
+ three commodities often consumption. The produce or price which thus
+ collected to thhe capital offices when thy have been a corporatious annual
+ present times, assured, are thle other coin of, th too, togetheth with
+ two per different, at thwich, till ththey heave, a part order to
+ take place to, according towns tobaccco of. To taxes tin tit is a great
+ pair of; an anciently practice, tend in all otthese animals organs one
+ anothing, after a smaller payment. 
+
+[lt_no_repeat_4gram][nonfiction_baseline] prompt='"You must understand," she began,'
+------------------------------------------------------------
+and the same manner as that of this
+ country, assembly to have bought too be thougH three is tolerable to
+ thus take place of, are transported together in thy were a state or any
+ particular profit order towards two per cent. thhe price which is
+, indeed, thle otheser who he had been exporated,
+ an equal total often people with thwo thbance annually present th. The
+ prudentices of
+ treat practical consumption of. To taxes till thE pr corn when twenty
+ or, toes, a certain prhics original prroduce
+
+[lt_no_repeat_4gram][nonfiction_baseline] prompt='At the market that morning'
+------------------------------------------------------------
+of those who have been a state of
+ things are considerable to three per cent. thus thy had before thE
+ country which he has become called thle ordinary profits of, and to
+ take place on any other particular commodity of. The price was not only
+ too taxes or thwo trades when thhe same measure ought togetheir towns. To
+ be a greater quantity, th thbound whatever an expense overbance animals
+ annually exceeded in two people arts ant officers, as told time till
+ tin assess twenty peaces as, indeed, 
+
+[lt_no_repeat_4gram][nonfiction_baseline] prompt='Three years afterwards, when'
+------------------------------------------------------------
+the same manner as that of this
+ country, and though threater thus two different consumptions of
+ thle stock which to have been a sort or office in time together. The
+ proprietors organs an ancient, thy were thhe common price, assembly to
+ had before it is too be taken place twenty yells are all thwo supposed
+ towars, artificially expected to, at th tit would both interest toes,
+ taxes only a corn who he has become called any part instructious at
+ till annuallity often shillings a greasure of, a
+
+[lt_no_repeat_4gram][nonfiction_baseline] prompt='The room smelled of'
+------------------------------------------------------------
+the same manner as that of
+ this country, and though thus to be sold too, assessed two different
+ parts off trade, are througHout thle consumption of, a state often any
+ commodity of. Their colonies which trust an advantage or thwo support or
+ twenty per cent. animals, thhe price occasional produce is a paid or, at
+ least time together with twice, towards twar tobacco ofcers, accepting thy
+ have been exporated in thEast, althose othese who had before it is
+ told, after twhe first coasts tendency
+
+[lt_no_repeat_4gram][nonfiction_baseline] prompt='The doctor set down his bag and'
+------------------------------------------------------------
+some of the same manner, an except of
+ this, that those other countries which thus consists throughout to thhe
+ sale or office any otal of, as it is not a great deal animal proportion to
+ take place only thy have been employed in thwhen two different persons
+ often annually present. They are thle common price, too, taxes at a
+ practice. To table togethese who had before its prudent, tends to, in
+ times, according towns twenty people artificial state outheavers an
+ extraordary part organs of. Two
+
+[lt_no_repeat_4gram][nonfiction_baseline] prompt='Beyond the river lay'
+------------------------------------------------------------
+of those who have been allowed to be that of
+ this country, and in three produce of, thus thy had before too, as to
+ belong th thwo support or thless any particular commodity, together with
+ two orders offer interest only thE Spanish colonies, at least an expense
+ often per cent. animals twenty people or, are some paid by twards times
+ to, take place twice industry organs one on towar, instead of. The
+ price, tends in
+ till thhe purposes originally considerable peace,—and, if twull be
+ so much a
+
+[lt_no_repeat_4gram][nonfiction_baseline] prompt='"And what," he asked, "became of'
+------------------------------------------------------------
+the same
+ manner as that office is always before this considerable to those other
+ countries, and thus too, in three common parts of
+ thland, are all thy were not only thwo trade two different corn animals
+ often above tribute times twenty per cent. into a colonies or profit or
+ towns an extent, assembly have been enably, it is, is
+ treated togethed by twice, at least any otal of, a paper, according to
+ twards around of. The prices which issued increased for thEast
+ Indies. To take place on toba
+
+[lt_no_repeat_4gram][nonfiction_baseline] prompt='That winter the family'
+------------------------------------------------------------
+of those who have been supposed to be so
+ little that, and this can be, in three proprietors of
+ thus thy had before too bank any other country, as towards two different
+ continents or an advantage of, are not only thless animals artificers, at
+ least annually expense order often present thhe power which thE great
+
+ Britain ancient, th tolerable part off twenty per distinct species on
+ twice otakers at twhen twar cases a commodity or, a paper, or
+ ofcertaion of. The same manner assembly anothing
+
+[lt_no_repeat_4gram][nonfiction_baseline] prompt='The ship had been at sea for'
+------------------------------------------------------------
+the produce of that country, and this
+ capital of
+ those who have become thus three pounds offered any other commodity, in
+ times, thy are to be a considerable part of, as it is not a present thhat
+ ofice is, attention too thwar two per distributious animals or carrying
+ towards togethese an extraordinary price, artificial colonies,
+ tends, its practices,—and, accordance,, after to
+ taxes a subsistence till thle order often should both th ofer in thEast
+ Indies trade twenty organs on anothor, a 
+
+[lt_no_repeat_4gram][nonfiction_baseline] prompt='In the garden behind the house'
+------------------------------------------------------------
+of those who have been allowed to
+ that offered any other country, and in time to this consumption too take
+ place on an accouragement towns of
+ two diffences animals into a state or ofit as three shillings or
+ commodity of, assistency togethese anothing thus tax upon exceeding
+ tobaccco annually discoveres one oto be thy are taught thhe present
+ century,—and, at till thle stock of. The same manner as
+ table twenty per divisions arises to, artificers occasiol antices
+ often shepherds attentiors 
+
+[lt_no_repeat_4gram][nonfiction_baseline] prompt='His debts had grown until'
+------------------------------------------------------------
+the same manner as that of this subject to
+ those ofference in three shillings of, and thus to thhe produce or
+ present could be a price together with thy have been a few considerable
+ part or of
+ trade, assumed too, a sum often prudent, at thwo treat practice, th ofer
+ towns any othese payments or, are thle oterives attention of. The common
+ people who has become extended into a greasure one out only thE goods
+ which is collected an exceeding th. To taxes till tobacco toes what
+ is, indeed, all
+
+[lt_no_repeat_4gram][nonfiction_baseline] prompt='By dawn the streets were'
+------------------------------------------------------------
+that this country, and those of three common
+ consumption of, as it is not always before it, in times, thus thy
+ have been supposed to be so much assembly too, a proportioty of
+ thhe capital office or present till th thwo subsistence any other part of.
+ The price, towards togetheer with a greater quantity animals often prudent
+ tolerable to
+ take place two orders or, are certainly afford trade tin a corn pair of;
+ an accouragement, actually different. This, its practices owing tobaccco ofer
+ a s
+
+[lt_lookback_a3.0][nonfiction_baseline] prompt='The road turned sharply where'
+------------------------------------------------------------
+the same manner as they have been
+ considered as the produce of the country which they are consumed in
+ the common particular country, and the most proportion of the state of
+ the same species of the present country. The price of the produce of
+ the country, therefore, which is a greater quantity of labour and subsistence
+ of the landlord. The suppose of the same continual production of the
+ country, it was not only the other parts of the country, and which had
+ been allowed to be the foreign co
+
+[lt_lookback_a3.0][nonfiction_baseline] prompt='He folded the letter and'
+------------------------------------------------------------
+subsistence of the same manner as they
+ have been considered as the production of the country, the real way of
+ the world, and the same species of the several parts of the common people
+ who had been a common part of the price of the produce of the country. The
+ proprietors of the present country which is always before the foreign trade,
+ and which the most profit of the country could not be exported to the
+ country, and consequently to be supposed to be a profit of a state of
+ particular profit
+
+[lt_lookback_a3.0][nonfiction_baseline] prompt='Rain struck the window as'
+------------------------------------------------------------
+the same manner as they have been allowed
+ to the produce of the country, and the most proportion of the society.
+ The price of the same species of the present country which they are the
+ profit of the labour of the world, the greater part of the profits of
+ the produce of a particular country. The suppose of the price of corn which
+ they had been exported to be a considerable proprietor. The proportion of
+ the country and commodity of the gold and silver which is the proprietors
+ of the country
+
+[lt_lookback_a3.0][nonfiction_baseline] prompt='"You must understand," she began,'
+------------------------------------------------------------
+and the same manner as they have
+ been supposed to be a state of the country. The produce of the society,
+ therefore, the price of the common price of labour and consumption of the
+ country, the contrary, and which the wages of the produce of land, the
+ proprietors of the country which it was not below the money price of a
+ great proprietor of the land and labour, and the proportion of the world,
+ which he had been allowed the same manner as the profits of the same
+ manner, the rent of the marke
+
+[lt_lookback_a3.0][nonfiction_baseline] prompt='At the market that morning'
+------------------------------------------------------------
+of the same manner as they have been
+ considered as the produce of the country. The price of labour and
+ country, therefore, is not be a small part of the price of the same
+ manner, and the proprietors of the landlord. The subject of the common
+ profit of the sovereign, the greater part of the country, it is the
+ price of corn which the price of land and silver which it was necessary
+ to be the most proportion of the great proprietor of the market price of
+ the world, and the state of the produc
+
+[lt_lookback_a3.0][nonfiction_baseline] prompt='Three years afterwards, when'
+------------------------------------------------------------
+the same manner as they have been
+ considered as the common profits of the production of the sea, and
+ the same species of the same genus, and the expense of the country, and
+ which the price of corn which he had been exchanged for the proprietors
+ of the landlord. The profits of a certain part of the foreign country,
+ therefore, the wages of labour is the profit of the commodity of the
+ produce of the present country. The country which is not be a greater part
+ of the produce of their own produ
+
+[lt_lookback_a3.0][nonfiction_baseline] prompt='The room smelled of'
+------------------------------------------------------------
+the same manner as the produce of the
+ country, and the common price of labour and consumption of the country.
+ The price of the landlord, therefore, which is not be so much as that of
+ the country, the rent of the price of land and labour, it is the capital
+ of the money price of a great proprietor of the world, and the profits of
+ the present country which they have been allowed to be a less of provision
+ which he had been exported to the same manner as the price of that of the
+ country, and t
+
+[lt_lookback_a3.0][nonfiction_baseline] prompt='The doctor set down his bag and'
+------------------------------------------------------------
+some of the same manner, and the
+ country which is not be considered as the produce of the country, the
+ price of the landlord and labour of the present country. The price of
+ the money price of corn which they had been allowed to be supposed to
+ be a greater part of the world, and the price of labour, the rent of the
+ land and profits of the great proprietors of the proprietor of the country.
+ The country and commodity of the same manner, and which is always before
+ the produce of the price of 
+
+[lt_lookback_a3.0][nonfiction_baseline] prompt='Beyond the river lay'
+------------------------------------------------------------
+of the same manner as they have been expected
+ to the produce of the country, and the same species of the present country
+ which they are the foreign trade of the society. The price of the same
+ manner, therefore, which is not be a greater quantity of labour which
+ they can be considered as the most proportion of the landlord. The same
+ proprietors of the commodity and country which he had been a common part of
+ the price of labour, and the profits of labour. The country, the rent of
+ the countr
+
+[lt_lookback_a3.0][nonfiction_baseline] prompt='"And what," he asked, "became of'
+------------------------------------------------------------
+the same manner as they have been
+ considered as the produce of the country which they are the first of
+ the land and labour of the present country, and the real price of the
+ country. The price of labour, therefore, in the price of the proprietors
+ of the labourer of the country. It is the common price of a great proprietor
+ of the price of land, the whole profits of the world, and the profit of the
+ produce of any country, the price of corn which it is not be so much
+ as the produce of the cou
+
+[lt_lookback_a3.0][nonfiction_baseline] prompt='That winter the family'
+------------------------------------------------------------
+of the same manner as they have been expected
+ to the produce of the country, and the same species of the people and
+ consumption of the land, and therefore, the most proportion of the
+ productive powers of the commodity of the contrary, the price of labour,
+ and the profits of the state of the present country. The proprietors of
+ the world, therefore, which is consisted by the real profit of the whole
+ country which they have been exported to the foreign country, therefore,
+ the country of the 
+
+[lt_lookback_a3.0][nonfiction_baseline] prompt='The ship had been at sea for'
+------------------------------------------------------------
+the produce of the country, and the
+ price of labour and consumption of the same manner as they have been
+ considered as the sovereigns of the present country. The price of the
+ country which they are the foreign trade of the society of the landlord. The
+ profits of the commodity of labour, therefore, which is always be supposed
+ to be the price of land, in the country and subsistence of the same
+ manner, and the most proportion of a great part of the greater part of
+ the country, the whole prod
+
+[lt_lookback_a3.0][nonfiction_baseline] prompt='In the garden behind the house'
+------------------------------------------------------------
+of the same manner as they have been
+ considered as the produce of the country. The price of labour and
+ country, therefore, which is not be a common parent to the price of
+ the landlord. The country which he can be considered at the present and
+ proportion of the produce of a great proprietor, and the profits of the
+ produce of their own produce. The supposed produce of the present country
+ which they are the same manner as they have been allowed to be sold as
+ the proprietors of the sovereigns
+
+[lt_lookback_a3.0][nonfiction_baseline] prompt='His debts had grown until'
+------------------------------------------------------------
+the same manner as they have been
+ considered as the common price of the landlord. The produce of the
+ society which they are continually belonged to the proprietors of the
+ country, and the rent of the price of labour which it was a part of the
+ produce of the produce of a greater part of the country. The country which
+ the produce of the country, the greater part of Europe, the same time, and
+ the contrary, in the profits of the money price of some other countries,
+ the suppose of the landlord
+
+[lt_lookback_a3.0][nonfiction_baseline] prompt='By dawn the streets were'
+------------------------------------------------------------
+the produce of the country, and the
+ price of labour and subsistence of the same manner as they have been
+ considered as the same species of the people who had been a few manufactures
+ of the landlord. The proprietors of the country which they are continually
+ expected to the price of the labourer of the most profitable profits
+ of the sovereigns of the state of the present country. The greater part of
+ the world, therefore, which is always be supposed to be the common price
+ of the produce of t
+
+[lt_fsd][nonfiction_baseline] prompt='The road turned sharply where'
+------------------------------------------------------------
+they had
+ been a common profit of those workmen, and with the same manner as to
+ the people of some other capital or of all that times are, to be a great
+ more price of their particular produce. This present century, in this
+ country can be considered, but as it is the case, as well-known in
+ two persons of labour who he has been exported. It was not by the
+ private proportion of that order to the rent, therefore, and thereby
+ seems to have been sufficiently, than to abundance to twenty pounds o
+
+[lt_fsd][nonfiction_baseline] prompt='He folded the letter and'
+------------------------------------------------------------
+subsistence of trade, as it is not be so
+ little to that other, they are considered, in this case interest to
+ the capital of a state or office, too, which it was the produced of
+ several parts of Europe, were therefore, itself order to bring than it
+ would be, but all the same manner, and, that, if it had been exported
+ at their present country, at least a greater part of their own people,
+ in order, it must be always be employed in a certain proportion to the
+ commodity of labour artificial ch
+
+[lt_fsd][nonfiction_baseline] prompt='Rain struck the window as'
+------------------------------------------------------------
+to this company which is
+ supposed to be a profit of their own particular capital of Europe, and
+ thereby the same manner as a certain, when those of all the country are
+ considerable to have been altogether in the price of that country, too, it
+ was, by a greater part of England would be sufficient to take place,
+ and that, indeed, they heavy both the money, as it was not abroad in
+ thirty or two centuries, and who are necessary to buy that other. The
+ present can be carried on with a smaller q
+
+[lt_fsd][nonfiction_baseline] prompt='"You must understand," she began,'
+------------------------------------------------------------
+and thereby to bring this subject to
+ the country which it has been a certain profit, in the same manner as
+ all those of their own company. The people of sometimes or several other
+ capitals are to the price of labour was too attention of that of
+ time, they are, as its power of a greater part of the least chapter. It
+ is, too, by a stock of paying, than in any other countries, at all
+ times, the rent of life is always carried only foreign trade, it is
+ not be able that they had been exported, 
+
+[lt_fsd][nonfiction_baseline] prompt='At the market that morning'
+------------------------------------------------------------
+of time, and to be supposed by the
+ produce of a country, though they have been some particular capital or
+ one another, it is always by a greater quantity of people who he had a
+ state or of the commodity, as they are too, without all the price,
+ and which in this case of that, together will, but be altogether,
+ to the same monopoly or pay to take place. The rent of land, however, at
+ least any part of their own consumption. It is, indeed, therefore, than
+ it, is to have, in a present, and, aft
+
+[lt_fsd][nonfiction_baseline] prompt='Three years afterwards, when'
+------------------------------------------------------------
+the same manner as to be that time
+ too, and therefore, in a country with those of their capital was
+ altogether it is not by the produce of a state or other. The common part of
+ its powers, than in time of labour which is, it would be, at least all times
+ the carrying orders of thousand, too the low of purchase, there is the
+ price, will, but that, if it had never been always been to take place
+ only any pair, as it cannot, as that one another, the greater part of the
+ continual profits, and, i
+
+[lt_fsd][nonfiction_baseline] prompt='The room smelled of'
+------------------------------------------------------------
+their own country, and to be supposed
+ to have been exported, that the proprietor which it is not brought to
+ be the capital of a certain part of than those of Europe, was the
+ price of the same manner as a poor, or attention of some other particular
+ commodity, too, indeed, as to the real profits of labour wages or
+ less in the sovereign, and, it would be allowed that other, at least a
+ greater quantity of present consists, who are to able that its
+ own, is, in almost even to taxes, a good deal
+
+[lt_fsd][nonfiction_baseline] prompt='The doctor set down his bag and'
+------------------------------------------------------------
+some of the
+ country. This, too, in this case is not be supposed to below that of
+ the commodity order to the profits of a single as than it would be
+ always be a certain part of that country, and, which is, it is all the
+ same, by the saving of silver, as itself or cultivation of labour and
+ long-continued, at the greater part of Europe, and thereby, though they
+ have been exported. It is, therefore, that, if it has been so much
+ good assess a general period, to according to that time to war,
+ 
+
+[lt_fsd][nonfiction_baseline] prompt='Beyond the river lay'
+------------------------------------------------------------
+of those who have been allowed in the
+ country, and, if it is not by the produce of some other, too, with the
+ purpose, or to take place, as that they are to be a greater quantity of
+ silver, and which it was, but a part of the capital of a certain, in
+ this, the same, than it, is, in a present state of their own price. The
+ sale of people, it may, be so much, as it consists assess to about
+ any particular profit, therefore, when this cannot, at least times by
+ the gold and situation of life in 
+
+[lt_fsd][nonfiction_baseline] prompt='"And what," he asked, "became of'
+------------------------------------------------------------
+the
+ country, and, to bring this capital or of a certain profit, as it is
+ not by the people was too the commodity of labour and trade, which is necessary
+ to take place in that of this, indeed order to have been allowed to
+ be sold at their present chance or pay for them. The same, therefore,
+ however, its price, is always both than it would, but be a subsistence,
+ and with a part of it, in order, that, the real proportion of the sovereign
+ of that country which, we may be exposed, in the priva
+
+[lt_fsd][nonfiction_baseline] prompt='That winter the family'
+------------------------------------------------------------
+of those who have been supposed to be so
+ little times, and in their own proportion of a country, than it is not
+ always by the people, which is, indeed, but too, or attention, to the
+ price of cattle, as they are considered assured, are, the same manner, of
+ the capital of the merchants of labour was a part of their commodity. The
+ circulating course of the least cannot be exported. It is, therefore,
+ too accordingly, itself order of purchases or other payments, however,
+ were allowed by a grea
+
+[lt_fsd][nonfiction_baseline] prompt='The ship had been at sea for'
+------------------------------------------------------------
+their own produce of this state, and to
+ the people who he has bought to be a part of Europe, that they have been
+ exported in the country, without all the same manner as than it is
+ not brought, indeed, too, by the wages of labour which they are to take
+ place, its price is always carried on by a greater part, as it would have
+ been so much less a certain payment or of the rent, the gold, and
+ silver, or, as to afford a subsistence, as well-know any other commodity,
+ and it may be sold by succe
+
+[lt_fsd][nonfiction_baseline] prompt='In the garden behind the house'
+------------------------------------------------------------
+of trade, and
+ to that other country, therefore, which is this, in a certain part of
+ Europe, too, but the price of corn was not always by the capital of a
+ commodity of labour who had been exported it into a person who, it
+ is, than it would have been allowed, at least any paper money, as to
+ back them to be taxed assess a small profit, and with their own present
+ and cultivation, according to two different causes or twenty-five
+ people and two, are some particular produce, is almost every cons
+
+[lt_fsd][nonfiction_baseline] prompt='His debts had grown until'
+------------------------------------------------------------
+the same manner as to be a state of things,
+ and thereby two species or from their own, and, in the country, too, that
+ they have been called altogether it. The proprietors of all other
+ commodities, which he has bought to him is, it is not only a good different
+ capital with those other countries. It was, therefore, however, by
+ taxes when that of the people would be sufficient than in a certain
+ part of Europe, as it would, be exported, a pound of silver who are to
+ bring the money, and we can
+
+[lt_fsd][nonfiction_baseline] prompt='By dawn the streets were'
+------------------------------------------------------------
+to this common profit of the
+ same manner as that time, and therefore, too, in a certain case of
+ the country, which is, it is always be able than in this subject or to
+ a particular person, as itself office, is not altogether the price of a
+ greater part of whatever, they are called any considerably respected
+ into a good deal and four out of a silver with the first present cent.
+
+ The gradual proportion of that of the landlord. This, though all the
+ course will be supposed to buy the most diff
+
+[lt_risk_only][nonfiction_baseline] prompt='The road turned sharply where'
+------------------------------------------------------------
+the same manner as the produce of the
+ country, and the country which they have been expected to the same manner
+ as the same proportion of the same species of the same manner as they are
+ the produce of the labour of the same manner as the produce of the produce
+ of the produce of the society, and the profits of the country. The price of
+ the produce of the country, therefore, which is the produce of the produce
+ of the country, which is consisted by the produce of the produce of the
+ produce o
+
+[lt_risk_only][nonfiction_baseline] prompt='He folded the letter and'
+------------------------------------------------------------
+subsistence of the same manner as they
+ have been supposed to be so much as the same manner as the same manner
+ as the production of the same manner, and the same manner as the price of
+ corn which they have been a standard of the produce of the country. The
+ produce of the produce of the produce of the produce of the produce of the
+ country, the price of the country, the price of the produce of the country,
+ the price of the produce of the country which is the produce of the produce
+ of the pro
+
+[lt_risk_only][nonfiction_baseline] prompt='Rain struck the window as'
+------------------------------------------------------------
+the same manner as the produce of the
+ country, and the country which had been considered as the same manner,
+ and the price of the country, and the profits of the same manner as a part of
+ the country, the price of the country, and the produce of the produce of
+ the produce of the country, the price of the country, and the produce of
+ the produce of the landlord. The proprietors of the produce of the country,
+ therefore, which is all the produce of the produce of the produce of the
+ produce of 
+
+[lt_risk_only][nonfiction_baseline] prompt='"You must understand," she began,'
+------------------------------------------------------------
+and the same manner as they are
+ considered as the same manner as the produce of the society is not always
+ the same manner, and the same species of the same manner as the same
+ manner as the proprietors of the country which they have been a common
+ profit of the country, and the price of the landlord. The produce of the
+ country which they have been considered as the produce of the produce of
+ the produce of the country. The produce of the country which is the produce
+ of the produce of the pro
+
+[lt_risk_only][nonfiction_baseline] prompt='At the market that morning'
+------------------------------------------------------------
+of the same manner as the produce of the
+ country, and the country which they have been considered as the produce
+ of the country, and the price of the country, the whole price of the country
+ which it was not be so much as the profit of the produce of the country,
+ the produce of the produce of the country, the price of the produce of the
+ country, it was the price of the produce of the produce of the land and
+ country, the price of the country which is the produce of the produce of
+ the produc
+
+[lt_risk_only][nonfiction_baseline] prompt='Three years afterwards, when'
+------------------------------------------------------------
+the same manner as the same manner as the
+ produce of the country which they have been expected to the same manner,
+ and the same manner as the same part of the country, and the same manner
+ as the proprietors of the country, the price of the landlord. The produce
+ of the produce of the produce of the produce of the produce of the produce
+ of the produce of the country. The produce of the country which they had
+ been allowed the produce of the produce of the produce of the produce of
+ the produc
+
+[lt_risk_only][nonfiction_baseline] prompt='The room smelled of'
+------------------------------------------------------------
+the same manner as the produce of the country, and
+ the price of the country which they have been employed in the country, the
+ price of the country, and the profits of the country, and the proprietors of
+ the produce of the produce of the produce of the produce of the present
+ country, the price of the produce of the produce of the produce of the
+ country, the price of the produce of the land and labour of the produce of
+ the produce of the country. The produce of the produce of the produce of
+
+
+[lt_risk_only][nonfiction_baseline] prompt='The doctor set down his bag and'
+------------------------------------------------------------
+some of the same manner, and the
+ country which had been expected to be a considerable productive labourers
+ of the country, and the same species of the same manner as the produce of
+ the same manner as the proprietors of the same manner as the same manner
+ as the produce of the sovereigns of the same manner as the produce of
+ the same manner as the same manner as they are so far as the same manner
+ as the same manner as the same manner as the same manner as they have
+ been so much as the same m
+
+[lt_risk_only][nonfiction_baseline] prompt='Beyond the river lay'
+------------------------------------------------------------
+of the same manner as the proprietors of the
+ country, and the country which they have been a profit of the country.
+ The price of the country which it has been exported to the produce of the
+ produce of the land and labour of the produce of the produce of the country,
+ the price of the produce of the produce of the country, the produce of the
+ country which they can be considered as the produce of the produce of the
+ country, and the produce of the country, which is all the produce of the
+ coun
+
+[lt_risk_only][nonfiction_baseline] prompt='"And what," he asked, "became of'
+------------------------------------------------------------
+the same manner as they have been
+ considered as the produce of the country which they have been exported
+ to the produce of the country, and the price of the land and labour of
+ the country, the price of the country which is the produce of the produce
+ of the country. The produce of the country, therefore, which is all the
+ proprietors of the produce of the produce of the produce of the produce of
+ the produce of the country, the price of the country, the price of the
+ country which it was the 
+
+[lt_risk_only][nonfiction_baseline] prompt='That winter the family'
+------------------------------------------------------------
+of the same manner as the produce of the
+ country, and the country which they have been considered as the produce
+ of the country, and the profits of the same manner as a part of the country.
+ The produce of the produce of the produce of the produce of the country,
+ the produce of the produce of the country, the price of the produce of the
+ country, it was not always before the produce of the produce of the country,
+ the produce of the country, the produce of the country, the price of the
+ count
+
+[lt_risk_only][nonfiction_baseline] prompt='The ship had been at sea for'
+------------------------------------------------------------
+the same manner as the produce of the
+ country, and the country which they have been exported to the same manner
+ as the same manner as the proprietors of the same manner, and the same
+ manner as the profits of the same manner as the price of the country, and
+ the produce of the produce of the produce of the produce of the produce of
+ the produce of the produce of the produce of the produce of the country,
+ the price of the country, the price of the country, which is all the produce
+ of the coun
+
+[lt_risk_only][nonfiction_baseline] prompt='In the garden behind the house'
+------------------------------------------------------------
+of the same manner as they have been
+ considered as the same manner as the production of the country. The
+ profits of the country, therefore, which is not be so much as the same
+ manner as the proprietors of the produce of the society, and the same time
+ to the produce of the produce of the produce of the produce of the produce
+ of the produce of the produce of the produce of the produce of the produce
+ of the produce of the produce of the produce of the produce of the produce
+ of the produce of
+
+[lt_risk_only][nonfiction_baseline] prompt='His debts had grown until'
+------------------------------------------------------------
+the same manner as the same manner as the
+ produce of the country which they have been expected to the same manner,
+ and the same manner as the same part of the country, and the same manner
+ as the proprietors of the country. The profits of the produce of the
+ country, the price of the country, the price of the produce of the produce
+ of the produce of the produce of the country, the price of the country, the
+ whole proportion of the produce of the produce of the country, the price of
+ the produ
+
+[lt_risk_only][nonfiction_baseline] prompt='By dawn the streets were'
+------------------------------------------------------------
+the same manner as the same manner as the
+ produce of the country which they have been expected to the same manner,
+ and the same manner as the same part of the country, and the same manner
+ as the proprietors of the country. The profits of the produce of the
+ country, the price of the country, the price of the produce of the produce
+ of the produce of the produce of the country, the price of the country, the
+ whole proportion of the produce of the produce of the country, the price of
+ the produ
+
+[lt_adaptive][nonfiction_baseline] prompt='The road turned sharply where'
+------------------------------------------------------------
+the same manner as the produce of the
+ country, and the country which they have been expected to the same manner
+ as the same proportion of the same species of the same manner, and the
+ profits of the country, the price of the landlord. The produce of the
+ country which is the produce of the produce of the produce of the country.
+ The produce of the country which he can be supposed to be a proportion to
+ the real profit of the produce of the country, the price of the produce of
+ the produce of t
+
+[lt_adaptive][nonfiction_baseline] prompt='He folded the letter and'
+------------------------------------------------------------
+subsistence of the same manner as they
+ have been supposed to be so much as the same manner as the common
+ price of the country, and the country which is not be a state of the
+ produce of the produce of the country. The rent of the produce of the
+ country, the price of the produce of the world, and the profits of the
+ produce of the produce of the produce of the present country, it is the
+ proprietors of the country, the country which they have been considered as
+ the produce of the produce of t
+
+[lt_adaptive][nonfiction_baseline] prompt='Rain struck the window as'
+------------------------------------------------------------
+the same manner as the produce of the
+ country, and the same manner as the productive price of the country. The
+ proprietors of the same manner, therefore, which has been exported to the
+ proprietors of the country, which is the produce of the produce of the
+ country, the price of the landlord. The produce of the country which they
+ have been produced the produce of the country, the produce of the country,
+ the rent of the profits of the produce of the produce of the present country
+ which it wa
+
+[lt_adaptive][nonfiction_baseline] prompt='"You must understand," she began,'
+------------------------------------------------------------
+and the same manner as they are
+ considered as the same manner as the produce of the country, and the
+ profits of the same manner, and the price of the landlord. The produce of
+ the produce of the country, therefore, which is the proprietors of the
+ country, which is not always be so much greater part of the produce of the
+ country, the price of the country which they have been exported to the
+ produce of the country. The produce of the produce of the country, it is
+ always the produce of the pr
+
+[lt_adaptive][nonfiction_baseline] prompt='At the market that morning'
+------------------------------------------------------------
+of the same manner as the produce of the
+ country, and the country which they have been considered as the produce
+ of the land and labour of the country, the price of the country and country
+ which it is the produce of the sovereign of the society, and the produce of
+ the produce of the produce of the present country. The proprietors of the
+ produce of the greater part of the produce of the produce of the world, and
+ the profits of the same manner as the proprietors of the produce of the
+ produc
+
+[lt_adaptive][nonfiction_baseline] prompt='Three years afterwards, when'
+------------------------------------------------------------
+the same manner as the same manner as
+ the produce of the country which they have been expected to the same
+ manner as the same manner as the proprietors of the same species of the
+ same manner, and the same manner as the same manner as the price of the
+ country, the greater part of the profits of the same manner. The proprietor
+ of the produce of the landlord. The produce of the same manner as the
+ produce of the country, therefore, which is not always be sufficient to
+ the produce of the produ
+
+[lt_adaptive][nonfiction_baseline] prompt='The room smelled of'
+------------------------------------------------------------
+the same manner as the produce of the country, and
+ the price of the country which they have been employed in the country, the
+ price of the country, and the market price of the country. The produce of
+ the country which is the produce of the landlord. The proprietors of the
+ country, therefore, the country which he had been allowed the produce of
+ the produce of the produce of the produce of the produce of the produce of
+ the whole produce of the greater part of the produce of the present count
+
+[lt_adaptive][nonfiction_baseline] prompt='The doctor set down his bag and'
+------------------------------------------------------------
+some of the same manner, and the
+ country which had been expected to be a considerable productive labourers
+ of the country, and the same species of the same manner as the produce of
+ the same manner as the proprietors of the same manner as the same manner
+ as the former than the price of the landlord. The profits of the same
+ manner as the proprietors of the same manner as the same manner as the
+ produce of the produce of the present country. The rent of the country,
+ therefore, the price of th
+
+[lt_adaptive][nonfiction_baseline] prompt='Beyond the river lay'
+------------------------------------------------------------
+of the same manner as the proprietors of the
+ country, and the country which they have been a profit of the country.
+ The price of the country which it has been exported to the produce of the
+ produce of the land and labour of the produce of the produce of the country
+ which they are the whole produce of the produce of the produce of the
+ landlord. The produce of the produce of the produce of the present country,
+ therefore, which is the produce of the produce of the produce of the produce
+ of t
+
+[lt_adaptive][nonfiction_baseline] prompt='"And what," he asked, "became of'
+------------------------------------------------------------
+the same manner as they have been
+ considered as the produce of the country which they have been exported
+ to the produce of the country, and the price of the land and labour of
+ the country. The proprietors of the country, therefore, is not only the
+ proprietors of the country, the price of the produce of the produce of the
+ country, the price of the whole profits of the country, the price of the
+ landlord. The produce of the produce of the country, therefore, which is
+ consisted in the proprie
+
+[lt_adaptive][nonfiction_baseline] prompt='That winter the family'
+------------------------------------------------------------
+of the same manner as the produce of the
+ country, and the country which they have been considered as the produce
+ of the land and labour of the country, the manufacturers of the country,
+ the price of the country which it is the produce of the produce of the
+ produce of the produce of the produce of the present country. The proprietors
+ of the country which the produce of the produce of the country, it was
+ really exchanged for the produce of the produce of the country, the price of
+ the whole 
+
+[lt_adaptive][nonfiction_baseline] prompt='The ship had been at sea for'
+------------------------------------------------------------
+the same manner as the produce of the
+ country, and the country which they have been exported to the same manner
+ as the same manner as the proprietors of the same species of the same
+ manner, and the price of the landlord. The profits of the country which
+ they are considered as the same manner as the produce of the country. The
+ produce of the produce of the country, therefore, the greater part of the
+ country which is consisted by the produce of the produce of the produce of
+ the produce of t
+
+[lt_adaptive][nonfiction_baseline] prompt='In the garden behind the house'
+------------------------------------------------------------
+of the same manner as they have been
+ considered as the same manner as the production of the country. The
+ profits of the country, therefore, which is not be so much as the same
+ manner as the proprietors of the produce of the society, and the same time
+ to the profits of the produce of the landlord. The produce of the produce
+ of the produce of the country which they are consist of the same manner, and
+ the real profits of the same manner as the produce of the produce of the
+ country, the price
+
+[lt_adaptive][nonfiction_baseline] prompt='His debts had grown until'
+------------------------------------------------------------
+the same manner as the same manner as the
+ produce of the country which they have been expected to the same manner,
+ and the same manner as the same part of the country, and the profits of
+ the country, the price of the landlord. The proprietors of the produce of
+ the produce of the country. The produce of the produce of the produce of
+ the produce of the produce of the world, the rent of the produce of the
+ country, which is always be sold as the produce of the country, it was
+ the produce of t
+
+[lt_adaptive][nonfiction_baseline] prompt='By dawn the streets were'
+------------------------------------------------------------
+the same manner as the same manner as the
+ produce of the country which they have been expected to the same manner,
+ and the same manner as the proprietors of the same species of a country,
+ the price of the landlord and subsistence of the same manner as they
+ are considered as the common profits of the same manner. The price of
+ the country, therefore, which is the contrary, the same manner as the
+ country which it is a common profit of the country. The produce of the
+ country which is the comm
+
+[lt_dual_eps0.05][nonfiction_baseline] prompt='The road turned sharply where'
+------------------------------------------------------------
+they had
+ been a common profit of trade, and which to bring two persons of
+ time, takes all tenants too, in this case or at as its price own accordinary
+ changes, on to that, with about any other city, but,
+ afterwards were,, for those,
+
+ would botanist thus by three pounds, have banken, not bird ought it,—an
+ except was advanced, evention,
+, partly,—their owage areas, so far from them against,, contaionally
+,—who heavy blended. Thirdly. In clotths high places. But I howevus
+ hastink becouraghed
+
+[lt_dual_eps0.05][nonfiction_baseline] prompt='He folded the letter and'
+------------------------------------------------------------
+subsistence of trade, as it is not be so
+ little that time which to bring two different countries with a state are
+ called tax upon teachers, turning, attack those in types,—an except or
+ advantageous altogether, accordingly, in a certain, or of
+ this, after three commonly endeavoured, we may both by thus,
+ indeedscedened. It was,, however. They appear too tthheir proprietors one
+ about against have blen butchE amouNt foreign circumstion,
+
+ would back, birdging. A stank out, from these,
+thy aver
+
+[lt_dual_eps0.05][nonfiction_baseline] prompt='Rain struck the window as'
+------------------------------------------------------------
+to take place of those countries, and times
+ afford a small part or othat trade, tends into
+ this case,
+ it is,
+through thus supposing two different classifications of
+ labour are turned instroyed, if improvement, be a certaiory on than iron
+ out altogether thle occanic beings attence. It was,, however, which
+ had botth ill thy hears from three shilling-houses we characters
+any species. The fould operate idle,—thhe same manner. But,
+ woud by their own circumstancy writest another; accors,—answer
+
+[lt_dual_eps0.05][nonfiction_baseline] prompt='"You must understand," she began,'
+------------------------------------------------------------
+an expense of the
+ country, to take place in this case, it is, not only tend times two or
+ trades,
+ as if turning t too a certain, which issued into
+ that other citizen are tleast all those
+ occans,, be supposined at less accordingly,
+
+ with three church, or thus tythem to brind. They affored,
+, however, clote about four agricultue was their own produce. It wages
+ increal sorts oveable evidently differences. But I have neceesved
+ had botth ought nations heavy butched.
+
+ To him the money,,
+thesem
+
+[lt_dual_eps0.05][nonfiction_baseline] prompt='At the market that morning'
+------------------------------------------------------------
+of time, and to be supposed by two different
+ persons or countries, as it was tendency in trade, taken place only to
+ turn t out a profit, which is not brought important foreign capital occasion
+ over thosEuropean company, if its power, or,
+ attention othin, but,
+ iregulated, accordingly,
+ without
+three are certificatinly. They affour all thus change illustry of
+ cultivators,—thereforacy,—animals articles who have been, he
+ said thy high this,
+
+ bottages. It however. But. thhese thlands hundreds
+
+[lt_dual_eps0.05][nonfiction_baseline] prompt='Three years afterwards, when'
+------------------------------------------------------------
+the same manner as to be so much above
+ two different countries with trades of time, and taken, in a certain
+ proportion or that other, are tendency turned by all types it is not a
+ capital one out tleast foreign commodity, they have bought but would
+ back those occasious metamorphological, oving this,
+ accordingly,
+
+ was,, attenantly seems taxed upon, bringing, such, from their cultivating
+ imporary objects himself if any class change an extremely
+ considerable part undoubtedly. These,
+, howeve
+
+[lt_dual_eps0.05][nonfiction_baseline] prompt='The room smelled of'
+------------------------------------------------------------
+their own country, and that time or less all those
+ officers, to take place on two different capitals ought in a state which
+ trade is not a profit over ten turn it. This,
+ howeven can be able to
+ believing thirty otherwise have boug if accordingly too attempt togethe
+, in they are certainly,
+consisted, as thus imported. It was,, hence seems by himself towards with
+the most part money,—three would buy it, bank agaility, occasionally
+ becomes clossed; after, we likewi thy wretched
+ thhem throubly
+
+[lt_dual_eps0.05][nonfiction_baseline] prompt='The doctor set down his bag and'
+------------------------------------------------------------
+some of the same
+ manner as to be a profit or, an except in time, taken at twenty per
+ censury trade on by all those who have bought but afforded teachers are
+, its power,
+ accors occasional turns is, broundered, with that, otheir owards weighs
+ things heavy bird too tthree parts outer. This
+
+ purposal, however,, four thus consists,
+ was,,
+
+thhey would be, not support throw them tythese,
+to always shou advantageous,—any observed. In operation, evidence if to
+ black above, individuals from agricu
+
+[lt_dual_eps0.05][nonfiction_baseline] prompt='Beyond the river lay'
+------------------------------------------------------------
+of trade, and
+ to that other, tends till take place of, in two or turns are too, be so
+ far as they arrise it is not always by this, on according to
+, attempt togethough three work a profit, which important could have botth
+ before, four institution out from thus carpenters overbance,
+ an advanntage amount,
+
+ with above thwhen part was sometimes idealy brought butcher’s meat,—an
+ exceptine censury if agricultue first produce. Their periods were
+ sufficiency deped occur. To affoorign types, howev
+
+[lt_dual_eps0.05][nonfiction_baseline] prompt='"And what," he asked, "became of'
+------------------------------------------------------------
+the
+ country, and, to bring two or trades a profit one share in time, it
+ was tendency taken place turn is not always by accordingly,
+ an advantage with those commodities, we may both, be at this,
+
+ than thus part ought importance for. They have but bankers of a great
+, other would bird type hundred army occasion from three periods if twenty
+ pourenments writter, so far about towards,—any cannow affoused
+ blinds. It wull be,, however; among against his
+ own price necessary furthE goods; b. appea
+
+[lt_dual_eps0.05][nonfiction_baseline] prompt='That winter the family'
+------------------------------------------------------------
+of two different periods or other
+ countries, and this considerable to take place on time, tends turn in
+ trade,
+ they are tleast too be so much as it is, if those occasional can botanish
+ a particular change over at any presence, which, by that, ought not only
+ but by, foreign centumers,
+ we may bring thus suppose importation, assembly, even afted icceans, had
+ nevity in some circumstablised, secordinary curred and
+ sixty-four shillinds,—and,
+as, three idleness all thlese, natually. These accom
+
+[lt_dual_eps0.05][nonfiction_baseline] prompt='The ship had been at sea for'
+------------------------------------------------------------
+their own produce of trade, and to
+ take place,
+ in time tendency to twenty per censury are always turned that, in
+ consequence. This subject one with this, though it is
+ not a part which has boug too, but three importancies or, any papenn out
+ occasion was,
+
+ according an expense may by sometinal prices,—animals arises. It he
+ purchaSes; assisters if thus cannon, have brought befoard two differen
+, when,, over,
+,—thherefical charactes were neceded otherwished, from these classified
+ state habit
+
+[lt_dual_eps0.05][nonfiction_baseline] prompt='In the garden behind the house'
+------------------------------------------------------------
+of trade, and
+ to that other country, till tends two shilings any one or tax upon anothin
+ occasions, in our own proportion, over, which it was no present turn in
+
+ work those,
+ are tleast allowed assembly too, but three wealth observed, have bought if
+ he,, nor,
+ is some opposite as,
+
+
+, can seldom by thus bank a part manufactual person. They afford its powars
+ old above,—animals army ost from
+ places, frequence impovincy into
+ clotth, such,
+,, eithen,—instead ofterwald, attempted. It his,—thy 
+
+[lt_dual_eps0.05][nonfiction_baseline] prompt='His debts had grown until'
+------------------------------------------------------------
+the same manner as to be so much above two
+ persons of those who heave, and taken times a state or animal part one
+ other, tends turn in all our council, it is, by trade improvement to
+ that ovule attempt this. The price but weight affords,
+ if i t impossible, through thus expense, however,
+ which iregard agrists illustry are calf any commodity observed from the
+
+ contribundance,
+ accors,, with twenty-five-ants, amouth, occasionally successful fouses,—and
+ seems not broke together their owars wo
+
+[lt_dual_eps0.05][nonfiction_baseline] prompt='By dawn the streets were'
+------------------------------------------------------------
+to take place of those who have been expected
+ two several other countries, and times trade in tenants,
+ as it is turned at that, indeed, this,—and,
+assize on a spending or all types. They are, however, which importance
+ islands an idle capital into agricultus,” accordity, ought to be a
+ smalt proposal, afterwards three may botack before. It was not obvious
+ changed. But about,
+thus suppote four admits.
+
+ Thirdly,
+consists; amongst I heave, appearanched; thy will buy thurt himself if
+ workmen, t
+

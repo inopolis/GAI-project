@@ -50,7 +50,7 @@ Usage
       --samples runs/v8_loop_regime/samples_cosine.txt --ckpt_name cosine
 """
 
-import os, re, json, argparse, random
+import os, re, json, argparse, random, hashlib
 from urllib.request import urlopen
 from urllib.error import URLError, HTTPError
 
@@ -190,15 +190,31 @@ def persistent_loop_onset(text, period_max, R, min_p=2, catch_period_one=True,
     return -1
 
 
+def stable_seed(name, salt=0):
+    """
+    Deterministic, process-independent seed from a string. Python's builtin
+    hash() is randomized per-process (PYTHONHASHSEED) unless explicitly
+    disabled, so seed=hash(name) silently produced a DIFFERENT sample of
+    windows on every run -- this is why numbers in a saved report could
+    disagree with a later re-run on the same corpus. hashlib.md5 is stable
+    across processes and Python versions.
+    """
+    h = hashlib.md5(f"{name}:{salt}".encode("utf-8")).hexdigest()
+    return int(h[:8], 16)
+
+
 def windows_of(text, window_chars, n_windows, seed=0):
+    """Returns (window_texts, window_start_indices) so the exact sampled
+    windows are reconstructable and auditable, not just their count."""
     if len(text) < window_chars:
-        return []
+        return [], []
     rng = random.Random(seed)
     max_start = len(text) - window_chars
     n_avail = max_start // window_chars
     n_windows = min(n_windows, max(1, n_avail))
     starts = sorted(rng.sample(range(0, max(1, n_avail)), n_windows)) if n_avail > 0 else [0]
-    return [text[s*window_chars:(s+1)*window_chars] for s in starts]
+    texts = [text[s*window_chars:(s+1)*window_chars] for s in starts]
+    return texts, starts
 
 
 def download_corpus(book_ids_dict, cache_dir):
@@ -243,9 +259,13 @@ def run_calibration_grid(calib_texts, window_chars_options, n_windows, out):
     R_options = [1, 2, 3, 4, 5, 6]
 
     windows_by_wc = {}
+    window_indices_record = {}   # saved into the report for exact reproducibility auditing
     for wc in window_chars_options:
-        windows_by_wc[wc] = {name: windows_of(text, wc, n_windows, seed=hash(name) % 10000)
-                              for name, text in calib_texts.items()}
+        windows_by_wc[wc] = {}
+        for name, text in calib_texts.items():
+            texts, starts = windows_of(text, wc, n_windows, seed=stable_seed(name, salt=wc))
+            windows_by_wc[wc][name] = texts
+            window_indices_record[f"{name}@wc{wc}"] = starts
 
     for period_max in period_max_options:
         for R in R_options:
@@ -285,6 +305,7 @@ def run_calibration_grid(calib_texts, window_chars_options, n_windows, out):
     print(f"\n  FROZEN: R={frozen['R']}, period_max={frozen['period_max']} "
           f"(worst-case upper 95% CI across window lengths = {frozen['worst_ci_hi']*100:.2f}%, {tag})")
     out["calibration_grid"] = grid_results
+    out["calibration_window_indices"] = window_indices_record
     out["frozen"] = {"R": frozen["R"], "period_max": frozen["period_max"],
                       "tolerance": TOLERANCE, "met_tolerance": met_tolerance,
                       "worst_case_ci_hi": frozen["worst_ci_hi"]}
@@ -295,8 +316,10 @@ def run_validation_battery(val_texts, R, period_max, window_chars, n_windows, ou
     print(f"\n=== SECTION 2: VALIDATION (frozen R={R}, period_max={period_max}), "
           f"never touched during calibration ===")
     rows = []
+    val_window_indices = {}
     for name, text in val_texts.items():
-        wins = windows_of(text, window_chars, n_windows, seed=hash(name) % 10000 + 1)
+        wins, starts = windows_of(text, window_chars, n_windows, seed=stable_seed(name, salt="validation"))
+        val_window_indices[name] = starts
         if not wins:
             continue
         fires = sum(1 for w in wins if persistent_loop_onset(w, period_max, R) >= 0)
@@ -311,6 +334,7 @@ def run_validation_battery(val_texts, R, period_max, window_chars, n_windows, ou
     print(f"  {'POOLED':<20} {total_fires:>3}/{total_n:<4} fire "
           f"({total_fires/total_n*100:5.1f}%, 95% CI [{lo*100:.1f}%, {hi*100:.1f}%])")
     out["validation_battery"] = rows
+    out["validation_window_indices"] = val_window_indices
     out["validation_pooled"] = {"fires": total_fires, "n": total_n,
                                  "rate": total_fires/total_n,
                                  "ci_lo": lo, "ci_hi": hi}
@@ -328,11 +352,13 @@ def run_window_length_robustness_confirmatory(val_texts, R, period_max, out):
           f"(R={R}, period_max={period_max}) on the validation battery ===")
     print("  (confirmatory only -- R was already frozen in Section 1 from "
           "calibration data alone)")
+    robustness_indices = {}
     for window_chars in (300, 500, 1000, 2000):
         fires, n = 0, 0
         for name, text in val_texts.items():
-            wins = windows_of(text, window_chars, n_windows=30,
-                               seed=hash(name) % 999 + window_chars)
+            wins, starts = windows_of(text, window_chars, n_windows=30,
+                               seed=stable_seed(name, salt=f"robustness{window_chars}"))
+            robustness_indices[f"{name}@wc{window_chars}"] = starts
             fires += sum(1 for w in wins if persistent_loop_onset(w, period_max, R) >= 0)
             n += len(wins)
         if n == 0:
@@ -343,6 +369,7 @@ def run_window_length_robustness_confirmatory(val_texts, R, period_max, out):
         out.setdefault("window_robustness_confirmatory", []).append(
             {"window_chars": window_chars, "fires": fires, "n": n,
              "rate": fires/n, "ci_lo": lo, "ci_hi": hi})
+    out["window_robustness_indices"] = robustness_indices
 
 
 def run_synthetic_sensitivity(R, period_max, out, period_one_min_run=8):
@@ -415,10 +442,45 @@ def main():
     ap.add_argument("--cache_dir", default="gutenberg_cache")
     ap.add_argument("--samples", default=None)
     ap.add_argument("--ckpt_name", default="cosine")
+    ap.add_argument("--confirm_only", nargs="*", type=int, default=None,
+                     help="Skip calibration entirely and reuse the ALREADY-"
+                          "FROZEN (R=5, period_max=60) setting; run only a "
+                          "confirmatory false-positive check on the given "
+                          "Gutenberg book IDs. For generalization to a new "
+                          "corpus/genre (e.g. non-fiction), this is the "
+                          "correct mode: it does not re-tune the threshold "
+                          "on the new corpus (which would be circular), it "
+                          "only checks whether the existing frozen event "
+                          "remains valid there. Pass the new corpus's OWN "
+                          "val+test book IDs, e.g. "
+                          "--confirm_only 205 1232 for a non-fiction check.")
+    ap.add_argument("--confirm_R", type=int, default=5)
+    ap.add_argument("--confirm_period_max", type=int, default=60)
     args = ap.parse_args()
 
     os.makedirs(args.out_dir, exist_ok=True)
     out = {}
+
+    if args.confirm_only is not None:
+        print(f"CONFIRM-ONLY mode: reusing frozen R={args.confirm_R}, "
+              f"period_max={args.confirm_period_max} (no re-calibration). "
+              f"Checking false-positive rate on book IDs {args.confirm_only}.")
+        new_corpus = {f"book_{bid}": bid for bid in args.confirm_only}
+        new_texts = download_corpus(new_corpus, args.cache_dir)
+        run_validation_battery(new_texts, args.confirm_R, args.confirm_period_max,
+                                args.window_chars, args.n_windows, out)
+        run_synthetic_sensitivity(args.confirm_R, args.confirm_period_max, out)
+        run_on_generated_samples(args.samples, args.ckpt_name,
+                                  args.confirm_R, args.confirm_period_max, out)
+        out_path = os.path.join(args.out_dir, "loop_event_confirm_report.json")
+        with open(out_path, "w") as f:
+            json.dump(out, f, indent=2)
+        print(f"\nConfirmatory report -> {out_path}")
+        print("If the pooled false-positive rate here is comparable to the "
+              "original validation battery's ~1%, the frozen event is "
+              "confirmed valid on this new corpus and can be used as-is for "
+              "the generalization experiment without re-running calibration.")
+        return
 
     print("Downloading calibration corpora...")
     calib_texts = download_corpus(CALIBRATION_BOOKS, args.cache_dir)

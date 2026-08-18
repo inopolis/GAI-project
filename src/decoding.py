@@ -246,6 +246,104 @@ class LookBackDecoder:
         return int(torch.multinomial(probs, 1).item())
 
 
+class FSDDecoder:
+    """
+    Contrastive, history-aware repetition suppression in the spirit of
+    "Frustratingly Simple Decoding" (FSD)-style methods and related
+    contrastive-decoding approaches: contrast the model's full-context
+    prediction against a NAIVE, training-free predictor that scores each
+    candidate purely by how often it has followed the current local context
+    earlier in the generation. Tokens the naive predictor is confident about
+    are exactly the "too easy, memorized-by-repetition" continuations;
+    contrasting suppresses those specifically, leaving tokens the naive
+    predictor has no opinion about (including common function words the LM
+    favors for ordinary fluency reasons) untouched. This differs from
+    repetition penalty, which discounts every previously-seen token
+    uniformly regardless of whether local repetition is what's driving the
+    model toward it.
+
+    IMPLEMENTATION NOTE: this is a reimplementation motivated by the
+    published description of the FSD family, built for this project from
+    that description, not a port of the original authors' code. It is
+    labeled as such throughout the paper and should be read as "FSD-style",
+    not as a certified reproduction of any specific paper's exact numbers.
+
+    naive_score(v) = (count of v following the current (k-1)-gram context,
+                       for the largest k in [n_min,n_max] with any prior
+                       occurrence) / (total follower count for that context),
+    i.e. the empirical next-token distribution implied purely by exact local
+    repetition so far, using the LONGEST context order that has been seen
+    before (falling back to shorter orders, then to "no signal" if the
+    current context has never occurred).
+
+    final_logits(v) = model_logits(v) - alpha * naive_score(v)
+    """
+    def __init__(self, temperature=0.8, top_p=0.95, alpha=4.0,
+                 n_min=3, n_max=6):
+        self.temperature = temperature
+        self.top_p       = top_p
+        self.alpha       = alpha
+        self.n_min       = n_min
+        self.n_max       = n_max
+
+    def reset(self):
+        self._all_ids   = []
+        self._followers = {n: defaultdict(lambda: defaultdict(int))
+                            for n in range(self.n_min, self.n_max + 1)}
+
+    def prime(self, prompt_ids):
+        for tid in prompt_ids:
+            self._register(tid)
+
+    def _register(self, token):
+        self._all_ids.append(token)
+        L = len(self._all_ids)
+        for n in range(self.n_min, self.n_max + 1):
+            if L >= n:
+                context = tuple(self._all_ids[L - n: L - 1])
+                self._followers[n][context][self._all_ids[L - 1]] += 1
+
+    def _naive_scores(self, vocab_size):
+        """Empirical next-token distribution from exact local repetition,
+        using the longest context order with any prior occurrence."""
+        L = len(self._all_ids)
+        for n in range(self.n_max, self.n_min - 1, -1):
+            if L < n - 1:
+                continue
+            context = tuple(self._all_ids[L - (n - 1): L]) if n > 1 else ()
+            followers = self._followers[n].get(context)
+            if followers:
+                total = sum(followers.values())
+                scores = torch.zeros(vocab_size)
+                for tok, cnt in followers.items():
+                    scores[tok] = cnt / total
+                return scores
+        return torch.zeros(vocab_size)
+
+    def step(self, logits, generated_ids=None):
+        naive = self._naive_scores(logits.shape[-1]).to(logits.device)
+        adjusted = logits - self.alpha * naive
+
+        adjusted = adjusted / max(self.temperature, 1e-6)
+        adjusted = top_p_filtering(adjusted.unsqueeze(0), self.top_p).squeeze(0)
+        probs = torch.softmax(adjusted, dim=-1)
+        token = int(torch.multinomial(probs, 1).item())
+        self._register(token)
+        return token
+
+    def diagnostics(self):
+        """
+        No-op: FSD has no KL-projection interpretation (it is a direct
+        logit contrast, not a bounded-divergence projection), so it has
+        nothing analogous to RecurrenceRiskDecoder's kl_bits/risk_achieved/
+        dual_* diagnostics to report. Returns {} so the caller's existing
+        dg.get(k, float("nan")) fallback fills every diagnostic column with
+        NaN for FSD samples, which is the correct, honest value (not
+        applicable), not a crash.
+        """
+        return {}
+
+
 class RecurrenceRiskDecoder:
     """
     Recurrence-Risk Decoding (this work).
@@ -281,7 +379,7 @@ class RecurrenceRiskDecoder:
                  rep_target=0.05, ent_target=3.5, window=100, adaptive=True,
                  use_risk=True, entropy_temp=False,
                  temp_gain=0.6, temp_max=1.6,
-                 mode=None, eps=0.05, dual_iters=30, dual_lambda_max=50.0,
+                 mode=None, eps=0.05, dual_iters=30, dual_lambda_max=1000.0,
                  include_prompt_context=True):
         # mode: "dual" | "fixed" | "adaptive" | "entropy_only".
         # Back-compat: if mode is None it is inferred from the old flags.

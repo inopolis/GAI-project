@@ -1,0 +1,2 @@
+strategy,category,checkpoint,hard_constraint,survival_auc_ngram10,rmst_ngram10,loop_rate_ngram10,mc_nll_bpc,ngram_sim_4,spelling_error,compression,longest_rep_sub,chars_per_sec
+lt_fsd,loop_regime,cosine,False,0.9994,499.7,0.0133,1.261,0.2994,0.0428,0.6278,6.16,

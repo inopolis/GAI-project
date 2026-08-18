@@ -1,0 +1,12 @@
+strategy,category,checkpoint,rmst_persistent,rmst_ngram8,rmst_ngram10,rmst_ngram12,rmst_ngram16,rmst_lrs20,rmst_compress,loop_rate_persistent,loop_rate_ngram8,loop_rate_ngram10,loop_rate_ngram12,loop_rate_ngram16,loop_rate_lrs20,loop_rate_compress
+greedy,baseline,nonfiction_baseline,269.35,27.05,27.05,27.05,30.0,65.65,353.35,1.0,1.0,1.0,1.0,1.0,1.0,1.0
+lt_temp_0.05,loop_regime,nonfiction_baseline,324.6,36.95,38.8,38.8,39.8,79.0,387.6,1.0,1.0,1.0,1.0,1.0,1.0,0.92
+lt_temp_0.1,loop_regime,nonfiction_baseline,395.95,33.25,35.5,35.85,38.05,76.25,456.75,0.6467,1.0,1.0,1.0,1.0,1.0,0.3867
+lt_temp_0.15,loop_regime,nonfiction_baseline,458.1,38.2,45.55,47.45,57.3,93.0,476.6,0.26,1.0,1.0,1.0,1.0,1.0,0.22
+lt_rep_penalty_1.3,loop_regime,nonfiction_baseline,458.25,72.8,90.6,106.45,141.2,194.55,460.85,0.36,1.0,1.0,1.0,1.0,1.0,0.3267
+lt_no_repeat_4gram,loop_regime_hard,nonfiction_baseline,500.0,500.0,500.0,500.0,500.0,500.0,500.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0
+lt_lookback_a3.0,loop_regime,nonfiction_baseline,500.0,94.75,157.65,244.6,424.25,482.9,500.0,0.0,1.0,1.0,1.0,0.7667,0.4333,0.0
+lt_fsd,loop_regime,nonfiction_baseline,500.0,456.2,498.85,499.0,500.0,500.0,500.0,0.0,0.2933,0.0133,0.0067,0.0,0.0,0.0
+lt_risk_only,loop_regime_rr,nonfiction_baseline,439.15,50.2,62.6,63.95,74.7,126.85,456.6,0.5133,1.0,1.0,1.0,1.0,1.0,0.4133
+lt_adaptive,loop_regime_rr,nonfiction_baseline,478.7,49.85,63.95,65.95,78.1,140.25,490.75,0.2133,1.0,1.0,1.0,1.0,1.0,0.12
+lt_dual_eps0.05,loop_regime_rr,nonfiction_baseline,500.0,500.0,500.0,500.0,500.0,500.0,500.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0

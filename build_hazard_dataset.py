@@ -39,7 +39,7 @@ Usage
       --out hazard_dataset.json
 """
 
-import os, sys, json, glob, argparse, random, re
+import os, sys, json, glob, argparse, random, re, hashlib
 import numpy as np
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -423,7 +423,7 @@ def main():
         cands, probs = select_candidates(model, stoi, itos, ids, device,
                                           n_top=args.n_top_candidates,
                                           n_random=args.n_random_candidates,
-                                          seed=hash(ctx) % 10000)
+                                          seed=int(hashlib.md5(ctx.encode()).hexdigest()[:8], 16) % 10000)
         context_id_lists.append(ids)
         candidates_per_context.append((ids, cands, probs))
 

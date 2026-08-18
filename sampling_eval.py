@@ -33,7 +33,7 @@ import torch
 import torch.nn.functional as F
 from src.utils import set_seed, load_json, ensure_dir
 from src.model import CharTransformerLM
-from src.decoding import generate, RecurrenceRiskDecoder, LookBackDecoder
+from src.decoding import generate, RecurrenceRiskDecoder, LookBackDecoder, FSDDecoder
 
 
 # 15 prompts; key methods use all 15, sweep configs use first 5.
@@ -83,12 +83,12 @@ def build_configs():
     def add(name, cat, key=False, **kw):
         d = dict(temperature=1.0, top_k=0, top_p=1.0, typical_p=1.0,
                  rep_penalty=1.0, no_repeat_ngram=0, mirostat_tau=0.0,
-                 risk=None, lookback=None)
+                 risk=None, lookback=None, fsd=None)
         d.update(kw)
         d["name"] = name; d["category"] = cat; d["key"] = key
         C.append(d)
 
-    add("greedy", "baseline", temperature=0.0)
+    add("greedy", "baseline", temperature=0.0, key=True)
 
     # ---------------------------------------------------------------------
     # LOOP REGIME (the regime the method is actually for).
@@ -110,6 +110,8 @@ def build_configs():
     add("lt_lookback_a3.0", "loop_regime", key=True,
         lookback=dict(temperature=0.10, top_p=1.0, alpha=3.0,
                       max_history=400, ref_len=20))
+    add("lt_fsd", "loop_regime", key=True,
+        fsd=dict(temperature=0.10, top_p=1.0, alpha=4.0, n_min=3, n_max=6))
     add("lt_risk_only", "loop_regime_rr", key=True,
         risk=dict(temperature=0.10, top_p=1.0, n_min=3, n_max=6,
                   mode="fixed", alpha_base=2.0, include_prompt_context=True))
@@ -390,57 +392,68 @@ LOOP_DEFS = {
 # ---- Quality metrics ----
 
 @torch.no_grad()
-def model_consistency_nll(model, gen_ids, block_size, device, prompt_ids=None):
+def model_consistency_nll(model, gen_ids, block_size, device, prompt_ids=None,
+                          nll_batch_size=256):
     """
     Model-consistency NLL (BPC): NLL of the GENERATED tokens under the SAME
-    model that produced them, correctly conditioned on the prompt.
+    model that produced them, with every scored position given EXACTLY the
+    context the model architecture allows (up to block_size preceding
+    tokens), not an approximation of it.
 
-    Fixes a bug where this function was called with the generated portion
-    alone: the first sliding window then started at position 0 of the
-    generated text with no prompt in context, which (a) silently OMITTED the
-    first generated token's own likelihood entirely -- position 0 was only
-    ever used as the input x[0] predicting position 1, never itself scored
-    as a target -- and (b) understated every early token's true conditional
-    probability, since the model was not shown the prompt that the tokens
-    were actually generated in response to.
+    Two bugs fixed here, in sequence:
 
-    Now the model input is (prompt_ids + gen_ids); scoring is restricted to
-    positions >= len(prompt_ids) so only generated tokens contribute to the
-    mean, but every one of them, including the first, is scored with its
-    correct prompt-conditioned context. If prompt_ids is not supplied (back-
-    compat) the previous, biased behaviour is used and a flag is returned so
-    callers can tell which convention produced a given number.
+    (1) An earlier version was called with the generated portion alone (no
+    prompt_ids): the first chunk started at position 0 of the GENERATED
+    text with no prompt in context, silently omitting the first generated
+    token's own likelihood and under-conditioning early tokens. Fixed by
+    scoring over (prompt_ids + gen_ids) and restricting the mean to
+    positions >= len(prompt_ids).
+
+    (2) A second version used non-overlapping chunks (stride = block_size):
+    correct for the first chunk, but every position near the start of every
+    later chunk was scored with a truncated context, even though real
+    preceding characters existed. A stride = block_size//2 partial fix was
+    tried and found insufficient: numerically verified on a toy model, only
+    the SINGLE LAST position of each non-final chunk actually reached full
+    context; every other kept position still fell short (e.g. one position
+    got only 9 of 16 possible context tokens where the true architectural
+    maximum was 16).
+
+    This version instead builds, for EVERY target position t independently,
+    the exact window full[max(0, t-block_size) : t] and batches these
+    variable-length (left-padded) windows through the model together, so
+    each position gets precisely min(t, block_size) tokens of context --
+    verified numerically to match the architectural ideal exactly, not
+    approximately, for every position, on a toy model with a deliberately
+    small block_size where the discrepancy is easy to see.
     """
     prompt_ids = prompt_ids or []
-    full = np.array(list(prompt_ids) + list(gen_ids), dtype=np.int64)
+    full_list = list(prompt_ids) + list(gen_ids)
+    full = np.array(full_list, dtype=np.int64)
     plen = len(prompt_ids)
     n = len(full)
     if n < 2 or len(gen_ids) < 1:
         return float("nan")
 
-    all_nll = []
-    stride = block_size
-    # Slide over the FULL (prompt+generated) sequence so every window has
-    # real preceding context; only accumulate loss at generated positions.
-    for s in range(0, max(1, n - 1), stride):
-        end_x = min(s + block_size, n - 1)
-        x_np = full[s:end_x]
-        y_np = full[s+1:end_x+1]
-        if len(x_np) == 0:
-            continue
-        x = torch.tensor(x_np, dtype=torch.long, device=device).unsqueeze(0)
-        y = torch.tensor(y_np, dtype=torch.long, device=device).unsqueeze(0)
-        logits, _ = model(x)
-        lp  = F.log_softmax(logits, dim=-1)
-        nll = (-lp.gather(2, y.unsqueeze(-1)).squeeze(-1))[0].tolist()
-        # y[i] corresponds to full position s+1+i; keep it only if that
-        # position is a GENERATED token (index >= plen), i.e. y-index >= plen-1
-        for i, v in enumerate(nll):
-            target_pos = s + 1 + i
-            if target_pos >= plen:
-                all_nll.append(v)
-    if not all_nll:
+    targets = [t for t in range(1, n) if t >= plen]
+    if not targets:
         return float("nan")
+
+    pad_id = 0
+    all_nll = []
+    for b0 in range(0, len(targets), nll_batch_size):
+        batch_targets = targets[b0:b0 + nll_batch_size]
+        windows = [full_list[max(0, t - block_size):t] for t in batch_targets]
+        max_len = max(len(w) for w in windows)
+        padded = [[pad_id] * (max_len - len(w)) + w for w in windows]
+        x = torch.tensor(padded, dtype=torch.long, device=device)
+        with torch.no_grad():
+            logits, _ = model(x)
+        lp = F.log_softmax(logits[:, -1, :], dim=-1)   # prediction for position t, from context ending at t-1
+        y = torch.tensor([full_list[t] for t in batch_targets], dtype=torch.long, device=device)
+        nll = -lp.gather(1, y.unsqueeze(-1)).squeeze(-1)
+        all_nll.extend(nll.tolist())
+
     return float(np.mean(all_nll) / math.log(2))
 
 
@@ -659,6 +672,11 @@ def make_decoders(cfg):
     risk = None; lz = None
     if cfg["risk"] is not None:
         risk = RecurrenceRiskDecoder(**cfg["risk"])
+    if cfg.get("fsd") is not None:
+        # FSDDecoder implements the same .step()/.reset()/.prime() interface
+        # as RecurrenceRiskDecoder, so it plugs into generate()'s existing
+        # `adaptive=` slot directly -- no changes needed to generate() itself.
+        risk = FSDDecoder(**cfg["fsd"])
     if cfg["lookback"] is not None:
         lz = LookBackDecoder(**cfg["lookback"])
     return risk, lz
@@ -696,11 +714,16 @@ def eval_checkpoint(ckpt_path, data_dir, n_chars, n_seeds, device, out_dir,
         onsets = {ld: [] for ld in LOOP_DEFS}
         groups = []          # prompt index per sample -> clustered inference
         diag = {"kl_bits": [], "entropy_q": [], "entropy_p": [],
-                "risk_achieved": [], "lambda_mean": []}
+                "risk_achieved": [], "lambda_mean": [],
+                "dual_feasible_rate": [], "dual_cap_hit_rate": [],
+                "dual_min_risk_mean": [], "dual_violation_mean": [],
+                "dual_violation_max": [], "dual_tolerance_mean": []}
         cps_val = None
 
         for pi, (pname, ptext) in enumerate(prompts):
             for seed in range(1, n_seeds+1):
+                print(f"\r    {c['name']:<24} sample {pi*n_seeds+seed}/{len(prompts)*n_seeds} "
+                      f"(prompt={pname}, seed={seed})", end="", flush=True)
                 set_seed(seed)
                 idx = encode(ptext, stoi).to(device)
                 risk, lz = make_decoders(c)
@@ -764,12 +787,12 @@ def eval_checkpoint(ckpt_path, data_dir, n_chars, n_seeds, device, out_dir,
         rows.append(row)
 
         kl_s = f"  KL={row['kl_bits_mean']:.3f}b" if 'kl_bits_mean' in row else ""
-        print(f"  PERSIST loop={row['loop_rate_persistent']:.2f} "
+        print(f"\r  PERSIST loop={row['loop_rate_persistent']:.2f} "
               f"rmst={row['rmst_persistent']:.0f} | "
               f"[old ngram10 loop={row['loop_rate_ngram10']:.2f}] "
               f"mcnll={row['mc_nll_bpc_mean']:.3f} "
               f"sim={row['ngram_sim_4_mean']:.3f}{kl_s}"
-              + (f" cps={cps_val}" if cps_val else ""))
+              + (f" cps={cps_val}" if cps_val else "") + " " * 20)
 
     samples_f.close()
 

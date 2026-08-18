@@ -1,0 +1,18 @@
+{
+  "cosine": {
+    "lt_fsd": {
+      "km_times": [
+        472,
+        482
+      ],
+      "km_survival": [
+        0.99333,
+        0.98667
+      ],
+      "n_censored": 148,
+      "n_total": 150,
+      "rmst": 499.7,
+      "survival_auc": 0.9994
+    }
+  }
+}

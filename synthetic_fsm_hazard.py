@@ -1,28 +1,50 @@
 """
-synthetic_fsm_hazard.py  (v2 -- bounded-window DP, tractable)
+synthetic_fsm_hazard.py
 
 First verification of finite-horizon loop-hazard control on a finite-state
-model where the TRUE loop probability is exactly computable.
+model where the TRUE loop probability is exactly computable by dynamic
+programming, used to check the projection machinery (Section 6 of the paper)
+before attempting to transfer it to a real language model (Section 10).
 
-Design note vs. v1: "visited" is now a bounded trailing WINDOW of the last w
-states (not the unbounded full history). This is more faithful to how the
-persistent-loop detector actually works in the main paper (period <= 60,
-not "ever in the whole generation") and it makes the hazard table finite and
-REUSABLE across the whole Monte Carlo run: the DP state is
-(current_state, trailing window, steps_remaining), computed once bottom-up
-for r = 0..H, then looked up (not recomputed) at every simulated step.
+Model (S=20 states; see build_base_matrix for exact transition probabilities)
+-------------------------------------------------------------------------
+Most states form a large, mutually diffuse "safe" region. A small
+probability P_GATEWAY from any diffuse state leads to a designated GATEWAY
+state, which is NOT itself a repeat when first entered (a one-step/local
+risk proxy sees nothing unusual about it) but which transitions with high
+probability P_ENTER into a tight 2-cycle {CYC_A, CYC_B} (further
+self-reinforcing probability P_CYCLE). A decoder that only reacts to an
+already-realized repeat cannot see the gateway coming; a decoder using the
+true finite-horizon hazard can downweight the gateway pre-emptively.
 
-Model
------
-6 states. {0,1,5} diffuse. State 2 = trap entry: not itself a repeat, but
-from 2 the chain moves with high probability into a tight 2-cycle {3,4}. A
-decoder that only reacts to an IMMEDIATE window-repeat cannot see this
-coming -- it only fires once already inside the 3<->4 cycle. A decoder using
-the TRUE finite-horizon hazard can downweight state 2 pre-emptively.
+Precise event definition
+-------------------------
+Let s_0, s_1, ..., s_t, ... be the state sequence and W_t = (s_{max(0,t-w+1)},
+..., s_t) the trailing window of the last w <= W states (W=2 throughout).
+LOOP(t) := 1[ s_{t+1} in W_t ], i.e. the state entered at t+1 already
+appears in the trailing window BEFORE that transition. "Loop within the next
+H steps starting from state s at time t with window W_t" is the event
+  L = 1[ exists t' in {t, ..., t+H-1} : LOOP(t') = 1 ].
 
-"Loop within the next H steps" = the next state entered is already present
-in the trailing window of the last w states, at any point in the next H
-transitions.
+Precise definition of the DP table (build_hazard_table)
+----------------------------------------------------------
+f[r][(s, win)] := Pr( L over the next r transitions | current state = s,
+current trailing window = win ), computed by exact backward recursion:
+  f[0][(s, win)] = 0
+  f[r][(s, win)] = sum_{s'} P[s,s'] * ( 1[s' in win] + 1[s' not in win] *
+                                          f[r-1][(s', (win+(s',))[-w:])] )
+This is exact (not an approximation or a sampled estimate) because the state
+and window spaces are finite and the recursion is a direct application of
+the law of total probability over the next transition.
+
+Per-candidate hazard used by both decoders (haz(s') in simulate()):
+  haz(s') = 1[s' in current window]                     if s' already loops immediately
+          = f[remaining][(s', new_window)]                otherwise
+where `remaining` is the number of transitions left in the current rollout
+and `new_window` is the window that would result from moving to s'. This
+mirrors exactly the per-candidate hazard structure used in the real-model
+transfer attempt (Section 10): a candidate's hazard is the probability of
+looping within the REST of the horizon, GIVEN that candidate is chosen now.
 """
 
 import numpy as np
@@ -202,25 +224,44 @@ def main():
         results["rows"].append({"eps": eps, "local_loop_rate": lr, "local_kl": lkl,
                                  "hazard_loop_rate": hr, "hazard_kl": hkl})
 
-    ref = [r for r in results["rows"] if r["eps"] == 0.05][0]
-    target_kl = ref["hazard_kl"]
-    print(f"\nMatched-distortion check: hazard@eps=0.05 spends {target_kl:.4f} bits/step "
-          f"for {ref['hazard_loop_rate']*100:.1f}% loop rate.")
-    print("Scanning local-risk eps for the closest KL/step match...")
-    best = None
-    for eps in np.linspace(0.001, 0.5, 40):
-        lr, lkl = simulate(P, "local", float(eps), f_table, 1200, H, W, seed=3)
-        d = abs(lkl - target_kl)
-        if best is None or d < best[0]:
-            best = (d, eps, lr, lkl)
-    _, eps_m, lr_m, lkl_m = best
-    print(f"  local-risk  @ eps={eps_m:.3f}: KL/step={lkl_m:.4f}, loop rate={lr_m*100:.1f}%")
-    print(f"  true-hazard @ eps=0.050: KL/step={target_kl:.4f}, loop rate={ref['hazard_loop_rate']*100:.1f}%")
-    results["matched_distortion_check"] = {
-        "target_kl_per_step": target_kl, "local_eps_matched": float(eps_m),
-        "local_loop_rate": lr_m, "local_kl": lkl_m,
-        "hazard_loop_rate": ref["hazard_loop_rate"],
-    }
+    # Matched-distortion comparison, applied UNIFORMLY across every eps in the
+    # grid (not a single hand-picked reference point, which would reintroduce
+    # exactly the kind of post-hoc-best-result selection this paper otherwise
+    # penalizes -- see the L-sweep discussion in the real-model hazard-transfer
+    # section). For each hazard row, scan local's eps to find the closest KL
+    # match, then compare loop rates at that matched budget.
+    print(f"\nMatched-distortion comparison (uniform across the full eps grid):")
+    print(f"{'hazard eps':>10} {'hazard KL':>10} {'hazard loop%':>13} | "
+          f"{'local eps (matched)':>20} {'local KL':>10} {'local loop%':>12}")
+    print("-" * 90)
+    matched_rows = []
+    local_scan_eps = np.linspace(0.001, 0.5, 60)
+    # Pre-compute local's (loop, KL) at every scan point ONCE, reused for all
+    # hazard rows (avoids re-simulating the same local configuration 6 times).
+    local_scan_cache = {}
+    for eps in local_scan_eps:
+        lr, lkl = simulate(P, "local", float(eps), f_table, 2000, H, W, seed=3)
+        local_scan_cache[float(eps)] = (lr, lkl)
+
+    for row in results["rows"]:
+        target_kl = row["hazard_kl"]
+        best = min(local_scan_cache.items(), key=lambda kv: abs(kv[1][1] - target_kl))
+        eps_m, (lr_m, lkl_m) = best
+        gap = lr_m - row["hazard_loop_rate"]
+        print(f"{row['eps']:>10.2f} {target_kl:>10.4f} {row['hazard_loop_rate']*100:>12.1f}% | "
+              f"{eps_m:>20.3f} {lkl_m:>10.4f} {lr_m*100:>11.1f}%")
+        matched_rows.append({
+            "hazard_eps": row["eps"], "hazard_kl": target_kl,
+            "hazard_loop_rate": row["hazard_loop_rate"],
+            "local_eps_matched": eps_m, "local_kl_at_match": lkl_m,
+            "local_loop_rate_at_match": lr_m,
+            "loop_rate_gap_local_minus_hazard": gap,
+        })
+    results["matched_distortion_all_eps"] = matched_rows
+
+    n_hazard_wins = sum(1 for r in matched_rows if r["loop_rate_gap_local_minus_hazard"] > 0)
+    print(f"\nHazard beats local at matched KL in {n_hazard_wins}/{len(matched_rows)} "
+          f"grid points (positive gap = local loops more than hazard at the same distortion).")
 
     with open("synthetic_fsm_results.json", "w") as fp:
         json.dump(results, fp, indent=2)
@@ -230,3 +271,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+    
