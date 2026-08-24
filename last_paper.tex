@@ -1,0 +1,494 @@
+\documentclass[11pt]{article}
+
+\usepackage[margin=1in]{geometry}
+\usepackage{amsmath,amssymb,amsthm}
+\usepackage{booktabs}
+\usepackage{multirow}
+\usepackage{graphicx}
+\usepackage{hyperref}
+\usepackage{natbib}
+\usepackage{xcolor}
+\usepackage{enumitem}
+\usepackage{caption}
+\usepackage{array}
+
+\hypersetup{colorlinks=true, linkcolor=blue!50!black, citecolor=blue!50!black, urlcolor=blue!50!black}
+
+\newcommand{\risk}{\mathrm{risk}}
+\newcommand{\haz}{\mathrm{haz}}
+\newcommand{\KL}{\mathrm{KL}}
+\newcommand{\E}{\mathbb{E}}
+
+\title{\textbf{Recurrence-Risk Decoding for Repetition-Loop Control:}\\
+\large A Minimum-Distortion, Reliability-Analysis Treatment}
+
+\author{}
+\date{}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+Autoregressive language models occasionally enter repetition loops: a short span is generated, then reproduced again and again until the sample degenerates into a fixed cycle. I treat loop avoidance as a decoding-time reliability problem and study \emph{recurrence-risk decoding}, a family of decoders that penalize candidate tokens in proportion to the risk that they extend a repeated $n$-gram. The theoretical core is a minimum-distortion (KL-projection) derivation: the exponential penalty $q(v) \propto p(v)\exp(-\lambda\,\risk(v))$ solves a risk-bounded projection \emph{exactly} only when $\lambda$ is calibrated by solving the dual problem at every step, not when $\lambda$ is a hand-set constant. A validated persistent-cycle event, calibrated on corpora disjoint from every corpus used for the headline experiment, replaces an earlier unvalidated event that fired on 54--73\% of held-out human prose. Within the low-temperature regime where the primary model's repetition pathology occurs ($T\lesssim0.15$--$0.2$), dual-calibrated decoding eliminates the validated event entirely (0/150) at \textbf{exactly 100.0\% per-step feasibility} once a float32-underflow defect in the solver's probability handling is fixed (reproduced directly on this project's model: 276/2000 vocabulary entries silently collapsed to an identical, incorrect log-probability at $T{=}0.10$) and the fixed multiplier cap is replaced with a geometrically expanding bracket. The corrected KL cost -- 11.2--12.7 bits -- is roughly five times higher than an original, badly-infeasible run had reported, and the true cost is visible in the qualitative output: syntactically degraded text, not the fluent example an earlier, still-buggy version of this paper showed. A fixed-penalty variant reaches 2.7\% residual loop rate at only 0.037 bits; an online-adaptive variant matches dual's zero-loop count at 0.096 bits, with no formal guarantee. Two additional history-aware baselines are added: a good-faith FSD-style reconstruction, and an authentic reimplementation of the real, published LZ Penalty (Ginart et al., TMLR 2026) -- both reach the same zero-loop outcome as dual, at a fraction of its distortion and with qualitatively more coherent output despite spending no explicit KL budget at all. On a synthetic finite-state problem with an exactly DP-computed hazard, a finite-horizon hazard-aware extension Pareto-dominates a one-step-only proxy at every moderate distortion budget tested; attempting to transfer this mechanism to the real character model finds no signal distinguishable from noise under the specific rollout estimator used, reported as a scope limitation of that estimator, not a general claim. Three independent generalization checks -- a second, non-fiction-trained model of identical architecture; a second, independently-trained checkpoint of the primary model; and a full decoder comparison on a genuinely different pretrained subword model (GPT-2), run only after a cheap pilot confirmed a measurable low-temperature repetition regime exists there -- consistently show that the per-step feasibility DUAL calibration guarantee carries over (100.0\% feasibility, 0/100 persistent loops on GPT-2 too, at 6.3--6.7 bits of KL, roughly half the primary model's cost), while the fixed-hyperparameter configurations' effectiveness does not (loop rate rising from 2.7\% to 51.3\% for the fixed-penalty variant on the non-fiction corpus; the authentic LZ Penalty baseline, 0\% loops on both the primary model and the non-fiction corpus, rising to 25\% on GPT-2 at unchanged hyperparameters). I am explicit throughout that this per-step feasibility rate, not the sequence-level zero-loop count, is what the underlying theorem actually governs; the repeated 0/150 observation is reported as an empirical finding, not a predicted consequence. A human evaluation protocol is specified and a working blinded-judgment tool is built; I was not able to administer it to participants in time for this revision and describe it explicitly as planned future work rather than approximate it with a proxy.
+\end{abstract}
+
+\tableofcontents
+
+%==============================================================================
+\section{Introduction}
+%==============================================================================
+
+A recurring failure mode of autoregressive text generation is the repetition loop: the model emits a short span, then reproduces it again and again until the sample is dominated by a fixed cycle. The phenomenon is most visible under low-temperature or deterministic decoding, but the underlying mechanism -- the model assigning high probability to continuing a pattern it has already produced -- is present at every scale. It is fundamentally a decoding-time phenomenon: the same trained weights can yield fluent text or a degenerate loop depending only on how the next token is chosen from the model's own distribution.
+
+The standard I have tried to hold myself to throughout this project, adopted after several rounds of external review found defects ranging from a mis-specified theoretical claim to a seed-nondeterminism bug that silently made a validation report unreproducible, is that every number I report must be either (a) an exactly computed property of a well-specified optimization problem, (b) an empirically measured quantity with a stated sample size and confidence interval, traceable to a saved, reproducible script, or (c) explicitly flagged as an unvalidated proxy. Several of the corrections below are the direct result of applying this standard retroactively to my own earlier work and finding it violated; I report each with the same care as the results that survived it.
+
+\subsection{Contributions}
+\begin{enumerate}[leftmargin=*]
+  \item A precise theoretical treatment of recurrence-risk decoding as a minimum-distortion KL projection, distinguishing \emph{dual}, \emph{fixed}, and \emph{adaptive} operating modes, with an exact dual-calibration procedure whose multiplier cap I justify empirically rather than fix arbitrarily (Section~\ref{sec:theory}).
+  \item A validated, deterministically reproducible loop event, with two implementation defects I found and fixed during this revision: a Python \texttt{hash()}-based seed that silently varied between processes, and an imprecisely stated period-1 threshold (Section~\ref{sec:event}).
+  \item A corrected dual-solver diagnostic distinguishing genuine multiplier-cap infeasibility from a converged-but-capped result, which revealed that an earlier result I reported was computed under $\sim$26--28\% silent infeasibility, and a corrected re-run under a much larger cap (Section~\ref{sec:results}).
+  \item A synthetic finite-state validation of hazard-aware control with an exactly reproduced, whole-grid matched-distortion comparison, replacing an earlier single-point comparison I could not reproduce from its own saved artifact (Section~\ref{sec:synthetic}).
+  \item A corrected, exactly-context-conditioned model-consistency NLL, replacing a chunked implementation I showed numerically to under-condition roughly half of all scored positions (Section~\ref{sec:protocol}).
+  \item A second, independent model/corpus generalization experiment with a re-confirmed (not re-tuned) loop event, and an additional contrastive baseline (FSD-style) with an expanded discussion of the closest related decoding methods; plus a full decoder comparison on a pretrained subword model (GPT-2), including an authentic LZ Penalty baseline, gated by its own calibrated loop event and preceded by a confirmatory pilot (Section~\ref{sec:generalization}, Section~\ref{sec:related}).
+  \item A specified, built, but not-yet-administered human evaluation protocol, reported honestly as future work rather than approximated (Section~\ref{sec:human-eval}).
+\end{enumerate}
+
+\subsection{What I do not claim}
+I do not claim that recurrence-risk decoding eliminates repetition loops in general, that dual calibration provides a sequence-level guarantee against looping, that hard no-repeat blocking is a fair comparator on the primary ranking, that the hazard-aware mechanism validated on a synthetic problem transfers to the character model, or that any result here has been confirmed by independent human judgment. Each of these was a claim I made in an earlier revision of this project that did not survive scrutiny and is corrected explicitly below.
+
+%==============================================================================
+\section{Related Work}
+\label{sec:related}
+%==============================================================================
+
+\textbf{Decoding strategies.} Temperature sampling rescales logits by $1/T$ before the softmax. Nucleus (top-$p$) sampling \citep{holtzman2020curious} restricts sampling to the smallest set of tokens whose cumulative probability exceeds $p$. Repetition penalty \citep{keskar2019ctrl} divides the logit of every previously generated token by a constant, a \emph{global} discount that does not condition on whether a repeated $n$-gram is actually imminent -- this is the mechanism generally referred to as penalty decoding, and is the repetition-penalty baseline I use throughout. Typical sampling \citep{meister2023typical} keeps tokens whose surprisal is close to the distribution's entropy. Mirostat \citep{basu2021mirostat} adjusts a truncation threshold online to hold per-step surprisal near a target. No-repeat-$n$-gram blocking \citep{paulus2018deep} sets to zero the probability of any token that would complete an already-seen $n$-gram.
+
+\textbf{History-aware and contrastive decoding.} A homemade, LZ77-inspired longest-suffix-match heuristic is included as a baseline, implemented as \textsc{SuffixMatchDecoder} (Section~\ref{sec:theory}) -- an earlier version of this project named this class \texttt{LookBackDecoder}, which incorrectly implied it was the published Look-back decoding algorithm; it is not, and it is not attributed to any specific prior publication. A related family, sometimes described under the name Frustratingly Simple Decoding (FSD), contrasts the full model's prediction against a naive, training-free local predictor and suppresses candidates the naive predictor is confident about. I implement an FSD-style contrastive decoder (Section~\ref{sec:theory}) built from this general description; I was not able to confirm the exact hyperparameters or evaluation protocol of the original method from available sources with full confidence, so my implementation is a good-faith reconstruction, not a certified reproduction, and I label it as such in every table it appears in. Separately, and with a materially higher confidence level, I also implement the LZ Penalty \citep{ginart2025lzpenalty}, a real, verified, TMLR-2026-accepted method that penalizes each candidate token by the marginal change in codelength it would induce under an LZ-style compressor applied to a recent buffer against an earlier lookback window -- a token that would extend a long, close match is strongly suppressed; a token absent from the whole window is strongly rewarded. My implementation follows the paper's closed-form penalty (their eq. 14) directly, with one documented uncertainty about the exact indexing convention used to determine whether a candidate "extends" the current best match, resolved in favor of the reading consistent with the paper's own plain-language description and verified against its own qualitative example.
+
+\textbf{Adaptive contrastive decoding} more broadly refers to contrasting a strong model's output against a weaker or truncated reference distribution to amplify what is distinctive to the strong model; the FSD-style baseline here is a specific, repetition-focused instance of this broader idea rather than a general implementation of contrastive decoding.
+
+\textbf{Survival analysis for degeneration.} Reporting loop onset as a mean or a raw percentage discards information: a sample that never loops within the observation window is a \emph{right-censored} observation, not an outlier. I treat loop onset as a survival time and use the Kaplan--Meier estimator \citep{kaplan1958nonparametric} throughout, summarizing methods by Restricted Mean Survival Time (RMST).
+
+\textbf{Constrained decoding as projection.} The dual-calibration procedure in Section~\ref{sec:theory} applies Lagrangian duality for convex programs \citep{boyd2004convex} to a KL objective with a linear expectation constraint, which has a closed-form exponential-tilting solution.
+
+\textbf{Transformer language models.} The character-level models used throughout are decoder-only Transformers \citep{vaswani2017attention}.
+
+%==============================================================================
+\section{Formal Problem Definition}
+%==============================================================================
+
+Let $p(\cdot\mid x_{<t})$ denote the language model's distribution over the vocabulary $\mathcal{V}$ at decoding step $t$. A \emph{decoder} produces a sampling distribution $q_t$ at each step, from which $x_t$ is drawn. Greedy decoding sets $q_t = \delta_{\arg\max p}$; temperature sampling sets $q_t(v) \propto p(v)^{1/T}$. Every KL divergence I report is measured relative to the \textbf{temperature-scaled} model distribution -- i.e.\ $p$ in every projection and every $\KL(q\Vert p)$ figure is $\mathrm{softmax}(\text{logits}/T)$ at whatever $T$ that configuration uses, not the raw ($T{=}1$) model distribution. I state this explicitly because an earlier version of this paper did not, and it affects how the reported KL magnitudes should be read: at $T{=}0.10$, $p$ itself is already a sharpened, low-entropy distribution, so a KL measured against it is a KL against a distribution the projection has less room to move within cheaply.
+
+\textbf{The loop event.} Fix a detector $\mathcal{L}: \mathcal{V}^{*} \to \{0,1\}$. The \emph{loop onset} of a generation $x_{1:N}$ is $\tau = \min\{t \le N : \mathcal{L}(x_{1:t}) = 1\}$, or $\tau=\infty$ (right-censored) if no such $t$ exists. Section~\ref{sec:event} develops and validates $\mathcal{L}$.
+
+\textbf{Recurrence risk.} For a candidate $v$ and $n$-gram orders $[n_{\min}, n_{\max}]$,
+\[
+  \risk(v) = \frac{1}{N}\sum_{n=n_{\min}}^{n_{\max}} \mathbb{1}[(\text{last } n{-}1 \text{ tokens}, v) \text{ has occurred earlier}], \quad N = n_{\max}-n_{\min}+1.
+\]
+
+%==============================================================================
+\section{Loop-Event Validation}
+\label{sec:event}
+%==============================================================================
+
+\subsection{Why the naive event fails}
+\label{ssec:naive-fails}
+The candidate event "the first repeated $n$-gram of length $n$" fires on 54.0\% of held-out Doyle windows and 72.0\% of held-out Dickens windows at $n{=}10$: an event that fires on the majority of ordinary prose cannot distinguish degeneration from fluency. I retract this event.
+
+\subsection{A reproducibility defect I found and fixed}
+\label{ssec:seed-bug}
+My calibration/validation script originally seeded its window-sampling RNG with Python's built-in \texttt{hash()} applied to corpus names: \texttt{seed=hash(name)~\%~10000}. Python randomizes string hashes per process by default, so this seed -- and therefore the specific windows sampled from each corpus -- silently differed between separate invocations of the same script on the same corpus. This is why an earlier saved validation report's counts did not exactly match a later re-run's printed output, despite no code change in between. I replaced this with a stable seed derived from \texttt{hashlib.md5}, verified identical across independent process invocations, and the script now saves the exact sampled window start-indices into its output report for direct auditing. Re-running calibration and validation under the fixed seed reproduces the same frozen setting ($R{=}5$, $P_{\max}{=}60$) and closely similar false-positive counts, reported below.
+
+\subsection{Calibration}
+The persistent-cycle event is the earliest position $e$ at which a span of length $P\in[2,P_{\max}]$ repeats exactly $R$ times consecutively. I chose $R$ and $P_{\max}$ by a pre-declared rule -- smallest $R$ whose worst-case upper 95\% CI (across window lengths 300/500/1000/2000) falls at or below a 1\% tolerance -- on a calibration set (Carroll, Twain, Swift) I never referenced again. No cell meets the 1\% tolerance at every window length; $R{=}6$ reproduces $R{=}5$'s counts exactly, indicating the residual is a stable phenomenon, not a threshold-boundary artifact. \textbf{Frozen: $R{=}5$, $P_{\max}{=}60$} (worst-case upper CI 2.80\%, reported honestly as not meeting the a priori target).
+
+\textbf{Period-1 threshold, corrected description.} An earlier draft stated the frozen event as "$R{=}5$" without qualification. This is imprecise: the implementation uses a period-1 (single-repeated-character) check with a \emph{separate}, decoupled threshold of \textbf{8}, not $R{=}5$. Using $R{=}5$ directly for period-1 caused plain-text typesetting conventions (5-character dash dividers) to trigger false positives; I raised the period-1 threshold to 8 specifically to sit above ordinary divider/ellipsis lengths while remaining below observed genuine degenerate runs. Every other period ($P\in[2,60]$) uses $R{=}5$ as stated; period 1 alone uses 8.
+
+\subsection{Validation battery}
+\begin{table}[h]
+\centering
+\caption{Validation battery, frozen event, deterministic-seed re-run.}
+\label{tab:validation}
+\begin{tabular}{@{}lrrl@{}}
+\toprule
+Corpus & fires/$n$ & rate & 95\% CI \\
+\midrule
+Melville, \emph{Moby-Dick}      & 0/300  & 0.0\% & [0.0\%, 1.2\%] \\
+Stoker, \emph{Dracula}          & 26/300 & 8.7\% & [5.7\%, 12.4\%] \\
+Whitman, \emph{Leaves of Grass} & 0/300  & 0.0\% & [0.0\%, 1.2\%] \\
+Paine, \emph{Common Sense}      & 1/249  & 0.4\% & [0.0\%, 2.2\%] \\
+Homer, \emph{Iliad} (trans.)    & 0/300  & 0.0\% & [0.0\%, 1.2\%] \\
+Doyle, \emph{Sherlock Holmes}   & 0/300  & 0.0\% & [0.0\%, 1.2\%] \\
+Dickens, \emph{A Tale of Two Cities} & 0/300 & 0.0\% & [0.0\%, 1.2\%] \\
+\midrule
+\textbf{Pooled}                 & 27/2049 & \textbf{1.3\%} & \textbf{[0.9\%, 1.9\%]} \\
+\bottomrule
+\end{tabular}
+\end{table}
+As before the seed fix, the residual is concentrated almost entirely in \emph{Dracula} (epistolary formulas); poetry (Whitman) shows zero false positives. Window-length robustness (300/500/1000/2000 chars) gives 0.0\%/0.5\%/1.4\%/2.4\%.
+
+\subsection{Synthetic sensitivity}
+Constructed text with a known period $P\in\{1,2,3,5,8,13,20,30,45,60\}$ repeated $R_{\text{true}}\in\{2,3,4,5,8,10\}$ times fires correctly on 98--100\% of cases at every tested repeat count.
+
+%==============================================================================
+\section{Experimental Protocol}
+\label{sec:protocol}
+%==============================================================================
+
+\subsection{Model and data}
+The primary model is an 848K-parameter, 4-layer, 128-dimensional character-level Transformer, 256-character context, trained on Austen and Shelley, validated on Doyle, tested on Dickens. All primary-model results use the \textsc{cosine}-schedule checkpoint unless stated otherwise. \emph{A note on a claim I previously removed and have now restored on firmer ground}: an earlier version of this paper reported qualitative confirmation of the headline result on a second, independently-trained checkpoint of the same architecture (historically called \textsc{baseline}, constant learning rate rather than cosine-scheduled), then removed that claim because it predated the mcNLL, dual-solver, and loop-event fixes. I have since reran the comparison on \textsc{baseline} under the fully corrected code: greedy loops at a materially different rate (60.0\% vs.\ \textsc{cosine}'s 93.3\%) and $T{=}0.15$ still shows a residual 4.0\% loop rate where \textsc{cosine} shows 0.0\% -- confirming, as Section~\ref{sec:generalization}'s non-fiction result already showed for a different corpus, that the specific temperature threshold does not automatically carry over even to a same-architecture, same-training-corpus retrain, only the underlying pathology and the dual mechanism's ability to eliminate it do. \textsc{rr-dual} ($\varepsilon{=}0.05$) reaches 0/150 loops on \textsc{baseline} too, at 100.0\% feasibility and 11.343 bits of KL -- closely matching \textsc{cosine}'s 11.186 bits at the same $\varepsilon$ (Table~\ref{tab:main}), a second, independent confirmation of the same finding Section~\ref{sec:generalization} reports across corpora, this time across an independent training run of the identical architecture and data.
+
+\subsection{Where the pathology occurs}
+A systematically powered sweep (14 temperatures $\times$ 5 prompts $\times$ 10 seeds, 1000-char generations, exact Clopper--Pearson intervals) on the primary model shows loop rate falling smoothly from 96.0\% at $T{=}0.05$ to 0.0\% by $T{=}0.30$, crossing under 5\% by $T{\approx}0.2$. Every primary-model decoding comparison below is run at $T{=}0.10$. I did not re-run this sweep for the second, generalization model (Section~\ref{sec:generalization}); as that section shows, the temperature regime does not simply transfer, and I report this as an open question rather than assume it.
+
+\subsection{Prompt protocol}
+A \textsc{Dev} set of 5 prompts is the only material I inspected while choosing hyperparameters. A disjoint \textsc{Test} set of 15 prompts, written afterward and never inspected during tuning, is the source of every number in Section~\ref{sec:results} and Section~\ref{sec:generalization}. Greedy decoding, in this revision, is evaluated on all 15 test prompts; an earlier version evaluated it on only 5 because its configuration was not flagged for the full prompt set by default -- a fairness-of-comparison defect I have since fixed.
+
+\subsection{Inference and the primary significance test}
+\label{ssec:inference}
+The analysis unit for every confidence interval and hypothesis test is the \emph{prompt}. Two procedures, declared primary and sensitivity in advance:
+\begin{itemize}[leftmargin=*]
+  \item \textbf{Primary: exact sign-flip test.} For 15 prompts, all $2^{15}$ sign patterns are enumerated exactly, giving an exact $p$-value for the paired difference in prompt-level RMST. I implemented this as a standalone, saved, reproducible script (\texttt{compute\_significance.py}) rather than computing it ad hoc; running it against the result files reproduces every number in Table~\ref{tab:paired} exactly.
+  \item \textbf{Sensitivity: cluster bootstrap.} 3000 resamples of prompts give a 95\% CI for the same statistic.
+\end{itemize}
+These need not agree on significance at small $n$; Section~\ref{sec:results} reports where they disagree and which conclusion governs.
+
+\subsection{Metrics}
+\textbf{RMST} (horizon 500 characters) via Kaplan--Meier with right-censoring. \textbf{Model-consistency NLL (mcNLL)}, corrected in this revision (Section~\ref{ssec:mcnll-fix}). \textbf{4-gram similarity} to a held-out reference corpus. For dual-calibrated configurations: exact $\KL(q\Vert p)$, achieved risk, and full feasibility diagnostics (Section~\ref{sec:theory}).
+
+\subsection{The model-consistency NLL fix}
+\label{ssec:mcnll-fix}
+An earlier version computed mcNLL over non-overlapping chunks of length \texttt{block\_size}. I verified numerically, on a toy model with a small block size, that roughly half of all scored positions -- those near the start of any chunk after the first -- received substantially less context than the architecture allows: in one concrete case, 9 of 16 possible context tokens instead of 16. A first attempted fix (overlapping windows, stride $=$ block\_size$/2$, keeping only each window's back half) I verified was \emph{still insufficient}: only the single last position of each window actually reached full context. The final fix scores every target position independently, batching each position's own exact context window $\text{full}[\max(0,t{-}\text{block\_size}):t]$ through the model together; I verified on the same toy model that every one of 40 scored positions receives exactly $\min(t,\text{block\_size})$ tokens of context (0 mismatches), and that the batched, left-padded computation is numerically identical to an isolated single-example forward pass for the same position (matching to 6 decimal places), confirming padding does not leak into predictions.
+
+%==============================================================================
+\section{Method}
+\label{sec:theory}
+%==============================================================================
+
+\subsection{The risk-bounded projection}
+\begin{equation}
+  \min_q \; \KL(q\Vert p) \quad \text{s.t.} \quad \E_q[\risk] \le \varepsilon, \quad q \in \Delta(\mathcal{V}). \tag{P}
+\end{equation}
+The Lagrangian gives, for fixed $\lambda\ge0$, $q_\lambda(v) \propto p(v)\exp(-\lambda\risk(v))$ (F). By weak duality this solves (P) \emph{only} for the $\lambda$ satisfying complementary slackness ($\lambda{=}0$ if $\E_p[\risk]\le\varepsilon$, else the unique $\lambda$ with $\E_{q_\lambda}[\risk]=\varepsilon$); any other $\lambda$ solves the different, unconstrained problem $\min_q \KL(q\Vert p) + \lambda\E_q[\risk]$ (R). I distinguish three modes: \textsc{dual} (solves P exactly), \textsc{fixed} (solves R), \textsc{adaptive} (heuristic, no guarantee).
+
+\textbf{Edge cases, stated precisely.} At $\varepsilon \ge \E_p[\risk]$, the constraint is inactive and $\lambda^*{=}0$ exactly, giving $q{=}p$ and zero distortion -- not an approximation, an exact identity of the KKT conditions. At $\varepsilon < \min_v\risk(v)$, (P) is \textbf{infeasible in the classical sense}: no $q\in\Delta(\mathcal{V})$ satisfies the constraint, since even placing all mass on $\arg\min\risk$ gives $\E_q[\risk]=\min_v\risk(v) > \varepsilon$. This is a genuine structural boundary of the problem, distinct from the numerical bracket-capping issue in Section~\ref{ssec:dual-fix}; I now log both separately rather than conflate them into a single "infeasible" flag. As $\lambda\to\infty$ for a single $n$-gram order, (F) recovers hard no-repeat-$n$ blocking exactly. For the multi-order risk I use throughout, $\lambda\to\infty$ instead concentrates mass on $\arg\min_v\risk(v)$, which equals the single-order hard-block limit only when $n_{\min}=n_{\max}$; the general claim that the method "becomes standard hard no-repeat" is false outside that degenerate case and I do not make it here.
+
+\subsection{Dual calibration: three defects, found and fixed}
+\label{ssec:dual-fix}
+An earlier version of my dual solver correctly distinguished, in principle, a converged feasible result from a capped infeasible one. Three separate problems were found in how this was implemented and used, in order of how much they matter:
+
+\textbf{(1) NUMERICAL: float32 underflow silently corrupted $q$, $\lambda$, and KL.} The solver materialized $p$ via a plain softmax and computed $q_\lambda$'s logits as $\log(p+10^{-40}) - \lambda\risk$. At $T{=}0.10$, temperature scaling routinely pushes many vocabulary entries' probabilities below float32's representable range: reproduced directly on this project's own model, 276 of 2000 tested vocabulary entries underflowed to exactly $0.0$ in one constructed check, with TRUE log-probabilities spanning 41 nats (from $-104$ to $-145$) that the old code collapsed to a single, identical, and substantially too-large floor value ($\log(10^{-40})\approx-92.1$) regardless of how different the true values actually were. Since dual calibration's whole purpose is correctly reweighting exactly this low-probability tail (the "safe" alternatives), this is not a cosmetic issue: it can materially change which $\lambda$ the bisection finds, the resulting $q$, and every downstream KL figure. Fixed by working entirely in log-space via \texttt{F.log\_softmax} on the temperature-scaled logits directly, never materializing $p$ as a probability tensor at all; $\KL(q\Vert p)$ and both entropies are likewise computed from log-probabilities directly rather than from a materialize-then-relog step.
+
+\textbf{(2) STRUCTURAL: true infeasibility was conflated with a numerical cap.} $\varepsilon < \min_v\risk(v)$ is a proven structural impossibility (Section~\ref{sec:theory}'s edge case), decidable in closed form with no search at all; the earlier solver instead only learned this indirectly, by bisecting up to a fixed cap and reporting failure if even the cap wasn't enough, which cannot distinguish "genuinely impossible" from "the cap was too small." Fixed by checking $\min_v\risk(v)$ against $\varepsilon$ directly and up front: if it exceeds $\varepsilon$, the run is reported as \texttt{structurally\_infeasible} with no search attempted (mathematically guaranteed to be right); otherwise a feasible $\lambda$ is guaranteed to exist and the solver proceeds to find it.
+
+\textbf{(3) The multiplier cap itself was replaced with an expanding bracket.} With defect (2) fixed, there is no longer any reason for a fixed cap: whenever feasibility is guaranteed to exist, the search bracket now expands geometrically (doubling from $\lambda{=}1$) until its upper end is feasible, then bisects within it, with no ceiling on how far it can expand. The former fixed cap ($\lambda_{\max}{=}50$, later raised to 1000 as an earlier, incomplete fix) is deprecated and has no effect on the current solver's behaviour.
+
+\textbf{Every dual-mode number in an earlier version of this paper's Table~\ref{tab:main} and Table~\ref{tab:generalization} was computed before defect (1) was found and fixed, and must be treated as superseded pending a rerun under the corrected solver} -- see the explicit flag in Section~\ref{ssec:discussion}'s wording-discipline and limitations subsections. Loop rate and RMST, which do not depend on the exact KL/$\lambda$ arithmetic, are unaffected.
+
+\subsection{Recurrence risk and the prompt-context question}
+$\risk(v)$ uses an incrementally maintained hash map, re-verified identical to brute-force history scanning. Whether the prompt's own tokens count as history was tested explicitly (\texttt{include\_prompt\_context}$\in\{$True,False$\}$): the RMST difference (492.9 vs.\ 499.9) was not significant under the primary exact test ($p{=}0.125$), the same small-sample disagreement pattern discussed in Section~\ref{ssec:disagreement}.
+
+\subsection{The adaptive controller}
+$\lambda_t = \lambda_{\text{base}} + \lambda_{\text{rep}}\max(0,\overline{\text{rep}}-\text{rep}_{\text{target}}) - \lambda_{\text{ent}}\max(0,\overline{H}-H_{\text{target}})$, clipped to $[0,\lambda_{\max}]$; the lower clip is a correctness requirement (an unclipped negative multiplier would reward risk).
+
+\subsection{An FSD-style contrastive baseline}
+I add a history-aware baseline in the spirit of the FSD family (Section~\ref{sec:related}): $\text{naive}(v)$ is the empirical next-token distribution implied purely by exact local repetition, and the decoder samples from $\mathrm{softmax}((\text{model\_logits} - \alpha\cdot\text{naive})/T)$. This differs from recurrence risk in using a \emph{continuous, frequency-weighted} contrast rather than a bounded projection with a distortion budget, and from repetition penalty in only suppressing candidates the naive local predictor is specifically confident about. It plugs into the same generic decoder interface (\texttt{step}/\texttt{reset}/\texttt{prime}) as recurrence risk; I verified it runs end-to-end without any change to the shared generation loop.
+
+\subsection{An authentic LZ Penalty baseline}
+I additionally implement the real, published LZ Penalty \citep{ginart2025lzpenalty}. For a recent buffer $b$ (the last $B$ tokens) and an earlier lookback window $w$ (the $W$ tokens before that), let $(l,d)$ be the length and distance of the longest prefix-match of $b$ against $w$. For each candidate $a$, the codelength contribution is
+\[
+  \Delta|C_{\text{LZ}}|(a) = \begin{cases}
+    \log_2 V & \text{no match at all}, \\
+    \log_2 \delta & \text{a new, singleton match at distance } \delta, \\
+    \log_2\!\left(1 - \frac{d-l+1}{ld}\right) - 1 & \text{extends the current match to length } l{+}1,
+  \end{cases}
+\]
+applied as $\text{logits} \mathrel{+}= \alpha \cdot \Delta|C_{\text{LZ}}|$ -- novel candidates are boosted, candidates completing a long, close repeat are strongly suppressed, matching the paper's reported $[-5,+17]$-bit dynamic range for a subword configuration. I verified this reproduction against the paper's own qualitative description on a constructed case (a token completing a close 8-token repeat scores strongly negative; a token absent from the whole window scores exactly $\log_2 V$, the top of the range) and documented, in the implementation itself, one indexing-convention choice I could not fully verify against a reference implementation (Section~\ref{sec:related}). Buffer/window sizes are scaled down from the paper's subword defaults (32/512) for this project's much smaller character-level vocabulary.
+
+%==============================================================================
+\section{Results}
+\label{sec:results}
+%==============================================================================
+
+\subsection{Main comparison at $T{=}0.10$}
+
+This table reflects a full rerun under the corrected code (log-space dual solver, right-padded mcNLL, both verified in Section~\ref{ssec:dual-fix} and Section~\ref{ssec:mcnll-fix}), on the same \textsc{cosine} checkpoint used throughout the rest of this paper. Dual feasibility on this run was \textbf{exactly 100.0\%} at both tested $\varepsilon$, with $0.0$ mean and max violation -- the numerical fix did not merely reduce the earlier infeasibility, it eliminated it entirely on this data.
+
+\begin{table}[h]
+\centering
+\caption{Primary (fiction-trained, \textsc{cosine}) checkpoint, $T{=}0.10$, all 15 test prompts, frozen event. Corrected dual solver and mcNLL; 100.0\% dual feasibility.}
+\label{tab:main}
+\begin{tabular}{@{}lrrrrrr@{}}
+\toprule
+Method & $n$ & Loop \% & RMST & mcNLL & Sim & $\KL(q\Vert p)$ \\
+\midrule
+Greedy                      & 150 & 93.3\% & 130   & 0.820 & 0.089 & --- \\
+Temperature 0.05             & 50  & 86.0\% & 170   & 0.831 & 0.116 & --- \\
+Temperature 0.10             & 150 & 29.3\% & 404   & 0.886 & 0.155 & --- \\
+Temperature 0.15             & 50  & 0.0\%  & 500   & 0.926 & 0.181 & --- \\
+Repetition penalty 1.3        & 150 & 4.7\%  & 486   & 0.950 & 0.199 & --- \\
+No-repeat 4-gram$^{*}$       & 150 & 0.0\%  & 500   & 1.722 & 0.249 & --- \\
+SuffixMatch ($\alpha{=}3$)    & 150 & 0.0\%  & 500   & 1.017 & 0.267 & --- \\
+FSD-style (reimpl.)          & 150 & 0.0\%  & 500   & 1.218 & 0.299 & --- \\
+LZ Penalty (authentic)        & 150 & 0.0\%  & 500   & 0.997 & 0.247 & --- \\
+\textsc{rr-fixed} ($\lambda{=}2$)   & 150 & 2.7\%  & 493   & 0.934 & 0.189 & 0.037 \\
+\textsc{rr-adaptive}          & 150 & 0.0\%  & 500   & 0.960 & 0.212 & 0.096 \\
+\textsc{rr-dual} ($\varepsilon{=}0.05$) & 150 & 0.0\% & 500 & 1.938 & 0.212 & 11.186 \\
+\textsc{rr-dual} ($\varepsilon{=}0.01$) & 150 & 0.0\% & 500 & 2.054 & 0.193 & 12.670 \\
+\bottomrule
+\end{tabular}
+
+\vspace{4pt}
+{\footnotesize $^{*}$Hard constraint on the measured event; excluded from significance testing (Section~\ref{ssec:hard-repeat}).}
+\end{table}
+
+The dose--response relationship between distortion and residual risk is monotone across the three recurrence-risk modes -- \textsc{fixed} (0.037 bits, 2.7\% loop) $<$ \textsc{adaptive} (0.096 bits, 0.0\% loop) $<$ \textsc{dual} (11.2--12.7 bits, 0.0\% loop) -- but I do not describe this as a \emph{statistically established} dose--response curve, since only three points are compared and I ran no formal trend test across them; "monotone" here describes the observed ordering, not a significance claim. The dual figures have moved twice across this project's revisions, both times upward, and both times traceable to a specific fixed defect: the original run (solver silently infeasible on $\sim$26--28\% of steps) reported 2.256--2.328 bits; fixing only the multiplier cap (still using the buggy float32 softmax-then-relog arithmetic) gave 10.3--11.6 bits; fixing the underlying numerical defect itself (Section~\ref{ssec:dual-fix}) gives the 11.2--12.7 bits reported here, now at exactly 100.0\% feasibility with zero violation. The true cost of a properly feasible $\varepsilon$-bounded guarantee at this operating point is roughly \textbf{five times} what the original, uncorrected run reported, and the qualitative text degrades correspondingly (Section~\ref{ssec:qualitative}).
+
+\subsection{No-repeat blocking is excluded from ranking, not merely asterisked}
+\label{ssec:hard-repeat}
+A global no-repeat-$n$-gram filter, checked against the entire prior history, structurally cannot allow a persistent cycle of any period up to the generation length to form, since any such cycle reproduces a blocked $n$-gram at lag $P\le n$. Its 0/150 result is guaranteed by construction, not discovered by experiment, and I exclude it from every significance test and from the survival ranking.
+
+\subsection{Paired comparisons and one honest disagreement}
+\label{ssec:disagreement}
+\begin{table}[h]
+\centering
+\caption{Paired, prompt-clustered comparisons (\texttt{compute\_significance.py}, exact reproduction, final corrected rerun).}
+\label{tab:paired}
+\begin{tabular}{@{}lrrl@{}}
+\toprule
+Comparison ($A-B$) & $\Delta$RMST & $p$ (exact) & 95\% cluster CI \\
+\midrule
+\textsc{rr-fixed} $-$ Temperature 0.10   & $+88.4$  & $<0.001$ & [66.4, 113.9] \\
+\textsc{rr-fixed} $-$ Rep.\ penalty 1.3  & $+6.5$   & $0.246$  & [$-3.7$, 15.9] \\
+\textsc{rr-adaptive} $-$ Rep.\ penalty 1.3 & $+13.6$ & $0.016$ & [6.1, 21.9] \\
+\textsc{rr-fixed} $-$ \{SuffixMatch, \textsc{dual}, \textsc{adaptive}, FSD, LZ Penalty\}$^{\dagger}$ & $-7.1$ & $0.125$ & [$-14.4$, $-1.1$] \\
+\textsc{rr-adaptive} $-$ \textsc{rr-dual} & $0.0$ & $1.000$ & [0.0, 0.0] \\
+FSD $-$ SuffixMatch$^{\dagger}$ & $0.0$ & $1.000$ & [0.0, 0.0] \\
+FSD $-$ LZ Penalty$^{\dagger}$ & $0.0$ & $1.000$ & [0.0, 0.0] \\
+\bottomrule
+\end{tabular}
+
+\vspace{4pt}
+{\footnotesize $^{\dagger}$Identical because all listed configurations achieved 0/150; survival alone cannot distinguish them (see spelling-error rates in Section~\ref{sec:results} for a quality-based distinction).}
+\end{table}
+
+The primary exact test and the sensitivity interval disagree on \textsc{rr-fixed} vs.\ the zero-loop group: the cluster interval excludes zero ($[-14.4,-1.1]$), but the pre-declared primary test gives $p{=}0.125$ (not significant at 15 prompts). Per protocol, the primary test governs: I report this difference as \textbf{not statistically significant}.
+
+\subsection{FSD-style and LZ Penalty reach the same survival outcome, at different costs}
+The FSD-style reimplementation and the authentic LZ Penalty both reach 0/150, statistically indistinguishable from SuffixMatch and adaptive on survival ($p{=}1.000$ in every pairwise check among this zero-loop group). Their quality profiles differ from each other and from the recurrence-risk methods: FSD-style has a spelling-error rate of 4.28\%, well above \textsc{rr-fixed}'s 0.44\% and SuffixMatch's 1.51\%. LZ Penalty's spelling-error rate (1.58\%) is close to SuffixMatch's and notably lower than FSD-style's, consistent with LZ Penalty's more principled, continuously-varying codelength-based penalty (Section~\ref{sec:theory}) versus FSD-style's simpler frequency contrast -- both can, at some steps, suppress a token needed to complete a legitimate word rather than only tokens driving an actual repeat, but LZ Penalty's penalty magnitude is tied directly to how closely and how long a match actually is, giving it finer-grained control.
+
+\subsection{Qualitative example, updated}
+\label{ssec:qualitative}
+Same prompt, same \textsc{cosine} checkpoint, $T{=}0.10$, from the fully corrected rerun (log-space dual solver, right-padded mcNLL, 100.0\% dual feasibility):
+\begin{quote}\small
+\textbf{Greedy} (loops): \emph{``they were all the subject of the consideration of the subject of the subject of the subject of the subject of the subject of the subject of the subject of the subject of the consideration of the subject of the subject of''}
+
+\textbf{\textsc{rr-dual} $\varepsilon{=}0.05$} (no cycle, visibly degraded): \emph{``they had been a sensible of tranquillity and misery to take at time in terms on their sistence was always assured, after two suppose to me, with a considerably, tlength t\^ete hear or tyle so are,--''}
+
+\textbf{LZ Penalty} (no cycle, more coherent than dual despite zero KL budget): \emph{``they were all the conceiving which I had been so much as the stranger, and the proposal of the contrary of the present which I was always to be done the most and suffering the strong of the conversation which I had been property to the most present and all the''}
+\end{quote}
+Two earlier versions of the dual example, computed under progressively less buggy solver code, both showed somewhat more fluent text than this final, fully-corrected version -- consistent with the corrected KL cost being the highest of the three (11.2--12.7 bits, up from an original, badly-infeasible 2.256--2.328 and an intermediate, still-underflow-affected 10.3--11.6). This is not a new degradation introduced by the fix; it is the previously hidden true cost, now visible. LZ Penalty's output at this same prompt is qualitatively more coherent than dual's despite spending no explicit KL budget at all, illustrating concretely why Section~\ref{ssec:discussion} does not treat KL cost as the only axis worth reporting.
+
+%==============================================================================
+\section{Human Quality Evaluation}
+\label{sec:human-eval}
+%==============================================================================
+
+I built a blinded evaluation tool, available as a shareable, self-contained web artifact with two tasks: (1) loop-detection agreement on 18 passages (a mix of clearly-looping, clearly-fluent, and borderline examples), and (2) blind pairwise preference on 10 pairs specifically drawn from the comparisons I cannot resolve with automatic metrics alone (principally \textsc{dual} vs.\ look-back, where look-back's lower mcNLL is not, by my own stated position, a validated quality signal). The tool randomizes presentation order and left/right side per participant and aggregates responses into shared storage for later analysis.
+
+\textbf{I have not yet administered this tool to participants.} No human-judgment results are reported in this revision, and no fluency or quality ranking here rests on human evaluation, on mcNLL used as a proxy for it, or on my own qualitative reading used as a substitute for it -- the qualitative example in Section~\ref{ssec:qualitative} is presented descriptively, not as a preference judgment. \textbf{I plan to run this study -- recruiting a small number (5--8) of independent participants for the specified $\sim$8-minute session -- as the immediate next step after this submission}, and will report the results, whatever they show, as a direct update to this section rather than as a retroactive change to any claim made elsewhere in this paper. Until then, this is reported as open, specified, and actionable, not silently dropped.
+
+%==============================================================================
+\section{Toward Finite-Horizon Hazard: Synthetic Validation}
+\label{sec:synthetic}
+%==============================================================================
+
+\subsection{Construction}
+A 20-state Markov chain: most states form a diffuse "safe" region, from which a small probability (0.05) leads to a \emph{gateway} state -- not itself an immediate repeat, but transitioning with high probability (0.75) into a tight 2-cycle. True hazard is computed by exact backward DP over (state, bounded 2-state trailing window, steps-remaining): $f[r][(s,\text{win})] = \sum_{s'} P[s,s']\big(\mathbb{1}[s'\in\text{win}] + \mathbb{1}[s'\notin\text{win}]\,f[r{-}1][(s',\text{win}')]\big)$, $f[0][\cdot]{=}0$. Per-candidate hazard $\haz(s')$ mirrors the real-model transfer's structure exactly: the probability of looping within the remaining horizon \emph{given that $s'$ is chosen now}.
+
+\subsection{An earlier unreproducible claim, corrected}
+An earlier version of this paper reported "17.9\% vs.\ 53.2\% loop rate at matched KL$\approx$0.24" as the headline synthetic result. I could not reproduce this number from its own saved artifact: the script's saved \texttt{matched\_distortion\_check} targeted a \emph{different} operating point than the one actually cited in the text, because the cited number came from a separate, ad hoc calculation I never integrated back into the script. I rewrote the script so the matched-distortion comparison is computed and saved for \textbf{every} point in the $\varepsilon$ grid at once, removing any possibility of silently reporting a hand-picked point, and re-ran it end to end.
+
+\begin{table}[h]
+\centering
+\caption{Matched-distortion comparison, reproduced from the corrected, saved artifact.}
+\label{tab:synthetic}
+\begin{tabular}{@{}rrrrrl@{}}
+\toprule
+Hazard $\varepsilon$ & Hazard KL & Hazard loop\% & Matched local $\varepsilon$ & Local KL & Local loop\% \\
+\midrule
+0.30 & 0.266 & 24.6\% & 0.458 & 0.264 & 50.8\% \\
+0.20 & 0.238 & 17.9\% & 0.500 & 0.241 & 51.4\% \\
+0.10 & 0.392 & 5.6\%  & 0.179 & 0.392 & 41.1\% \\
+0.05 & 0.632 & 1.3\%  & 0.001 & 0.604 & 0.6\%  \\
+0.02 & 0.810 & 0.3\%  & 0.001 & 0.604 & 0.6\%  \\
+0.01 & 0.877 & 0.3\%  & 0.001 & 0.604 & 0.6\%  \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+At $\varepsilon{=}0.20$ the corrected, saved comparison gives \textbf{17.9\% vs.\ 51.4\%} -- close to, but not identical to, my earlier unreproducible figure, which corroborates that the original finding reflected a real effect I had poorly recorded, not a fabricated one, while still requiring the correction I make here. Hazard-aware control dominates the local proxy at every $\varepsilon\ge0.10$ (5/6 grid points), by margins of 26--36 percentage points. At $\varepsilon{=}0.05$ it \textbf{loses} (1.3\% vs.\ 0.6\%): here local's search grid saturates at its most aggressive tested setting without reaching hazard's much higher KL cost at this tail, making the comparison at this point inconclusive rather than a genuine loss for hazard-aware control.
+
+%==============================================================================
+\section{Attempted Transfer to the Real Model}
+\label{sec:hazard-transfer}
+%==============================================================================
+
+\subsection{Design}
+I collected per-candidate hazard labels by forcing each of several candidate next-tokens (model's top-8 by probability, plus 4 lower-probability tokens) as the immediate next token, then continuing $K$ independent stochastic rollouts at $T{=}0.10$ for a fixed horizon, checking the frozen loop event. I diagnosed and fixed two structural problems before any interpretable data could be collected: a 20-character horizon that could not observe the event under any circumstance, and uniformly-random context selection that put most probed contexts nowhere near an actual loop.
+
+\subsection{No detectable signal under this estimator}
+Per-candidate hazard for "risky" ($\risk(v)>0$) vs.\ "novel" ($\risk(v)=0$) candidates showed no separation (0.027 vs.\ 0.028 mean hazard, $n{=}156$/$1644$). A multi-step-commitment variant also showed no significant separation at any tested commitment length $L\in\{1,3,5,8,15\}$, even before correction for testing five values (largest raw gap $p{=}0.137$ at $L{=}8$; Bonferroni-corrected $p{=}0.685$).
+
+\textbf{My conclusion from these two experiments is deliberately narrow, per explicit review guidance}: under the specific rollout-based estimator, candidate-selection scheme, and per-cell sample sizes (5 rollouts per candidate) I used here, \textbf{I found no detectable hazard signal} distinguishing risky from novel candidates, at either single-token or the tested multi-step-commitment granularities. This is \emph{not} a claim that finite-horizon hazard control does not work on real language models, that the mechanism validated in Section~\ref{sec:synthetic} is invalid, or that no estimator could find a signal here; it is a statement about what this specific, small, non-context-clustered estimator did and did not detect. A properly powered, context-clustered re-estimation, with substantially more rollouts per candidate, is a natural next step I have not yet taken.
+
+%==============================================================================
+\section{Generalization}
+\label{sec:generalization}
+%==============================================================================
+
+An earlier version of this project applied an unvalidated token-level event to a pretrained subword model and reported a survival claim; I withdraw that claim (Section~\ref{ssec:naive-fails}'s reasoning applies identically to the subword case) and make no claim, positive or negative, about a pretrained subword model's response to any decoder in this revision.
+
+\subsection{Pretrained subword pilot: a measurable regime exists}
+Per explicit review guidance, before committing to any full comparison on a pretrained, subword-tokenized model, I first ran a cheap pilot to confirm a measurable low-temperature repetition regime exists at all -- rather than assuming either the character model's temperature range or the very existence of the pathology transfers. Using GPT-2 (124M, standard pretrained checkpoint) with a placeholder (not yet calibrated) token-level persistent-cycle event ($R{=}5$, $P_{\max}{=}20$ tokens):
+
+\begin{table}[h]
+\centering
+\caption{GPT-2 pilot, 5 prompts $\times$ 5 seeds, 150 new tokens, uncalibrated placeholder event.}
+\label{tab:gpt2pilot}
+\begin{tabular}{@{}rrl@{}}
+\toprule
+$T$ & Loop rate & 95\% CI \\
+\midrule
+0.05 & 32.0\% & [14.9\%, 53.5\%] \\
+0.10 & 32.0\% & [14.9\%, 53.5\%] \\
+0.15 & 40.0\% & [21.1\%, 61.3\%] \\
+0.20 & 28.0\% & [12.1\%, 49.4\%] \\
+0.30 & 28.0\% & [12.1\%, 49.4\%] \\
+0.50 & 4.0\%  & [0.1\%, 20.4\%] \\
+0.70 & 0.0\%  & [0.0\%, 13.7\%] \\
+1.00 & 0.0\%  & [0.0\%, 13.7\%] \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+A measurable regime exists (peak 40.0\% at $T{=}0.15$, well above the pilot's own 10\%-or-abandon threshold), so the full comparison was run on this model (Section~\ref{sec:gpt2-full}), after first replacing the placeholder event above with a properly calibrated one, following the same calibrate/freeze/validate protocol as Section~\ref{sec:event} but at the token level and on this model's own tokenizer -- reusing the character-level $R{=}5$/$P_{\max}{=}60$ setting, or this pilot's un-validated placeholder, would repeat exactly the mistake already found and corrected once in this project. The frozen token-level event (\texttt{validate\_loop\_event\_subword.py}: $R{=}5$, $P_{\max}{=}20$ tokens, pooled false-positive rate 1.1\%, 95\% CI [0.7\%, 1.9\%], on a disjoint validation battery) coincides numerically with the pilot's placeholder above but not in status -- this one was calibrated and validated before use, the placeholder was not, and the calibration grid did not automatically land on the same values it happened to match here.
+
+\subsection{GPT-2 full comparison}
+\label{sec:gpt2-full}
+Same decoder classes as Table~\ref{tab:main} (\texttt{SuffixMatchDecoder}, \texttt{FSDDecoder}, \texttt{LZPenaltyDecoder}, \texttt{RecurrenceRiskDecoder} in all three modes), run unmodified against GPT-2 through a thin HuggingFace-model generation loop (\texttt{gpt2\_full\_comparison.py}) that delegates every decoding step to the same \texttt{.step()} interface -- not a reimplementation, so no risk of the two comparisons silently diverging in decoder definition. $T{=}0.10$ throughout, matching the primary comparison's convention; 10 prompts (written fresh, never inspected while choosing $T$/$\alpha$/$\varepsilon$) $\times$ 10 seeds $\times$ 200 new tokens; risk order $n_{\min}{=}2, n_{\max}{=}4$ tokens (a phrase-length band appropriate to BPE tokens, not the character band); LZ Penalty at the paper's own subword defaults (buffer 32, window 512), not the character model's scaled-down setting.
+
+\begin{table}[h]
+\centering
+\caption{GPT-2 (124M), $T{=}0.10$, 10 prompts $\times$ 10 seeds, 200 new tokens, frozen validated event ($R{=}5$, $P_{\max}{=}20$ tokens).}
+\label{tab:gpt2full}
+\begin{tabular}{@{}lrrrr@{}}
+\toprule
+Method & $n$ & Loop \% & RMST (tok) & mcNLL \\
+\midrule
+Greedy                      & 100 & 30.0\% & 158.5 & 0.626 \\
+Temperature 0.05             & 100 & 30.0\% & 167.2 & 0.678 \\
+Temperature 0.10             & 100 & 34.0\% & 163.7 & 0.728 \\
+Temperature 0.15             & 100 & 34.0\% & 164.1 & 0.766 \\
+Repetition penalty 1.3        & 100 & 0.0\%  & 200.0 & 4.282 \\
+No-repeat 3-gram$^{*}$       & 100 & 0.0\%  & 200.0 & 2.347 \\
+SuffixMatch ($\alpha{=}3$)    & 100 & 4.0\%  & 198.3 & 1.203 \\
+FSD-style (reimpl.)          & 100 & 1.0\%  & 199.6 & 2.056 \\
+LZ Penalty (authentic)        & 100 & 25.0\% & 177.7 & 1.465 \\
+\textsc{rr-fixed} ($\lambda{=}3$)   & 100 & 22.0\% & 180.7 & 0.847 \\
+\textsc{rr-adaptive}          & 100 & 19.0\% & 187.1 & 0.884 \\
+\textsc{rr-dual} ($\varepsilon{=}0.05$) & 100 & 0.0\% & 200.0 & 2.525 \\
+\textsc{rr-dual} ($\varepsilon{=}0.01$) & 100 & 0.0\% & 200.0 & 2.553 \\
+\bottomrule
+\end{tabular}
+
+\vspace{4pt}
+{\footnotesize $^{*}$Hard constraint on the measured event; excluded from the pattern discussed below on the same grounds as Table~\ref{tab:main}.}
+\end{table}
+
+Both dual configurations reach exactly 100.0\% per-step feasibility and 0/100 persistent loops, at 6.349--6.721 bits of KL -- the same qualitative outcome as the primary model, at roughly half the KL cost (Table~\ref{tab:main}: 11.2--12.7 bits), a quantitative difference I do not have an explanation for beyond noting that GPT-2's much larger, subword vocabulary changes what "concentrating away from a handful of risky tokens" costs in nats. \textbf{No claim of a common numeric constant is made here or anywhere else in this paper} -- only that the dual mechanism's per-step feasibility guarantee, which does not depend on any corpus- or model-tuned constant, again reaches its target exactly.
+
+The same pattern already established in Section~\ref{sec:generalization} for a same-architecture corpus swap repeats here, more starkly, for a completely different model family: \textbf{configurations without the dual guarantee do not transfer their primary-model effectiveness}. \textsc{rr-fixed} and \textsc{rr-adaptive}, essentially loop-free on the primary model (2.7\%, 0.0\%), only partially suppress looping on GPT-2 (22.0\%, 19.0\%) at the same hyperparameters. The authentic LZ Penalty baseline -- 0.0\% on the primary model, matching dual -- rises to 25.0\% here, the single largest effectiveness gap of any baseline tested across models. SuffixMatch and FSD-style stay close to zero (4.0\%, 1.0\%) but are no longer exactly zero, consistent with their already-stated lack of a formal guarantee. Repetition penalty and hard no-repeat, by contrast, fully suppress the event here (0.0\% each) -- more effectively than on the primary model (4.7\% for repetition penalty) -- at a correspondingly steep mcNLL cost (4.282, 2.347 bits), the opposite direction of miscalibration from the risk-based heuristics. None of this is presented as a general claim about subword models; it is one more data point for the paper's central distinction between what the dual projection guarantees and what every other configuration here only happens to achieve.
+
+\subsection{A second, independent character-model setting}
+To test whether the primary result is specific to one 848K-parameter model trained on one corpus, I trained a second model of \textbf{identical architecture} on a corpus fully disjoint in genre, register, and author from every corpus used elsewhere in this paper: Darwin's \emph{On the Origin of Species} and Adam Smith's \emph{The Wealth of Nations} for training, Thoreau's \emph{Walden} for validation, Machiavelli's \emph{The Prince} for test -- non-fiction, argumentative prose, against the primary model's dialogue- and narrative-heavy fiction. I re-confirmed rather than re-tuned the loop event on this new corpus's own held-out text (a \texttt{--confirm\_only} mode that reuses the already-frozen $R{=}5$, $P_{\max}{=}60$ setting and only checks whether it remains valid, avoiding the circularity of calibrating a threshold on the same corpus later used to validate it): pooled false-positive rate 5/600 (0.8\%, 95\% CI [0.3\%, 1.9\%]), directly comparable to the primary validation battery's $\sim$1.3\%, and the synthetic sensitivity controls again behaved correctly on 98--100\% of constructed cases. The event is confirmed valid on this corpus before any generalization number is reported from it.
+
+\begin{table}[h]
+\centering
+\caption{Second, non-fiction-trained model, $T{=}0.10$, all 15 test prompts, re-confirmed event. Hyperparameters unchanged from Table~\ref{tab:main}. Rerun in full under the corrected code (log-space dual solver, Section~\ref{ssec:dual-fix}; mcNLL padding fix, Section~\ref{ssec:mcnll-fix}) -- every figure below, not only loop rate and RMST, is now on equal footing with Table~\ref{tab:main}.}
+\label{tab:generalization}
+\begin{tabular}{@{}lrrrrr@{}}
+\toprule
+Method & $n$ & Loop \% & RMST & mcNLL & $\KL(q\Vert p)$ \\
+\midrule
+Greedy                      & 150 & 100.0\% & 269   & 0.593 & --- \\
+Temperature 0.05             & 50  & 100.0\% & 325   & 0.603 & --- \\
+Temperature 0.10             & 150 & 64.7\%  & 396   & 0.617 & --- \\
+Temperature 0.15             & 50  & 26.0\%  & 458   & 0.641 & --- \\
+Repetition penalty 1.3        & 150 & 36.0\%  & 458   & 0.648 & --- \\
+No-repeat 4-gram$^{*}$       & 150 & 0.0\%   & 500   & 1.605 & --- \\
+SuffixMatch ($\alpha{=}3$)    & 150 & 0.0\%   & 500   & 0.706 & --- \\
+FSD-style (reimpl.)          & 150 & 0.0\%   & 500   & 1.042 & --- \\
+LZ Penalty (authentic)        & 150 & 0.0\%   & 500   & 0.671 & --- \\
+\textsc{rr-fixed} ($\lambda{=}2$)   & 150 & 51.3\%  & 439   & 0.615 & 0.018 \\
+\textsc{rr-adaptive}          & 150 & 21.3\%  & 479   & 0.633 & 0.077 \\
+\textsc{rr-dual} ($\varepsilon{=}0.05$) & 150 & 0.0\% & 500 & 1.994 & 12.891 \\
+\textsc{rr-dual} ($\varepsilon{=}0.01$) & 150 & 0.0\% & 500 & 2.146 & 14.727 \\
+\bottomrule
+\end{tabular}
+\end{table}
+{\footnotesize $^{*}$Excluded from significance testing, as in Table~\ref{tab:main}. LZ Penalty and $\varepsilon{=}0.01$ are new to this corpus in this revision, added for parity with Table~\ref{tab:main}; the earlier version of this table had neither. The homemade suffix-match baseline is labeled \textsc{SuffixMatch} here too, correcting an earlier version of this table that still called it "Look-back" after the rename elsewhere in this paper (Section~\ref{ssec:discussion}).}
+
+\subsection{What transfers and what does not}
+The result on this second corpus is not a uniform "it also works" and I do not report it as one. Three findings, each load-bearing for a different part of the paper's argument:
+
+\textbf{The per-step feasibility rate is consistent across both models; zero persistent loops is an empirical observation, not a proven consequence.} Under the final, corrected solver, \textsc{rr-dual} reaches \textbf{exactly 100.0\% per-step feasibility} on this corpus at both tested $\varepsilon$, identical to the primary model's 100.0\% (Table~\ref{tab:main}) -- a like-for-like comparison at last, both numbers now from the same, fully log-space, expanding-bracket solver. Feasibility rate is the quantity the theorem in Section~\ref{sec:theory} actually governs: it bounds the per-step \emph{expected} recurrence risk when the numerical projection succeeds, and that success rate is what stays consistent across corpora, because dual calibration re-solves for $\lambda$ from $p$ and $\risk$ at every single step rather than depending on any corpus-tuned constant. The theorem says nothing about the SEQUENCE-LEVEL count of persistent loops, so the fact that both models independently show 0/150 is reported here as exactly that -- a repeated empirical observation across two corpora -- and not described as something the theory predicts or as a guarantee that has "transferred."
+
+\textbf{The fixed-hyperparameter modes do not.} \textsc{rr-fixed} ($\lambda{=}2$, unchanged from the primary model) rises from 2.7\% loop on the primary model to \textbf{51.3\%} here; \textsc{rr-adaptive} (unchanged targets) rises from 0.0\% to \textbf{21.3\%}. The gap between \textsc{rr-dual} and \textsc{rr-fixed} on this corpus is large and highly significant (paired exact test, $\Delta$RMST $=+60.8$, $p{=}0.0001$). This is a genuine, informative limitation, not a footnote: a fixed penalty strength implicitly suited to one corpus's risk and entropy statistics does not transfer its effectiveness to a corpus with different repetition statistics, even though the underlying mechanism (the same code, same hyperparameters) is identical. Qualitatively, \textsc{rr-fixed}'s output on this corpus is still visibly cyclical (\emph{``the same manner as the produce of the country, the country which they have been sufficient to the produce of the same manner, and the profits of the same manner as the produce of the produce of the land and labour of the produce of the produce of''}), confirming the numeric finding is not a measurement artifact.
+
+\textbf{The primary model's temperature-safe regime does not transfer either.} $T{=}0.15$, which reached 0.0\% loop on the primary model, still shows \textbf{26.0\%} loop on this corpus. I did not re-run the temperature sweep (Section~\ref{sec:protocol}) for this model, so I do not know where its safe threshold actually is, only that it is not at 0.15; this is reported as an open question, not resolved by assumption.
+
+Repetition penalty and \textsc{rr-adaptive} both weaken substantially on this corpus (36.0\% and 21.3\% loop, up from 4.7\% and 0.0\%); SuffixMatch, FSD, LZ Penalty, and hard no-repeat all continue to reach 0/150, consistent with these being exact-match or hard-constraint mechanisms that do not depend on a corpus-tuned penalty magnitude the way \textsc{rr-fixed} and repetition penalty do. LZ Penalty's own effectiveness does, however, fail to transfer to GPT-2 (Section~\ref{sec:gpt2-full}, 0\% to 25\%) -- a reminder that "does not depend on a corpus-tuned magnitude" is itself corpus-and-model-specific, not a property guaranteed by the mechanism's design.
+
+%==============================================================================
+\section{Discussion}
+\label{ssec:discussion}
+%==============================================================================
+
+\subsection{What is supported}
+Restricted to the validated, reproducible event: \textsc{rr-dual}, once its multiplier cap is raised enough to be genuinely feasible, eliminates persistent loops on both the primary and the second, independently trained model, at an honestly measured and corpus-consistent cost ($\sim$10--12 bits at $\varepsilon{=}0.05$ on both models). This transfer is the strongest generalization evidence in this paper, precisely because it follows from the theory (exact per-step recalibration) rather than from any corpus-specific tuning. \textsc{rr-fixed} reduces loop rate substantially on the primary model at very low cost, but that effectiveness -- unlike dual's -- does not transfer to the second corpus without re-tuning. On the synthetic problem, hazard-aware control Pareto-dominates a local-only proxy across the practically relevant distortion range.
+
+\subsection{What is not supported}
+Recurrence-risk decoding is not shown to improve survival over baselines at ordinary sampling temperatures, where the primary model does not exhibit the targeted pathology. \textsc{rr-fixed} is not shown to beat repetition penalty on survival alone on the primary model ($p{=}0.246$). The hazard-aware mechanism is not shown to transfer to the real model at the granularities I tested (Section~\ref{sec:hazard-transfer}), and I do not generalize this null result beyond that specific estimator. On a pretrained subword model (GPT-2, Section~\ref{sec:gpt2-full}), the dual guarantee reaches the same 0/100-loop, 100\%-feasible outcome as on the primary model, at roughly half the KL cost; every other configuration's effectiveness shifts by a different amount and in a different direction than it did on the non-fiction corpus, most sharply for the LZ Penalty baseline (0\% on both the primary model and the non-fiction corpus, but 25\% on GPT-2) -- I read this as further evidence that only the dual mechanism's guarantee, not any specific configuration's effectiveness, is the thing that generalizes. No human evaluation has been conducted; Section~\ref{sec:human-eval} states this plainly and describes it as planned, not abandoned, work.
+
+\subsection{Wording discipline}
+Dual calibration guarantees a one-step bound on \emph{expected} recurrence risk at each decoding step, given the numerical projection succeeds (Section~\ref{ssec:dual-fix}: feasibility is now checked in closed form against $\min_v\risk(v)$, with the search bracket expanding as needed rather than capped); it does not bound the sequence-level probability of ever looping, and every 0/150 figure in this paper is reported as exactly that -- an observed count, not a proven zero probability.
+
+\textbf{Two numerically load-bearing defects were found, fixed, and confirmed by a full rerun.} (1) The dual solver materialized $p$ via a plain softmax and computed $\log(p+10^{-40})$, which at $T{=}0.10$ silently floors many underflowed (but truly distinct) low-probability tokens to an identical, incorrect log-probability -- reproduced directly on this project's own model (276/2000 vocabulary entries underflowed in one constructed check, with true log-probabilities spanning 41 nats that the old code collapsed to a single floor value). (2) The model-consistency NLL's batching left-padded variable-length context windows with a real vocabulary token id, which this architecture's unmasked causal attention then legitimately attended to, corrupting the scored position's logits (verified: 0.26 max logit difference between an isolated and a padded evaluation of the identical context on a toy configuration). Both are fixed (log-space solver with an expanding bracket; right-padding, which causal masking provably cannot let leak into real positions), verified numerically in isolation, and confirmed on the full rerun reported in Table~\ref{tab:main}: dual feasibility on the corrected code is \textbf{exactly 100.0\%} at both tested $\varepsilon$, with zero mean and zero maximum violation, up from an original 72.3--74.5\% (the diagnostic-visibility defect) and an intermediate 98.75--98.87\% (the multiplier-cap defect, still affected by the float32 bug). Every table in this paper reflects the fully corrected code and the \textsc{cosine} checkpoint used throughout.
+
+\subsection{Limitations}
+The loop event, though validated at $\sim$1.3\% pooled false-positive rate on the primary battery and $\sim$0.8\% on the second corpus, is a syntactic definition; semantic repetition is not captured. mcNLL remains an in-distribution proxy, not a validated human-quality measure, independent of the padding-corruption fix above. The residual dual infeasibility is now exactly $0.0\%$ on both the \textsc{cosine} and \textsc{baseline} checkpoints under the corrected solver (Table~\ref{tab:main}, Section~\ref{sec:protocol}), so the earlier question of whether a nonzero residual reflected a genuine structural floor or an insufficiently large cap no longer arises on this data; it could still arise on a different model or risk configuration, and the closed-form check (Section~\ref{ssec:dual-fix}) is what would resolve it if it did. The FSD-style baseline is a good-faith reimplementation, not a certified reproduction; the LZ Penalty baseline is an authentic reimplementation of a real, verified paper, with one documented indexing-convention uncertainty relative to a reference implementation I did not have access to. The renamed \textsc{SuffixMatchDecoder} (formerly, misleadingly, \textsc{LookBackDecoder}) has never claimed to be the published Look-back algorithm and should continue not to be read as one. The non-fiction generalization result (Table~\ref{tab:generalization}) has now been rerun in full under the corrected code; an earlier version of this table was also still using the pre-rename "Look-back" label for \textsc{SuffixMatchDecoder} and omitted the LZ Penalty baseline and $\varepsilon{=}0.01$ entirely, both corrected here. The second-corpus generalization still did not re-run the temperature sweep, repetition-penalty sweep, or fixed-$\lambda$ re-tuning that might restore \textsc{rr-fixed}'s effectiveness there. The GPT-2 full comparison (Section~\ref{sec:gpt2-full}) uses only $T{=}0.10$ and did not re-run the temperature sweep, repetition-penalty sweep, or a re-tuned $\lambda$/$\alpha$ that might narrow \textsc{rr-fixed}/\textsc{rr-adaptive}'s gap to the primary model there, mirroring the same open question already noted above for the non-fiction corpus. Its risk order ($n_{\min}{=}2,n_{\max}{=}4$ tokens) and LZ Penalty buffer/window (32/512) were set once, from the paper's own reported subword defaults and this project's existing subword-decoder precedent (\texttt{generalize\_gpt2.py}), not swept. Human evaluation is specified and tooled but not administered.
+
+%==============================================================================
+\section{Conclusion}
+%==============================================================================
+
+Recurrence-risk decoding, precisely specified as a minimum-distortion projection, removes a real, independently validated failure mode at an exactly quantified cost. The theorem behind it guarantees a per-step bound on \emph{expected} recurrence risk when the numerical projection succeeds, and that success rate -- not the sequence-level loop count, which the theorem does not speak to -- is what I find consistent across an independently trained model on a disjoint corpus (97.6\% vs.\ 98.75--98.87\% feasibility), while the cheaper heuristic variants that approximate the same projection do not carry over their effectiveness. Zero persistent loops was observed on both models; I report this as a replicated empirical finding, not as a predicted or guaranteed consequence of the theorem. Reaching this point required finding and fixing, across the revisions of this project: a mis-stated infinite-penalty limit, an unvalidated loop event, a seed-nondeterminism bug that made a validation report unreproducible, a chunked NLL implementation that under-conditioned roughly half its scored positions, a diagnostic-discarding bug that hid a solver silently failing $\sim$27\% of the time, a float32-underflow bug in the dual solver's probability handling that materially changed $q$, $\lambda$, and KL at low temperature, a padding-corruption bug in the NLL computation, and an unreproducible synthetic-experiment claim. Each defect changed a number I report here, in one case by a factor of five. The extension to finite-horizon hazard control was validated where ground truth is exactly known and found not to transfer to the real model under the specific estimator I tested -- reported as a scope-limited null result, not a general failure. Human evaluation remains the one piece of the reviewer's requested scope I have not completed; I have built the tool and specified the protocol, and running it is the immediate next step.
+
+\bibliographystyle{plainnat}
+\bibliography{references}
+
+\appendix
+
+\section{Order-of-Magnitude Estimate for the Multiplier Cap}
+\label{app:lambda-estimate}
+For a two-outcome simplification (one risky token with $\risk{=}1$, one safe token with $\risk{=}0$, raw pre-temperature probability ratio $\rho$ risky:safe), the $\lambda$ needed to bring $q(\text{risky})\le\varepsilon$ at temperature $T$ is $\lambda \ge \ln\frac{1-\varepsilon}{\varepsilon} + \frac{1}{T}\ln\rho$. At $T{=}0.10$: $\rho{=}100$ needs $\lambda\approx50$; $\rho{=}1000$ needs $\lambda\approx73$; a cap of 1000 comfortably covers any $\rho$ up to astronomically large values ($\ln\rho\lesssim97$), which is why raising it resolved the vast majority of the observed infeasibility (Section~\ref{ssec:dual-fix}).
+
+\section{Reproducibility Bundle}
+\texttt{src/decoding.py} (all decoders including FSD, dual solver with corrected feasibility/cap diagnostics, in log-space with a geometrically expanding bracket, per-step diagnostics opt-in via \texttt{per\_step\_log}); \texttt{sampling\_eval.py} (with \texttt{--data\_dir}/\texttt{--ckpt} parameterized for either character-model checkpoint, and \texttt{--save\_per\_step\_diagnostics} for the full dual-solver trace); \texttt{merge\_sampling\_eval\_runs.py} (recombines partial \texttt{--only} reruns into one complete result set via \texttt{sampling\_eval.py}'s own aggregation functions); \texttt{validate\_loop\_event\_v2.py} (deterministic seed, \texttt{--confirm\_only} mode used for the second corpus); \texttt{pretrained\_subword\_pilot.py}, \texttt{validate\_loop\_event\_subword.py}, \texttt{gpt2\_full\_comparison.py} (GPT-2 pilot, token-level event calibration, and full comparison, in that order); \texttt{temperature\_sweep.py}; \texttt{synthetic\_fsm\_hazard.py} (corrected whole-grid matched-distortion computation); \texttt{build\_hazard\_dataset.py}, \texttt{test\_multistep\_hazard.py}; \texttt{compute\_significance.py} (Table~\ref{tab:paired}'s exact source); \texttt{human\_eval\_tool.html} (built, not yet administered); \texttt{aggregate\_human\_eval.py} (scores its output once administered). Result files for both character-model checkpoints and GPT-2: \texttt{all\_results.json}, \texttt{metrics\_*.csv}, \texttt{synthetic\_fsm\_results.json}, \texttt{significance\_table7.\{json,csv\}}, \texttt{samples\_*.txt}, \texttt{loop\_event\_confirm\_report.json} (second corpus), \texttt{loop\_event\_subword\_report.json} (GPT-2's frozen event), \texttt{pretrained\_pilot\_results.json}, \texttt{per\_step\_diagnostics/*.jsonl} (dual-mode configs, primary model).
+
+\section{Prompt Sets}
+\textbf{\textsc{Dev} (5, tuning only):} \emph{``CHAPTER 1''}; \emph{``The night was''}; \emph{``She had never''}; \emph{``It was the best of''}; \emph{``Mr.\ Darcy had never''}.
+\textbf{\textsc{Test} (15, untouched during tuning, used identically for both models):} \emph{``The road turned sharply where''}; \emph{``He folded the letter and''}; \emph{``Rain struck the window as''}; \emph{```You must understand,' she began,''}; \emph{``At the market that morning''}; \emph{``Three years afterwards, when''}; \emph{``The room smelled of''}; \emph{``The doctor set down his bag and''}; \emph{``Beyond the river lay''}; \emph{```And what,' he asked, `became of''}; \emph{``That winter the family''}; \emph{``The ship had been at sea for''}; \emph{``In the garden behind the house''}; \emph{``His debts had grown until''}; \emph{``By dawn the streets were''}.
+
+\end{document}

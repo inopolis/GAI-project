@@ -33,7 +33,7 @@ import torch
 import torch.nn.functional as F
 from src.utils import set_seed, load_json, ensure_dir
 from src.model import CharTransformerLM
-from src.decoding import generate, RecurrenceRiskDecoder, LookBackDecoder, FSDDecoder
+from src.decoding import generate, RecurrenceRiskDecoder, SuffixMatchDecoder, FSDDecoder, LZPenaltyDecoder
 
 
 # 15 prompts; key methods use all 15, sweep configs use first 5.
@@ -83,7 +83,7 @@ def build_configs():
     def add(name, cat, key=False, **kw):
         d = dict(temperature=1.0, top_k=0, top_p=1.0, typical_p=1.0,
                  rep_penalty=1.0, no_repeat_ngram=0, mirostat_tau=0.0,
-                 risk=None, lookback=None, fsd=None)
+                 risk=None, lookback=None, fsd=None, lz_penalty=None)
         d.update(kw)
         d["name"] = name; d["category"] = cat; d["key"] = key
         C.append(d)
@@ -107,11 +107,26 @@ def build_configs():
         temperature=0.10, rep_penalty=1.3)
     add("lt_no_repeat_4gram", "loop_regime_hard", key=True,
         temperature=0.10, no_repeat_ngram=4)
-    add("lt_lookback_a3.0", "loop_regime", key=True,
+    add("lt_suffixmatch_a3.0", "loop_regime", key=True,
+        # Renamed from "lt_lookback_a3.0": this is a homemade LZ77-style
+        # longest-suffix-match heuristic, NOT the published Look-back
+        # decoding algorithm -- see SuffixMatchDecoder's docstring. Old
+        # result files under the "lt_lookback_a3.0" name refer to the
+        # identical mechanism under its earlier, misleading name.
         lookback=dict(temperature=0.10, top_p=1.0, alpha=3.0,
                       max_history=400, ref_len=20))
     add("lt_fsd", "loop_regime", key=True,
         fsd=dict(temperature=0.10, top_p=1.0, alpha=4.0, n_min=3, n_max=6))
+    add("lt_lzpenalty", "loop_regime", key=True,
+        # Authentic reimplementation of Ginart, Kodali, Lee, Xiong, Savarese,
+        # Emmons, "LZ Penalty: An Information-Theoretic Repetition Penalty
+        # for Autoregressive Language Models" (arXiv:2504.20131, TMLR 2026).
+        # alpha=0.15 matches the paper's reported sweet-spot value; buffer/
+        # window are scaled down from their 32/512 (subword) defaults for
+        # this project's much smaller character-level vocabulary -- see
+        # LZPenaltyDecoder's docstring for the ratio reasoning.
+        lz_penalty=dict(temperature=0.10, top_p=1.0, alpha=0.15,
+                        buffer_size=8, window_size=128))
     add("lt_risk_only", "loop_regime_rr", key=True,
         risk=dict(temperature=0.10, top_p=1.0, n_min=3, n_max=6,
                   mode="fixed", alpha_base=2.0, include_prompt_context=True))
@@ -400,32 +415,43 @@ def model_consistency_nll(model, gen_ids, block_size, device, prompt_ids=None,
     context the model architecture allows (up to block_size preceding
     tokens), not an approximation of it.
 
-    Two bugs fixed here, in sequence:
+    Three bugs fixed here, in sequence:
 
     (1) An earlier version was called with the generated portion alone (no
-    prompt_ids): the first chunk started at position 0 of the GENERATED
-    text with no prompt in context, silently omitting the first generated
-    token's own likelihood and under-conditioning early tokens. Fixed by
-    scoring over (prompt_ids + gen_ids) and restricting the mean to
-    positions >= len(prompt_ids).
+    prompt_ids): silently omitted the first generated token's own
+    likelihood and under-conditioned early tokens. Fixed by scoring over
+    (prompt_ids + gen_ids) and restricting the mean to positions >= len(prompt_ids).
 
-    (2) A second version used non-overlapping chunks (stride = block_size):
-    correct for the first chunk, but every position near the start of every
-    later chunk was scored with a truncated context, even though real
-    preceding characters existed. A stride = block_size//2 partial fix was
-    tried and found insufficient: numerically verified on a toy model, only
-    the SINGLE LAST position of each non-final chunk actually reached full
-    context; every other kept position still fell short (e.g. one position
-    got only 9 of 16 possible context tokens where the true architectural
-    maximum was 16).
+    (2) A second version used non-overlapping chunks (stride = block_size),
+    then a stride = block_size//2 partial fix, both found insufficient by
+    direct numerical check (only the single last position of a window
+    reached full context).
 
-    This version instead builds, for EVERY target position t independently,
-    the exact window full[max(0, t-block_size) : t] and batches these
-    variable-length (left-padded) windows through the model together, so
-    each position gets precisely min(t, block_size) tokens of context --
-    verified numerically to match the architectural ideal exactly, not
-    approximately, for every position, on a toy model with a deliberately
-    small block_size where the discrepancy is easy to see.
+    (3) The exact-context fix that followed (score every position's own
+    window independently, batched) introduced a THIRD, more subtle bug:
+    batching variable-length windows together requires padding them to a
+    common length, and the fix LEFT-padded with a real vocabulary id
+    (id 0). This model has no attention mask beyond the causal one -- there
+    is no mechanism to make it IGNORE the padding -- so causal self-
+    attention at the real (scored) position legitimately attended to the
+    fake left-padding as if it were real preceding context. Verified
+    directly on this project's own model: the same 5-token context, scored
+    alone vs. left-padded to align with a longer batch-mate, produced
+    materially different logits at the position that matters (max
+    difference 0.26, mean 0.08, on a small toy configuration -- not a
+    rounding-level discrepancy).
+
+    Fixed by RIGHT-padding instead: append the filler AFTER the real
+    context rather than before it. Because attention is causal (each
+    position only attends to itself and earlier positions), anything
+    appended strictly after a given position provably cannot affect that
+    position's own computed representation -- verified numerically on the
+    same toy model: logits at the true last-real-token position are
+    identical whether that context is run alone or right-padded to align
+    with a longer batch-mate, matching to 1e-7. Each row's correct
+    "current position" (varies by that row's true context length) is
+    extracted explicitly rather than assuming index -1, since right-padded
+    rows no longer all end at the same true position within the tensor.
     """
     prompt_ids = prompt_ids or []
     full_list = list(prompt_ids) + list(gen_ids)
@@ -444,12 +470,20 @@ def model_consistency_nll(model, gen_ids, block_size, device, prompt_ids=None,
     for b0 in range(0, len(targets), nll_batch_size):
         batch_targets = targets[b0:b0 + nll_batch_size]
         windows = [full_list[max(0, t - block_size):t] for t in batch_targets]
-        max_len = max(len(w) for w in windows)
-        padded = [[pad_id] * (max_len - len(w)) + w for w in windows]
+        lens = [len(w) for w in windows]
+        max_len = max(lens)
+        # RIGHT-pad: real content first, filler after -- causal masking
+        # guarantees the filler cannot influence any real position's logits.
+        padded = [w + [pad_id] * (max_len - len(w)) for w in windows]
         x = torch.tensor(padded, dtype=torch.long, device=device)
         with torch.no_grad():
             logits, _ = model(x)
-        lp = F.log_softmax(logits[:, -1, :], dim=-1)   # prediction for position t, from context ending at t-1
+        # Each row's "current position" is its own true length - 1, NOT a
+        # shared index, since rows have different amounts of trailing filler.
+        row_idx = torch.arange(len(batch_targets), device=device)
+        pos_idx = torch.tensor([l - 1 for l in lens], device=device)
+        row_logits = logits[row_idx, pos_idx, :]
+        lp = F.log_softmax(row_logits, dim=-1)
         y = torch.tensor([full_list[t] for t in batch_targets], dtype=torch.long, device=device)
         nll = -lp.gather(1, y.unsqueeze(-1)).squeeze(-1)
         all_nll.extend(nll.tolist())
@@ -677,8 +711,12 @@ def make_decoders(cfg):
         # as RecurrenceRiskDecoder, so it plugs into generate()'s existing
         # `adaptive=` slot directly -- no changes needed to generate() itself.
         risk = FSDDecoder(**cfg["fsd"])
+    if cfg.get("lz_penalty") is not None:
+        # Same generic interface, same slot; mutually exclusive with risk/fsd
+        # by construction (a config sets at most one of these three).
+        risk = LZPenaltyDecoder(**cfg["lz_penalty"])
     if cfg["lookback"] is not None:
-        lz = LookBackDecoder(**cfg["lookback"])
+        lz = SuffixMatchDecoder(**cfg["lookback"])
     return risk, lz
 
 
@@ -689,7 +727,19 @@ SCALARS = ["ttr", "entropy_4gram", "rep_rate_5",
 
 
 def eval_checkpoint(ckpt_path, data_dir, n_chars, n_seeds, device, out_dir,
-                    measure_runtime_for, only=None):
+                    measure_runtime_for, only=None, save_per_step_diagnostics=0):
+    """
+    save_per_step_diagnostics: if >0, for dual-mode RecurrenceRiskDecoder
+    configs, save a full per-STEP diagnostic trace (lambda, achieved risk,
+    feasible, structurally_infeasible, KL, entropy -- everything
+    decoding.py's per-step hook records) for this many samples per config,
+    not just the per-sample aggregate mean that diagnostics() already
+    provides. Off (0) by default: 500 steps x 150 samples x several dual
+    configs would be a large amount of data for routine runs, so this is
+    opt-in, and even then capped to a handful of samples per config, which
+    is enough to audit the solver's actual step-by-step behaviour without
+    bloating every ordinary run's output.
+    """
     model, cfg = load_model(ckpt_path, device)
     vocab = load_json(os.path.join(data_dir, "vocab.json"))
     stoi, itos = vocab["stoi"], vocab["itos"]
@@ -715,10 +765,16 @@ def eval_checkpoint(ckpt_path, data_dir, n_chars, n_seeds, device, out_dir,
         groups = []          # prompt index per sample -> clustered inference
         diag = {"kl_bits": [], "entropy_q": [], "entropy_p": [],
                 "risk_achieved": [], "lambda_mean": [],
-                "dual_feasible_rate": [], "dual_cap_hit_rate": [],
+                "dual_feasible_rate": [], "dual_structurally_infeasible_rate": [],
                 "dual_min_risk_mean": [], "dual_violation_mean": [],
-                "dual_violation_max": [], "dual_tolerance_mean": []}
+                "dual_violation_max": [], "dual_tolerance_mean": [],
+                "dual_n_doublings_mean": [], "dual_n_doublings_max": []}
         cps_val = None
+
+        per_step_dir = None
+        if save_per_step_diagnostics > 0:
+            per_step_dir = os.path.join(out_dir, "per_step_diagnostics")
+            ensure_dir(per_step_dir)
 
         for pi, (pname, ptext) in enumerate(prompts):
             for seed in range(1, n_seeds+1):
@@ -727,6 +783,17 @@ def eval_checkpoint(ckpt_path, data_dir, n_chars, n_seeds, device, out_dir,
                 set_seed(seed)
                 idx = encode(ptext, stoi).to(device)
                 risk, lz = make_decoders(c)
+                # Opt-in: capture this specific sample's full per-step trace
+                # if it's within the requested cap AND this decoder actually
+                # supports it (RecurrenceRiskDecoder in dual mode; other
+                # decoders simply never populate per_step_log, so this is a
+                # no-op for them rather than an error).
+                capture_this_sample = (
+                    per_step_dir is not None and seed <= save_per_step_diagnostics
+                    and hasattr(risk, "per_step_log")
+                )
+                if capture_this_sample:
+                    risk.per_step_log = []
                 measure = (c["name"] in measure_runtime_for and seed == 1 and pname == prompts[0][0])
                 out, cps = generate(
                     model, idx, max_new_tokens=n_chars,
@@ -734,6 +801,11 @@ def eval_checkpoint(ckpt_path, data_dir, n_chars, n_seeds, device, out_dir,
                     typical_p=c["typical_p"], rep_penalty=c["rep_penalty"],
                     no_repeat_ngram=c["no_repeat_ngram"], mirostat_tau=c["mirostat_tau"],
                     adaptive=risk, lz_decoder=lz, measure_time=measure)
+                if capture_this_sample and risk.per_step_log:
+                    fname = f"{c['name']}_{pname}_seed{seed}.jsonl"
+                    with open(os.path.join(per_step_dir, fname), "w") as f:
+                        for rec in risk.per_step_log:
+                            f.write(json.dumps(rec) + "\n")
                 if cps is not None:
                     cps_val = cps
                 gen_ids = out[0].tolist()[len(ptext):]
@@ -760,9 +832,15 @@ def eval_checkpoint(ckpt_path, data_dir, n_chars, n_seeds, device, out_dir,
                 acc["ngram_sim_4"].append(ngram_js_similarity(text, ref_text, 4))
                 acc["spelling_error"].append(spelling_error_rate(text))
 
-                if seed == 1:
-                    samples_f.write(f"[{c['name']}][{name}] prompt='{ptext.strip()}'\n"
-                                    + "-"*60 + "\n" + text + "\n\n")
+                # Save EVERY (prompt, seed) generation, not just seed==1.
+                # An earlier version saved only seed==1's text per (config,
+                # prompt), which meant most of the actual sampled text never
+                # made it into the reproducibility bundle at all -- for
+                # stochastic configs (anything except greedy), 9 of every 10
+                # generations were silently discarded. The seed is now part
+                # of the header so every saved block is uniquely identified.
+                samples_f.write(f"[{c['name']}][{name}] prompt='{ptext.strip()}' seed={seed}\n"
+                                + "-"*60 + "\n" + text + "\n\n")
 
         row = {"strategy": c["name"], "category": c["category"],
                "checkpoint": name, "key": c["key"],
@@ -812,9 +890,21 @@ def eval_checkpoint(ckpt_path, data_dir, n_chars, n_seeds, device, out_dir,
 
 
 def write_pareto(all_results, out_dir):
-    """Pareto CSV: survival(ngram10) vs each quality axis. Hard constraint flagged."""
+    """
+    Pareto CSV: survival vs each quality axis, using the FROZEN, VALIDATED
+    persistent-cycle event as the primary survival metric. An earlier
+    version used "ngram10" -- the naive, retracted event that fires on
+    54-73% of ordinary held-out prose (Section 4.1) -- as the PRIMARY
+    survival axis here, the same class of bug fixed in
+    write_survival_curves(). The retracted event's columns are kept,
+    explicitly labeled, ONLY as a side-by-side reference for anyone
+    auditing the correction; no plot or statistic should be built from them.
+    """
     fields = ["strategy", "category", "checkpoint", "hard_constraint",
-              "survival_auc_ngram10", "rmst_ngram10", "loop_rate_ngram10",
+              "survival_auc_persistent", "rmst_persistent", "loop_rate_persistent",
+              "survival_auc_ngram10_RETRACTED_DO_NOT_USE",
+              "rmst_ngram10_RETRACTED_DO_NOT_USE",
+              "loop_rate_ngram10_RETRACTED_DO_NOT_USE",
               "mc_nll_bpc", "ngram_sim_4", "spelling_error", "compression",
               "longest_rep_sub", "chars_per_sec"]
     rows_out = []
@@ -824,9 +914,12 @@ def write_pareto(all_results, out_dir):
                 "strategy": r["strategy"], "category": r["category"],
                 "checkpoint": r["checkpoint"],
                 "hard_constraint": (r["category"] == "hard_constraint"),
-                "survival_auc_ngram10": r["survival_auc_ngram10"],
-                "rmst_ngram10": r["rmst_ngram10"],
-                "loop_rate_ngram10": r["loop_rate_ngram10"],
+                "survival_auc_persistent": r["survival_auc_persistent"],
+                "rmst_persistent": r["rmst_persistent"],
+                "loop_rate_persistent": r["loop_rate_persistent"],
+                "survival_auc_ngram10_RETRACTED_DO_NOT_USE": r["survival_auc_ngram10"],
+                "rmst_ngram10_RETRACTED_DO_NOT_USE": r["rmst_ngram10"],
+                "loop_rate_ngram10_RETRACTED_DO_NOT_USE": r["loop_rate_ngram10"],
                 "mc_nll_bpc": r["mc_nll_bpc_mean"],
                 "ngram_sim_4": r["ngram_sim_4_mean"],
                 "spelling_error": r["spelling_error_mean"],
@@ -920,16 +1013,31 @@ def write_loop_robustness(all_results, out_dir):
 
 
 def write_survival_curves(all_results, out_dir, max_t):
+    """
+    Uses the FROZEN, VALIDATED persistent-cycle event ("onsets_persistent")
+    throughout. An earlier version of this function built the saved
+    survival-curve artifact from "onsets_ngram10" -- the naive, retracted
+    event that fires on 54-73% of ordinary held-out prose (Section 4.1 of
+    the paper) -- while every other table and statistic in this project
+    correctly used the validated persistent event. This meant the SAVED
+    survival_curves.json artifact silently disagreed with the numbers
+    reported in the paper, even though both were produced by the same run.
+    Fixed by switching every field to the persistent event; the retracted
+    ngram10 event is no longer written to this file at all.
+    """
     km = {}
     for name, rows in all_results.items():
         km[name] = {}
         for r in rows:
-            t, s = kaplan_meier(r["onsets_ngram10"], max_t)
+            t, s = kaplan_meier(r["onsets_persistent"], max_t)
             km[name][r["strategy"]] = {
                 "km_times": t, "km_survival": s,
-                "n_censored": sum(1 for x in r["onsets_ngram10"] if x < 0),
-                "n_total": len(r["onsets_ngram10"]),
-                "rmst": r["rmst_ngram10"], "survival_auc": r["survival_auc_ngram10"],
+                "n_censored": sum(1 for x in r["onsets_persistent"] if x < 0),
+                "n_total": len(r["onsets_persistent"]),
+                "rmst": r["rmst_persistent"], "survival_auc": r["survival_auc_persistent"],
+                "event": "persistent_cycle_R5_Pmax60",  # explicit, so any
+                # downstream consumer of this file can verify which event
+                # it reflects without having to trust a filename or comment
             }
     with open(os.path.join(out_dir, "survival_curves.json"), "w") as f:
         json.dump(km, f, indent=2)
@@ -949,6 +1057,16 @@ def main():
     ap.add_argument("--only", nargs="*", default=None,
                     help="Run only these strategy names (e.g. --only rep_penalty_1.5 lookback_a5.0). "
                          "Useful for topping up a config to the full sample budget.")
+    ap.add_argument("--save_per_step_diagnostics", type=int, default=0,
+                    help="If >0, save a full per-STEP diagnostic trace "
+                         "(lambda, achieved risk, feasible, "
+                         "structurally_infeasible, KL, entropy at EVERY "
+                         "decoding step, not just the per-sample mean) for "
+                         "this many samples per dual-mode config, to "
+                         "runs/<out_dir>/per_step_diagnostics/*.jsonl. Off "
+                         "by default since this can be a large amount of "
+                         "data; 3-5 is enough to audit the solver's actual "
+                         "step-by-step behaviour without bloating routine runs.")
     args = ap.parse_args()
 
     global PROMPTS
@@ -976,7 +1094,8 @@ def main():
         name = os.path.basename(os.path.dirname(ckpt))
         rows, max_t = eval_checkpoint(ckpt, args.data_dir, args.n_chars,
                                       args.n_seeds, device, args.out_dir, runtime_for,
-                                      only=args.only)
+                                      only=args.only,
+                                      save_per_step_diagnostics=args.save_per_step_diagnostics)
         all_results[name] = rows
 
     write_pareto(all_results, args.out_dir)

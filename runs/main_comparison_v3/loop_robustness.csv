@@ -1,0 +1,5 @@
+strategy,category,checkpoint,rmst_persistent,rmst_ngram8,rmst_ngram10,rmst_ngram12,rmst_ngram16,rmst_lrs20,rmst_compress,loop_rate_persistent,loop_rate_ngram8,loop_rate_ngram10,loop_rate_ngram12,loop_rate_ngram16,loop_rate_lrs20,loop_rate_compress
+lt_risk_only,loop_regime_rr,cosine,492.85,43.8,70.25,80.7,99.4,162.35,491.25,0.0267,1.0,1.0,1.0,1.0,1.0,0.0267
+lt_adaptive,loop_regime_rr,cosine,500.0,44.4,85.65,106.05,142.5,238.05,500.0,0.0,1.0,1.0,1.0,1.0,0.9733,0.0
+lt_dual_eps0.01,loop_regime_rr,cosine,500.0,500.0,500.0,500.0,500.0,500.0,500.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0
+lt_dual_eps0.05,loop_regime_rr,cosine,500.0,500.0,500.0,500.0,500.0,500.0,500.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0

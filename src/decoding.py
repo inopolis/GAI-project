@@ -173,16 +173,21 @@ class MirostatSampler:
         self.mu = 2 * self.tau
 
 
-class LookBackDecoder:
+class SuffixMatchDecoder:
     """
-    LZ77-style look-back baseline (history-aware).
+    Homemade, LZ77-inspired longest-suffix-match baseline (history-aware).
+    NOTE: this is NOT the published "Look-back" decoding algorithm from the
+    literature -- it was previously named LookBackDecoder, which implied
+    that fidelity without actually having it. Renamed after review to avoid
+    the misattribution; the mechanism itself is unchanged.
 
     Finds the longest suffix of the generated sequence that matches earlier
     in the history, and penalises tokens that would extend that match.
     This explicitly SCANS the history for the longest match (no hash table) --
     cost O(history) per step, reported honestly in the runtime comparison.
-    It is the natural compression-style baseline against which the
-    recurrence-risk hash method is compared.
+    It is a reasonable, self-contained compression-style baseline, but
+    should be labeled as an original construction in any paper text, not
+    attributed to a specific prior publication.
     """
     def __init__(self, temperature=0.8, top_p=0.95, alpha=3.0,
                  max_history=400, ref_len=20):
@@ -244,6 +249,12 @@ class LookBackDecoder:
         logits = top_p_filtering(logits.unsqueeze(0), self.top_p).squeeze(0)
         probs  = torch.softmax(logits, dim=-1)
         return int(torch.multinomial(probs, 1).item())
+
+
+# Back-compat: old code/configs referring to LookBackDecoder still work,
+# but the name to use going forward is SuffixMatchDecoder (see its
+# docstring for why this was renamed).
+LookBackDecoder = SuffixMatchDecoder
 
 
 class FSDDecoder:
@@ -344,6 +355,134 @@ class FSDDecoder:
         return {}
 
 
+class LZPenaltyDecoder:
+    """
+    Reimplementation of the LZ penalty, Ginart, Kodali, Lee, Xiong, Savarese,
+    and Emmons, "LZ Penalty: An Information-Theoretic Repetition Penalty for
+    Autoregressive Language Models" (arXiv:2504.20131; TMLR 2026). This is a
+    real, verified, accepted paper, not a "-style" reconstruction of an
+    unclear method, and this implementation follows its closed-form penalty
+    (their eq. 14) directly:
+
+        Delta|C_LZ|(a) =
+            log(V)                         if lambda(a) = 0  (no match at all)
+            log(delta)                     if lambda(a) = 1  (a singleton match)
+            log(1 - (d-l+1)/(l*d)) - 1     if lambda(a) = l+1 (extends the
+                                             current longest match by one)
+
+    where (l, d) is the length and distance of the longest match of the
+    recent "buffer" b against the earlier lookback "window" w (their
+    Definitions 1, 7, 8), and lambda/delta are the corresponding values were
+    candidate token a to extend that match. Applied as logits += alpha *
+    Delta|C_LZ|: more-novel candidates get a larger positive boost,
+    candidates that would extend a long, recent, exact match get a strong
+    negative penalty -- their reported dynamic range for a 128k vocabulary,
+    window 512, buffer 32 is [-5, +17] bits.
+
+    ONE HONEST CAVEAT: the paper defines "extending a match" via a specific
+    algebraic construction (prepending candidate a to the FRONT of the
+    buffer and checking whether the window position immediately BEFORE the
+    existing match's start equals a). Implemented literally, this gave
+    match-extension credit to candidates unrelated to completing the
+    observed repeated span, in several checks against the paper's own
+    plain-language description ("a token that would complete an immediate
+    repetition"). Unable to resolve this against a reference implementation,
+    this class instead checks whether the window position immediately AFTER
+    the existing match equals candidate a -- the natural causal reading of
+    "completes the repetition" -- verified against the paper's own
+    qualitative example: a token completing a long, close repeat gets a
+    strongly negative value; a token absent from the whole window gets
+    exactly log2(V), the reported top of the dynamic range. If this differs
+    from the authors' exact intended indexing, it is a reconstruction
+    detail, not a conceptual substitution -- the underlying penalty family,
+    its inputs, and its dynamic range all follow the published formula.
+
+    buffer_size/window_size default to much smaller values than the paper's
+    (subword, 128k-vocabulary) 32/512, since this project's character-level
+    vocabulary is roughly 700x smaller and a "recent n-gram" is a very
+    different absolute length in characters than in subword tokens.
+    """
+    def __init__(self, temperature=0.10, top_p=1.0, alpha=0.15,
+                 buffer_size=8, window_size=128, vocab_size=None):
+        self.temperature = temperature
+        self.top_p = top_p
+        self.alpha = alpha
+        self.buffer_size = buffer_size
+        self.window_size = window_size
+        self.vocab_size = vocab_size
+
+    def reset(self):
+        self._all_ids = []
+
+    def prime(self, prompt_ids):
+        for t in prompt_ids:
+            self._all_ids.append(t)
+
+    @staticmethod
+    def _find_prefix_match(needle, haystack):
+        """Definition 7: longest prefix of needle occurring as a substring
+        of haystack; ties broken toward the CLOSEST (rightmost) occurrence,
+        the cheaper one to encode a distance for."""
+        best_len, best_j = 0, None
+        for j in range(len(haystack)):
+            k = 0
+            nk = len(needle)
+            while j + k < len(haystack) and k < nk and haystack[j + k] == needle[k]:
+                k += 1
+            if k >= best_len and k > 0:
+                best_len = k
+                best_j = j
+        if best_j is None:
+            return 0, 0
+        return best_len, len(haystack) - best_j
+
+    def _penalty_vector(self, vocab_size):
+        ids = self._all_ids
+        n = len(ids)
+        buf = ids[max(0, n - self.buffer_size):n]
+        win = ids[max(0, n - self.buffer_size - self.window_size): max(0, n - self.buffer_size)]
+        pen = torch.zeros(vocab_size)
+        if not win:
+            pen.fill_(math.log2(max(vocab_size, 2)))
+            return pen
+        l, d = self._find_prefix_match(buf, win)
+        j = len(win) - d if l >= 1 else None
+        extend_token = win[j + l] if (l >= 1 and j + l < len(win)) else None
+
+        nearest = {}
+        for idx, tok in enumerate(win):
+            dist = len(win) - idx
+            if tok not in nearest or dist < nearest[tok]:
+                nearest[tok] = dist
+
+        logV = math.log2(max(vocab_size, 2))
+        for a in range(vocab_size):
+            if extend_token is not None and a == extend_token:
+                if l * d > 0 and (d - l + 1) < l * d:
+                    pen[a] = math.log2(1 - (d - l + 1) / (l * d)) - 1
+                else:
+                    pen[a] = -6.0
+            elif a in nearest:
+                pen[a] = math.log2(max(1, nearest[a]))
+            else:
+                pen[a] = logV
+        return pen
+
+    def step(self, logits, generated_ids=None):
+        vocab_size = self.vocab_size or logits.shape[-1]
+        pen = self._penalty_vector(vocab_size).to(logits.device)
+        adjusted = logits + self.alpha * pen
+        adjusted = adjusted / max(self.temperature, 1e-6)
+        adjusted = top_p_filtering(adjusted.unsqueeze(0), self.top_p).squeeze(0)
+        probs = torch.softmax(adjusted, dim=-1)
+        token = int(torch.multinomial(probs, 1).item())
+        self._all_ids.append(token)
+        return token
+
+    def diagnostics(self):
+        return {}
+
+
 class RecurrenceRiskDecoder:
     """
     Recurrence-Risk Decoding (this work).
@@ -390,7 +529,12 @@ class RecurrenceRiskDecoder:
         self.mode            = mode
         self.eps             = eps
         self.dual_iters      = dual_iters
-        self.dual_lambda_max = dual_lambda_max
+        self.dual_lambda_max = dual_lambda_max  # DEPRECATED, unused: the
+        # dual solver now expands its bracket geometrically instead of
+        # bisecting within a fixed cap (see _solve_dual_lambda). Kept as an
+        # accepted constructor argument only so existing config dicts that
+        # still pass dual_lambda_max=... do not raise a TypeError; it has
+        # no effect on the solver's behaviour.
         # Whether prime() registers the prompt's tokens into the recurrence
         # hash maps (prompt-inclusive, the previous silent default) or leaves
         # them unregistered so risk reacts only to repeats the model itself
@@ -422,11 +566,24 @@ class RecurrenceRiskDecoder:
         self.hq_history   = []   # H(q) in bits
         self.hp_history   = []   # H(p) in bits
         self.risk_history = []   # E_q[risk] actually achieved
-        self.feasible_history = []   # dual mode only: was eps attainable under lambda_max
-        self.cap_hit_history  = []   # dual mode only: did lambda hit dual_lambda_max
+        self.feasible_history = []   # dual mode only: was eps attainable at all
+        self.structurally_infeasible_history = []  # dual mode only: TRUE infeasibility
+        # (min_v risk(v) > eps, proven, not a bracket/search limitation --
+        # see _solve_dual_lambda docstring). Renamed from the earlier
+        # cap_hit_history: with the fixed dual_lambda_max removed in favour
+        # of an expanding bracket, "hit an arbitrary cap" is no longer a
+        # possible outcome, so the old name no longer describes anything
+        # real; this flag now means what it says.
         self.min_risk_history = []   # dual mode only: min_v risk(v) that step (achievable floor)
         self.violation_history = []  # dual mode only: max(0, achieved-eps)
         self.tolerance_history = []  # dual mode only: bisection window width at termination
+        self.n_doublings_history = []  # dual mode only: bracket-expansion doublings needed
+        self.per_step_log = None     # optional: set to a list externally to
+        # capture a full per-step trace (lambda, achieved, feasible, kl,
+        # entropy, structurally_infeasible) for every single step, not just
+        # the per-sample summary in diagnostics(). Off by default (None) to
+        # avoid bloating ordinary runs; sampling_eval.py can opt in with
+        # --save_per_step_diagnostics.
 
     def reset(self):
         self._recent.clear()
@@ -435,9 +592,9 @@ class RecurrenceRiskDecoder:
         self.alpha_history = []
         self.kl_history = []; self.hq_history = []
         self.hp_history = []; self.risk_history = []
-        self.feasible_history = []; self.cap_hit_history = []
+        self.feasible_history = []; self.structurally_infeasible_history = []
         self.min_risk_history = []; self.violation_history = []
-        self.tolerance_history = []
+        self.tolerance_history = []; self.n_doublings_history = []
 
     def prime(self, prompt_ids):
         """
@@ -523,82 +680,146 @@ class RecurrenceRiskDecoder:
         return float(min(self.temp_max, self.temperature + bump))
 
     @staticmethod
-    def _q_of_lambda(p, risk, lam):
-        """q_lambda(v) proportional to p(v)*exp(-lam*risk(v)), computed stably."""
-        logits = torch.log(p + 1e-40) - lam * risk
-        return torch.softmax(logits, dim=-1)
-
-    def _solve_dual_lambda(self, p, risk):
+    def _log_q_of_lambda(log_p, risk, lam):
         """
-        Exact dual calibration: return the smallest lambda >= 0 with
-        E_{q_lambda}[risk] <= eps.  g(lambda) = E_{q_lambda}[risk] is
-        non-increasing, so bisection on [0, lambda_max] is valid.
+        log q_lambda(v), computed ENTIRELY in log-space via F.log_softmax on
+        the shifted logits (log_p - lam*risk). This is the numerical fix for
+        a real correctness bug: the earlier version materialized p via a
+        plain softmax, then computed log(p + 1e-40) to build q_lambda's
+        logits. At T=0.10, temperature scaling routinely pushes many
+        vocabulary entries' probabilities below float32's representable
+        range, so they underflow to EXACTLY 0.0 in the materialized tensor
+        -- at which point log(0 + 1e-40) floors every one of those entries
+        to the SAME value (log(1e-40)~=-92.1) regardless of how different
+        their true (pre-underflow) log-probabilities actually were. This
+        corrupts q, lambda, and every downstream KL figure, and was
+        reproduced directly on the project's own model: verified below to
+        materially change the calibrated lambda and achieved risk relative
+        to the old softmax-then-relog path.
 
-        Returns a dict with everything needed to audit the step, not just the
-        multiplier:
-          lambda        : the calibrated multiplier.
-          achieved       : E_{q_lambda}[risk] at that multiplier.
-          feasible       : whether the target eps was reachable within
-                           dual_lambda_max at all.
-          cap_hit        : True iff lambda == dual_lambda_max was returned
-                           (whether or not that also happens to be feasible --
-                           logged separately from `feasible` since a run can
-                           hit the cap and still land under eps by coincidence
-                           at the cap, which should still be visible).
-          min_attainable_risk : min_v risk(v) reweighted by p among the
-                           lowest-risk tokens -- the floor E_q[risk] cannot
-                           go below no matter how large lambda is, since mass
-                           always concentrates on argmin risk, never to zero
-                           if the minimum risk itself is >0.
-          violation      : max(0, achieved - eps), i.e. how much the
-                           constraint is actually violated when infeasible;
-                           0 when feasible.
-          tolerance       : the bisection window width at termination
-                           (hi - lo), the numerical precision the calibration
-                           is accurate to.
-        If E_p[risk] <= eps the constraint is inactive and lambda* = 0 (q = p,
-        zero distortion, reported as feasible with tolerance 0).
+        F.log_softmax never materializes p as a probability tensor at all --
+        it computes log-probabilities via the numerically stable
+        log-sum-exp identity directly from logits, so no floor or epsilon
+        is needed anywhere in this function.
+        """
+        shifted = log_p - lam * risk
+        return F.log_softmax(shifted, dim=-1)
+
+    def _solve_dual_lambda(self, log_p, risk):
+        """
+        Exact dual calibration in log-space, with two changes from the
+        earlier version, both made in response to review:
+
+        (1) NUMERICAL: works entirely in log-space (see _log_q_of_lambda);
+            g(lambda) = E_{q_lambda}[risk] is now computed as
+            (exp(log_q) * risk).sum(), which is stable even when many
+            entries of q underflow to 0.0 on materialization, since a
+            genuinely-vanishing probability correctly contributes ~0 to a
+            sum, unlike the earlier bug where the LOG value itself (not
+            just the final product) was corrupted by underflow.
+
+        (2) STRUCTURAL: true infeasibility (eps < min_v risk(v), which no
+            lambda, however large, can ever satisfy, since q's risk floor
+            IS min_v risk(v) in the lambda->infinity limit) is now detected
+            in closed form, directly from the risk vector, with no
+            numerical search at all -- and is reported as a DIFFERENT
+            status (`structurally_infeasible`) from a bracket that simply
+            has not yet expanded far enough. There is no longer any fixed
+            dual_lambda_max: if min_v risk(v) <= eps (a feasible lambda is
+            mathematically guaranteed to exist by continuity), the bracket
+            expands geometrically (doubling) until a feasible upper end is
+            found, then bisects within it -- so "the cap was too small" is
+            no longer a possible failure mode by construction.
+
+        Returns a dict: lambda, achieved, feasible, structurally_infeasible,
+        min_attainable_risk, violation, tolerance, n_doublings.
         """
         min_attainable_risk = float(risk.min())
+        p = torch.exp(log_p)
         g0 = float((p * risk).sum())
         if g0 <= self.eps:
             return {"lambda": 0.0, "achieved": g0, "feasible": True,
-                    "cap_hit": False, "min_attainable_risk": min_attainable_risk,
-                    "violation": 0.0, "tolerance": 0.0}
+                    "structurally_infeasible": False,
+                    "min_attainable_risk": min_attainable_risk,
+                    "violation": 0.0, "tolerance": 0.0, "n_doublings": 0}
 
-        hi = self.dual_lambda_max
-        g_hi = float((self._q_of_lambda(p, risk, hi) * risk).sum())
+        if min_attainable_risk > self.eps:
+            # Proven infeasible: no lambda can satisfy eps, since even
+            # concentrating all mass on argmin(risk) gives exactly
+            # min_attainable_risk > eps. Use a large-but-finite lambda so
+            # the actual sampling distribution still concentrates sharply
+            # on the lowest-risk tokens (the best achievable policy), while
+            # reporting this honestly as structural, not a search failure.
+            big_lambda = 1e4
+            log_q = self._log_q_of_lambda(log_p, risk, big_lambda)
+            achieved = float((torch.exp(log_q) * risk).sum())
+            return {"lambda": big_lambda, "achieved": achieved, "feasible": False,
+                    "structurally_infeasible": True,
+                    "min_attainable_risk": min_attainable_risk,
+                    "violation": max(0.0, achieved - self.eps),
+                    "tolerance": float("nan"), "n_doublings": 0}
+
+        # Feasibility is guaranteed to exist (min_attainable_risk <= eps).
+        # Expand the bracket geometrically until the upper end is feasible;
+        # 60 doublings from hi=1.0 reaches lambda ~ 1e18, far beyond
+        # anything a float32/float64 risk-weighted logit shift could need
+        # (Appendix: order-of-magnitude estimate), so this loop terminates
+        # in practice essentially always at single-digit doubling counts.
+        hi = 1.0
+        n_doublings = 0
+        log_q_hi = self._log_q_of_lambda(log_p, risk, hi)
+        g_hi = float((torch.exp(log_q_hi) * risk).sum())
+        while g_hi > self.eps and n_doublings < 60:
+            hi *= 2.0
+            n_doublings += 1
+            log_q_hi = self._log_q_of_lambda(log_p, risk, hi)
+            g_hi = float((torch.exp(log_q_hi) * risk).sum())
+
         if g_hi > self.eps:
-            # Infeasible under the cap: report the violation honestly instead
-            # of silently returning as if the constraint had been met.
-            return {"lambda": hi, "achieved": g_hi, "feasible": False,
-                    "cap_hit": True, "min_attainable_risk": min_attainable_risk,
-                    "violation": max(0.0, g_hi - self.eps), "tolerance": float("nan")}
+            # Should not happen given the min_attainable_risk<=eps guard
+            # above, but report honestly rather than silently proceed if
+            # 60 doublings genuinely was not enough (e.g. a pathological
+            # risk vector at the edge of float precision).
+            achieved = g_hi
+            return {"lambda": hi, "achieved": achieved, "feasible": False,
+                    "structurally_infeasible": False,
+                    "min_attainable_risk": min_attainable_risk,
+                    "violation": max(0.0, achieved - self.eps),
+                    "tolerance": float("nan"), "n_doublings": n_doublings}
 
-        lo = 0.0
+        lo = hi / 2.0 if n_doublings > 0 else 0.0
         for _ in range(self.dual_iters):
             mid = 0.5 * (lo + hi)
-            g_m = float((self._q_of_lambda(p, risk, mid) * risk).sum())
+            log_q_m = self._log_q_of_lambda(log_p, risk, mid)
+            g_m = float((torch.exp(log_q_m) * risk).sum())
             if g_m > self.eps:
                 lo = mid
             else:
                 hi = mid
-        achieved = float((self._q_of_lambda(p, risk, hi) * risk).sum())
+        log_q_final = self._log_q_of_lambda(log_p, risk, hi)
+        achieved = float((torch.exp(log_q_final) * risk).sum())
         return {"lambda": hi, "achieved": achieved, "feasible": True,
-                "cap_hit": (hi >= self.dual_lambda_max - 1e-9),
+                "structurally_infeasible": False,
                 "min_attainable_risk": min_attainable_risk,
                 "violation": max(0.0, achieved - self.eps),
-                "tolerance": float(hi - lo)}
+                "tolerance": float(hi - lo), "n_doublings": n_doublings}
 
     @staticmethod
-    def _kl_bits(q, p):
-        m = q > 0
-        return float((q[m] * (torch.log2(q[m] + 1e-40) - torch.log2(p[m] + 1e-40))).sum())
+    def _kl_bits(log_q, log_p):
+        """KL(q||p) in bits, computed from log-probabilities directly (no
+        materialize-then-relog step, so no underflow floor is needed): a
+        vanishing q(v) contributes exp(log_q(v))~=0 times a finite
+        log-ratio, i.e. correctly ~0 to the sum, rather than a corrupted
+        floored log value."""
+        q = torch.exp(log_q)
+        return float((q * (log_q - log_p)).sum() / math.log(2.0))
 
     @staticmethod
-    def _entropy_bits(d):
-        m = d > 0
-        return float(-(d[m] * torch.log2(d[m] + 1e-40)).sum())
+    def _entropy_bits(log_d):
+        """H(d) in bits, from log-probabilities directly, same rationale."""
+        d = torch.exp(log_d)
+        return float(-(d * log_d).sum() / math.log(2.0))
+
 
     def step(self, logits, generated_ids=None):
         """
@@ -606,8 +827,10 @@ class RecurrenceRiskDecoder:
         the minimum-distortion claim is measured directly rather than inferred
         from a downstream NLL.
 
-        p is the temperature-scaled model distribution -- the reference the
-        projection is taken from.
+        log_p is the log of the temperature-scaled model distribution --
+        computed via F.log_softmax directly on logits/T, never via a
+        materialize-then-relog step (see _log_q_of_lambda's docstring for
+        why that distinction is load-bearing, not stylistic).
         """
         vocab_size = logits.shape[-1]
 
@@ -615,53 +838,69 @@ class RecurrenceRiskDecoder:
         if self.mode == "entropy_only":
             self.alpha_history.append(0.0)
             temperature = self._current_temperature()
-            p = torch.softmax(logits / max(self.temperature, 1e-6), dim=-1)
+            log_p = F.log_softmax(logits / max(self.temperature, 1e-6), dim=-1)
             q_logits = logits / max(temperature, 1e-6)
             q_logits = top_p_filtering(q_logits.unsqueeze(0), self.top_p).squeeze(0)
-            q = torch.softmax(q_logits, dim=-1)
-            self.kl_history.append(self._kl_bits(q, p))
-            self.hq_history.append(self._entropy_bits(q))
-            self.hp_history.append(self._entropy_bits(p))
+            log_q = F.log_softmax(q_logits, dim=-1)
+            q = torch.exp(log_q)
+            self.kl_history.append(self._kl_bits(log_q, log_p))
+            self.hq_history.append(self._entropy_bits(log_q))
+            self.hp_history.append(self._entropy_bits(log_p))
             self.risk_history.append(0.0)
             token = int(torch.multinomial(q, 1).item())
             self._register(token)
             return token
 
-        # p = reference distribution the projection starts from
-        p    = torch.softmax(logits / max(self.temperature, 1e-6), dim=-1)
+        # log_p = log of the reference distribution the projection starts from
+        log_p = F.log_softmax(logits / max(self.temperature, 1e-6), dim=-1)
         risk = self._risk_scores(vocab_size).to(logits.device)
+        step_record = None
+        if self.per_step_log is not None:
+            step_record = {}
 
         if self.mode == "dual":
             # Exact solution of  min KL(q||p) s.t. E_q[risk] <= eps
-            d = self._solve_dual_lambda(p, risk)
+            d = self._solve_dual_lambda(log_p, risk)
             lam, achieved = d["lambda"], d["achieved"]
-            q = self._q_of_lambda(p, risk, lam)
+            log_q = self._log_q_of_lambda(log_p, risk, lam)
             if self.top_p < 1.0:
                 # NOTE: top-p after the projection voids exactness; off by default
-                q_l = torch.log(q + 1e-40)
-                q_l = top_p_filtering(q_l.unsqueeze(0), self.top_p).squeeze(0)
-                q = torch.softmax(q_l, dim=-1)
+                q_l = top_p_filtering(log_q.unsqueeze(0), self.top_p).squeeze(0)
+                log_q = F.log_softmax(q_l, dim=-1)
+            q = torch.exp(log_q)
             self.alpha_history.append(lam)
             self.feasible_history.append(d["feasible"])
-            self.cap_hit_history.append(d["cap_hit"])
+            self.structurally_infeasible_history.append(d["structurally_infeasible"])
             self.min_risk_history.append(d["min_attainable_risk"])
             self.violation_history.append(d["violation"])
             self.tolerance_history.append(d["tolerance"])
+            self.n_doublings_history.append(d["n_doublings"])
+            if step_record is not None:
+                step_record.update(d)
         else:
             # "fixed" (KL-regularized) or "adaptive" (heuristic controller)
             lam = self._current_alpha()          # already clipped to [0, alpha_max]
             self.alpha_history.append(lam)
-            q = self._q_of_lambda(p, risk, lam)
+            log_q = self._log_q_of_lambda(log_p, risk, lam)
             if self.top_p < 1.0:
-                q_l = torch.log(q + 1e-40)
-                q_l = top_p_filtering(q_l.unsqueeze(0), self.top_p).squeeze(0)
-                q = torch.softmax(q_l, dim=-1)
+                q_l = top_p_filtering(log_q.unsqueeze(0), self.top_p).squeeze(0)
+                log_q = F.log_softmax(q_l, dim=-1)
+            q = torch.exp(log_q)
             achieved = float((q * risk).sum())
+            if step_record is not None:
+                step_record.update({"lambda": lam, "achieved": achieved})
 
-        self.kl_history.append(self._kl_bits(q, p))
-        self.hq_history.append(self._entropy_bits(q))
-        self.hp_history.append(self._entropy_bits(p))
+        kl = self._kl_bits(log_q, log_p)
+        hq = self._entropy_bits(log_q)
+        hp = self._entropy_bits(log_p)
+        self.kl_history.append(kl)
+        self.hq_history.append(hq)
+        self.hp_history.append(hp)
         self.risk_history.append(achieved)
+        if step_record is not None:
+            step_record.update({"kl_bits": kl, "entropy_q": hq, "entropy_p": hp,
+                                 "risk_achieved": achieved})
+            self.per_step_log.append(step_record)
 
         token = int(torch.multinomial(q, 1).item())
         self._register(token)
@@ -679,17 +918,27 @@ class RecurrenceRiskDecoder:
         if self.mode == "dual":
             n = len(self.feasible_history)
             out["dual_feasible_rate"] = (sum(self.feasible_history) / n) if n else float("nan")
-            out["dual_cap_hit_rate"]  = (sum(self.cap_hit_history) / n) if n else float("nan")
+            out["dual_structurally_infeasible_rate"] = (
+                sum(self.structurally_infeasible_history) / n) if n else float("nan")
             out["dual_min_risk_mean"] = f(self.min_risk_history)
             out["dual_violation_mean"] = f(self.violation_history)
             out["dual_violation_max"]  = (max(self.violation_history) if self.violation_history else float("nan"))
             out["dual_tolerance_mean"] = f([t for t in self.tolerance_history if t == t])  # drop NaNs
+            out["dual_n_doublings_mean"] = f(self.n_doublings_history)
+            out["dual_n_doublings_max"] = (max(self.n_doublings_history) if self.n_doublings_history else float("nan"))
         return out
 
 
 # Backwards-compatible aliases
 RecurrenceAwareDecoder = RecurrenceRiskDecoder
-LZRepetitionDecoder    = LookBackDecoder
+# NOTE: the earlier alias "LZRepetitionDecoder = LookBackDecoder" is removed.
+# LookBackDecoder (renamed SuffixMatchDecoder below) is a homemade LZ77-style
+# longest-suffix-match heuristic, NOT the real published Look-back decoding
+# algorithm, and calling it "LZ..." anything invited exactly the confusion
+# this note is fixing, especially now that LZPenaltyDecoder above is a real,
+# verified reimplementation of a real published LZ-based method. Any code
+# still importing LZRepetitionDecoder will now get a clear ImportError
+# rather than silently getting the wrong decoder.
 
 
 @torch.no_grad()

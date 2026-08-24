@@ -1,0 +1,14 @@
+strategy,category,checkpoint,hard_constraint,survival_auc_persistent,rmst_persistent,loop_rate_persistent,survival_auc_ngram10_RETRACTED_DO_NOT_USE,rmst_ngram10_RETRACTED_DO_NOT_USE,loop_rate_ngram10_RETRACTED_DO_NOT_USE,mc_nll_bpc,ngram_sim_4,spelling_error,compression,longest_rep_sub,chars_per_sec
+greedy,baseline,baseline,False,0.6371,318.55,0.6,0.0484,24.2,1.0,1.1109,0.139,0.0043,0.2344,90.0,98.6
+lt_temp_0.05,loop_regime,baseline,False,0.6669,333.45,0.46,0.058,29.0,1.0,1.0839,0.1526,0.0042,0.2656,59.66,
+lt_temp_0.1,loop_regime,baseline,False,0.9529,476.45,0.06,0.0905,45.25,1.0,1.0577,0.1844,0.0093,0.3299,42.3133,
+lt_temp_0.15,loop_regime,baseline,False,0.9764,488.2,0.04,0.1331,66.55,1.0,1.061,0.2084,0.0167,0.3856,29.2,
+lt_rep_penalty_1.3,loop_regime,baseline,False,0.9965,498.25,0.0067,0.2014,100.7,1.0,1.0808,0.2238,0.0102,0.4407,28.3533,
+lt_no_repeat_4gram,loop_regime_hard,baseline,False,1.0,500.0,0.0,1.0,500.0,0.0,1.7858,0.2485,0.1474,0.607,3.0,
+lt_suffixmatch_a3.0,loop_regime,baseline,False,1.0,500.0,0.0,0.7115,355.75,0.9133,1.0544,0.2832,0.0243,0.5249,14.5133,
+lt_fsd,loop_regime,baseline,False,1.0,500.0,0.0,1.0,500.0,0.0,1.2511,0.3021,0.0416,0.619,6.0133,
+lt_lzpenalty,loop_regime,baseline,False,1.0,500.0,0.0,0.3053,152.65,1.0,1.0337,0.2517,0.0191,0.4874,22.7467,
+lt_risk_only,loop_regime_rr,baseline,False,1.0,500.0,0.0,0.1561,78.05,1.0,1.0623,0.2159,0.0145,0.3995,28.3267,
+lt_adaptive,loop_regime_rr,baseline,False,1.0,500.0,0.0,0.1851,92.55,1.0,1.064,0.2307,0.0163,0.4287,23.18,
+lt_dual_eps0.01,loop_regime_rr,baseline,False,1.0,500.0,0.0,1.0,500.0,0.0,2.083,0.1899,0.2135,0.675,3.0267,
+lt_dual_eps0.05,loop_regime_rr,baseline,False,1.0,500.0,0.0,1.0,500.0,0.0,1.9694,0.21,0.1908,0.6723,3.7333,

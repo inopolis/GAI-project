@@ -1,0 +1,295 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Recurrence-Risk Decoding — Human Evaluation</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+  :root {
+    --bg: #ffffff; --fg: #1a1a1a; --muted: #666666; --border: #dddddd;
+    --card: #f7f7f7; --accent: #2563eb; --accent-fg: #ffffff;
+    --good: #16833e; --bad: #b91c1c;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #15161a; --fg: #e8e8e8; --muted: #9a9a9a; --border: #33343a;
+      --card: #1e1f24; --accent: #5b8def; --accent-fg: #0b0c0f;
+      --good: #4ade80; --bad: #f87171;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--fg);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    line-height: 1.55;
+  }
+  .wrap { max-width: 720px; margin: 0 auto; padding: 28px 20px 80px; }
+  h1 { font-size: 1.3rem; margin: 0 0 4px; }
+  h2 { font-size: 1.05rem; margin: 0 0 10px; }
+  .sub { color: var(--muted); font-size: 0.92rem; margin-bottom: 24px; }
+  .progress {
+    height: 6px; background: var(--border); border-radius: 3px; overflow: hidden;
+    margin-bottom: 22px;
+  }
+  .progress > div { height: 100%; background: var(--accent); transition: width .2s; }
+  .card {
+    background: var(--card); border: 1px solid var(--border); border-radius: 10px;
+    padding: 20px; margin-bottom: 18px;
+  }
+  .passage {
+    white-space: pre-wrap; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 0.92rem; line-height: 1.5; background: var(--bg);
+    border: 1px solid var(--border); border-radius: 8px; padding: 14px;
+    max-height: 340px; overflow-y: auto;
+  }
+  .pair { display: grid; grid-template-columns: 1fr; gap: 14px; }
+  @media (min-width: 640px) { .pair { grid-template-columns: 1fr 1fr; } }
+  .pair .card { margin-bottom: 0; }
+  .pair-label { font-weight: 600; margin-bottom: 8px; color: var(--muted); font-size: 0.85rem; text-transform: uppercase; letter-spacing: .04em; }
+  .btnrow { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 16px; }
+  button {
+    font: inherit; padding: 10px 18px; border-radius: 8px; border: 1px solid var(--border);
+    background: var(--bg); color: var(--fg); cursor: pointer;
+  }
+  button:hover { border-color: var(--accent); }
+  button.primary { background: var(--accent); color: var(--accent-fg); border-color: var(--accent); }
+  button:disabled { opacity: .4; cursor: default; }
+  button.wide { width: 100%; }
+  input[type=text], textarea {
+    font: inherit; width: 100%; padding: 10px 12px; border-radius: 8px;
+    border: 1px solid var(--border); background: var(--bg); color: var(--fg);
+  }
+  textarea { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 0.78rem; }
+  label { display: block; margin: 14px 0 6px; font-weight: 600; font-size: 0.9rem; }
+  .hint { color: var(--muted); font-size: 0.85rem; margin-top: 4px; }
+  .center { text-align: center; }
+  .hidden { display: none !important; }
+  .footer-nav { display: flex; justify-content: space-between; align-items: center; margin-top: 10px; }
+  ul { padding-left: 20px; }
+  .badge {
+    display: inline-block; font-size: 0.75rem; padding: 2px 8px; border-radius: 999px;
+    background: var(--border); color: var(--muted); margin-left: 8px;
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <!-- SCREEN: intro -->
+  <div id="screen-intro">
+    <h1>Recurrence-Risk Decoding — Human Evaluation</h1>
+    <div class="sub">A short (about 8-minute), anonymous, offline study. Nothing here is
+      sent anywhere automatically — at the end you'll get a block of text to copy and
+      send back yourself.</div>
+    <div class="card">
+      <h2>What you'll do</h2>
+      <ul>
+        <li><strong>Part 1 (18 short items):</strong> read a short passage of
+          machine-generated text and judge whether it is stuck in a repeating loop.</li>
+        <li><strong>Part 2 (10 pairs):</strong> read two passages generated from the
+          same prompt by two different methods, and say which reads more naturally
+          as English prose.</li>
+      </ul>
+      <p class="hint">All passages are real, unedited output from the project's language
+        model at a low sampling temperature, so some grammatical oddity is expected
+        throughout regardless of looping — judge looping and naturalness on their own
+        terms, not against normal fluent writing.</p>
+    </div>
+    <div class="card">
+      <label for="pid">Participant ID or initials (for your own reference — not
+        published anywhere)</label>
+      <input type="text" id="pid" placeholder="e.g. participant-1">
+    </div>
+    <div class="center">
+      <button class="primary wide" onclick="startStudy()">Begin</button>
+    </div>
+  </div>
+
+  <!-- SCREEN: task 1 -->
+  <div id="screen-task1" class="hidden">
+    <h1>Part 1 — Loop detection</h1>
+    <div class="sub">Is this passage stuck repeating itself (a short span of text
+      recurring again and again), or not?</div>
+    <div class="progress"><div id="t1-progress-bar" style="width:0%"></div></div>
+    <div class="card">
+      <div class="passage" id="t1-passage"></div>
+    </div>
+    <div class="btnrow">
+      <button class="primary" onclick="answerTask1(true)">Yes — looping</button>
+      <button class="primary" onclick="answerTask1(false)">No — not looping</button>
+    </div>
+    <div class="hint" id="t1-counter"></div>
+  </div>
+
+  <!-- SCREEN: task 2 -->
+  <div id="screen-task2" class="hidden">
+    <h1>Part 2 — Which reads better?</h1>
+    <div class="sub">Same prompt, two different generation methods. Which passage reads
+      more naturally as English prose? (Ignore length; judge coherence and fluency.)</div>
+    <div class="progress"><div id="t2-progress-bar" style="width:0%"></div></div>
+    <div class="pair">
+      <div class="card">
+        <div class="pair-label">Passage A</div>
+        <div class="passage" id="t2-passage-a"></div>
+      </div>
+      <div class="card">
+        <div class="pair-label">Passage B</div>
+        <div class="passage" id="t2-passage-b"></div>
+      </div>
+    </div>
+    <div class="btnrow">
+      <button class="primary" onclick="answerTask2('A')">A is better</button>
+      <button class="primary" onclick="answerTask2('tie')">About the same</button>
+      <button class="primary" onclick="answerTask2('B')">B is better</button>
+    </div>
+    <div class="hint" id="t2-counter"></div>
+  </div>
+
+  <!-- SCREEN: done -->
+  <div id="screen-done" class="hidden">
+    <h1>Thank you</h1>
+    <div class="sub">That's everything. Please copy the block below and send it back
+      (paste into an email, chat message, or file) to whoever gave you this link.</div>
+    <div class="card">
+      <button class="primary wide" onclick="copyResults()">Copy results to clipboard</button>
+      <div class="hint" id="copy-status" style="margin-top:8px;"></div>
+      <label for="results-out">Or copy manually:</label>
+      <textarea id="results-out" rows="10" readonly onclick="this.select()"></textarea>
+    </div>
+  </div>
+
+</div>
+
+<script id="human-eval-data" type="application/json">{"task1": [{"category": "looping", "text": "than the same of the subject of the\nconsideration of the subject of the subject of the subject of the subject\nof the subject of the subject of the subject of the subject of the\nconsideration of the subject of the subject of the subject of the same\ntime of the subject of the subject of the subject of the subject of the\nconsideration of the subject of the subject of the subject of the same\ntime of the subject of the subject of the subject of the subject of the\nconsideration of the subject of the s", "is_loop": true}, {"category": "looping", "text": "the same of the subject of the\nconsideration of the subject of the subject of the subject of the subject\nof the subject of the subject of the subject of the subject of the\nconsideration of the subject of the subject of the subject of the same\ntime of the subject of the subject of the subject of the subject of the\nconsideration of the subject of the subject of the subject of the same\ntime of the subject of the subject of the subject of the subject of the\nconsideration of the subject of the subjec", "is_loop": true}, {"category": "looping", "text": "the subject of the subject of the\nconsideration of the subject of the subject of the subject of the subject\nof the subject of the subject of the subject of the subject of the\nconsideration of the subject of the subject of the subject of the same\ntime of the subject of the subject of the subject of the subject of the\nconsideration of the subject of the subject of the subject of the same\ntime of the subject of the subject of the subject of the subject of the\nconsideration of the subject of the sub", "is_loop": true}, {"category": "looping", "text": "and the same of the subject of\nthe subject of the subject of the subject of the subject of the subject\nof the subject of the subject of the subject of the subject of the\nconsideration of the subject of the subject of the subject of the same\ntime of the subject of the subject of the subject of the subject of the\nconsideration of the subject of the subject of the subject of the same\ntime of the subject of the subject of the subject of the subject of the\nconsideration of the subject of the subject", "is_loop": true}, {"category": "looping", "text": "all the subject of the subject of the\nconsideration of the subject of the subject of the subject of the subject\nof the subject of the subject of the subject of the subject of the\nconsideration of the subject of the subject of the subject of the same\ntime of the subject of the subject of the subject of the subject of the\nconsideration of the subject of the subject of the subject of the same\ntime of the subject of the subject of the subject of the subject of the\nconsideration of the subject of the", "is_loop": true}, {"category": "looping", "text": "of the subject of the subject of the\nconsideration of the subject of the subject of the subject of the subject\nof the subject of the subject of the subject of the subject of the\nconsideration of the subject of the subject of the subject of the same\ntime of the subject of the subject of the subject of the subject of the\nconsideration of the subject of the subject of the subject of the same\ntime of the subject of the subject of the subject of the subject of the\nconsideration of the subject of the", "is_loop": true}, {"category": "nonlooping", "text": "a most account of town the\nconsideration off his father’s companious in him at last, and, till my\nfamily answer. I am sure you are, as tell, when I had not been\nso much about travels allowed, afted. The strength on talking our daughtened\nto two sense or than a characte appear over me turners occupied by ty\nand-thinkised opinine withouut,--\n\n“I was, my deatest. You would heav boat,” said Elizabeth, “thus\narrival welcord intolered; addetember, again, awkward,”\n\n“took how it is, I, aven to human,”,", "is_loop": false}, {"category": "nonlooping", "text": "and then to black of tears a\nservant as that her had been,--\n\n“I am sure your fathing to take him time travelled two me, I saw thought\nthrouble a sensibility on turn at tleine so soon. I hope it was not by\ntalkindness or tyield to human but I, who would,” stepted,\n\n“thus are,”\n\nElizabeth, “thy did no longer sistince tneaty, thhey were\nall ttoo consequently against, in thlow all, afterwards hyposition out\noff tmen.”\n]\n\nCHAPTER XXXIII.", "is_loop": false}, {"category": "nonlooping", "text": "the\nconsideration of talking to him at tended a solitude on time trace a\nstrong or, an affectious as that, all two suppose turn in my father,\nany othine was, about ty against tleave her frienzy walk answered how\nshelters are not a moment ttowards our companiors which I had no means\nthought t white should be improved my present intolertable manner. I\nhavinng, and, accordinal tstate, addenly amonth appearance, with\na charmining. I awoke up to tneed. Thirst off highly, thosatisfied ov\ntogethr tchee", "is_loop": false}, {"category": "nonlooping", "text": "of to take him at\nleast and transported to her. I had not been so much as till than this\nconsideration or a sensibility are turned. The subject only, although\nthrouble against tears out in my feelings any proposal addressed, a\nservant strong over, those who were, was, it continued; afteer she\ncanno but, however; by two account,--\n\n“I am say you aboufore.”\n\nThink is tlength ty well. And,” scried! “It may broth, I\nshall back towards me thus book appearably. I would blace myself thy\narrival, bitten", "is_loop": false}, {"category": "nonlooping", "text": "I had not been a second of the\nconsiderable offering to this subject on that he hope with him time take\nhighly. This, though tears of, and, was a few more. It would bround\nthrown human by true our particular assurance at thus three in my\ncharacter. He cousin, hyposition of\ntransportive me, all thy always impossibly, but I, so much appeale for\nto black against two making, if I\nwanted. If you wert allowed,” said h, “thanks write year, I am silent\ntill, afteined; and I’m too miget speak tleave,” re", "is_loop": false}, {"category": "nonlooping", "text": "this world and to be a miserable of\nthe subject on temper time towards taken any oth all tranquillity or\ntogethr. They were not turned by two offer, an invitation, which he\ncould, however.\n\n“I have boundary at alarmed,” said he, “thery, tle was above him to\nme. I am so much, I, but It is nevident human,”\n\nElizabetone,\n\n “I wil nature,”--and,--though night write it seems out, if you wish t\nanswelledge from my father’s consequence wy improving, she canno forge\ntalk assuranches hhe did nurse years", "is_loop": false}, {"category": "borderline", "text": "the subject of the present of the most\naccount of the proposal of the consideration of the first and and said\nthe world of the stranger of the sensation of the country of the same\nconsideration of the particular of the subject of the cottage of the\nsubject of the sense of the subject of the present of the subject of\nthe subject of the subject of the subject of the subject of the same\ntime of the country of the subject of the subject of the consequence of\nthe sun and considerable and the evening", "is_loop": false}, {"category": "borderline", "text": "the sight of the consequence of\nthe subject of the subject of the subject of the subject of the subject\nof the country of the present of the most and the same of the most\nconcerning the family of the subject of the sensibility of the stranger\nwhich had been so much as the subject of the sense of the subject of\nthe subject of the cottage of the subject of the country of the same\ntime of the subject of the subject of the present of the subject of the\nsense of the subject of the contrary of the sub", "is_loop": false}, {"category": "borderline", "text": "the subject of the country of the\nconsiderable of the most and some particularly and sense of the subject\nof the subject of the most present of the subject of the secret of the\nmorning which had been a sensible of the consideration of the same\ntime of the sensation of the subject of the subject of the subject of\nthe subject of the subject of the cottage of the present of the same\ntime the stranger of the subject of the subject of the most of the\npresent of the same and the sensation of the conce", "is_loop": false}, {"category": "borderline", "text": "my\nfather, and I have been the place of the subject.”\n\n“And the subject of the subject of the subject of the subject of the\nsubject of the family of the day which had been so much as the subject of\nthe most and more than a compliment of the subject of the sensation of\nthe subject of the subject of the subject of the subject; and the same\ntime of the constant of the sensation of the subject of the subject, and\nthe consideration of the most and and the sense of the country of the\nmost and sense of", "is_loop": false}, {"category": "borderline", "text": "the\ncountry. I was almost the subject, and the subject of the subject of\nthe subject of the subject of the subject of the companion of the\nconversation of the destroyer of the most anguish and so much a strange\nwhich he had not been so much as the most and the contrary of the\nconscious of the country of the subject of the consequence of the struck\nof the most consideration of the contrary of the contrary of the first\nand desired and the most assurance of the same time of the sensation of\nthe sam", "is_loop": false}, {"category": "borderline", "text": "the\nprival of the country.”\n\n“I am a great deal to my father’s acquaintance; and the subject of the\nsubject of the subject of the subject of the subject of the subject of\nthe subject of the subject of the most and the same and place of the\nconsideration of the most and and said the consideration of the same\ntime of the consideration of the consideration of the subject of the\nconversation of the conversation of the subject of the present of the\nmost and and account of the subject of the most pers", "is_loop": false}], "task2": [{"text_dual": "to her fathemation of ten time take a\nsecond only a moment or two means overcominate which I had not been\nsense out othine in his sisters and tranquillity object an entered it with\nhim turn attempt hom as tleast tyle should be prevent, althose\nwho were nevidence forward against so far affeciend, are, was, about\nthrough t improvincing, tcountry towatch humanitures when I\nhave accordintly seemed. It cold,” said he,\n\n“I am surprised my family, I, but I’m feel ttoo speak tnew thy woushed\nto believat", "text_suffixmatch": "than the same of the country of the\nconsiderable of his father, and the proposal of the subject of the\nfirst and despair of the particular of her family, and who had been\nso much as the world of the most person of the rest of his concern was\na strong of my father’s account was a companion of manners which I had\nbeen so much a sensible and and said, and a woman who was so fortune\nand consequence of the sensation of the country of the first of the last\nand assurance of his father and conversation"}, {"text_dual": "the most present of towards taken time tears\noff tranquillity and turned a strong on her family was all a secret two\nopenetr tleast, as tnot tyou are at leave him têkin again out or than\nheart afterwal acquairing t which hopiness over, amonth appeale in\nthis. They hungersted, withough throubled. To be sure yoself thus\nangry tconscious intents, tthheir park oftemenles were, about,--\n\n“I awoke no lone object incompany it may boassed; added! I shalk neve\na lively so much. It could natularly, hypowe", "text_suffixmatch": "the most present of the sensation of\nthe country of his father’s sisters were all the subject of the\nconstruction of the morning of the contrary of the proposal of my\nfather and happiness of the first and sense of the expectation of her\nfamily and the day of the same time of his companion was a stranger to\nmake him a surprise of manners which I had been so much as the world,\nand a considerable and concerning the state of the character of the\nfirst of his father’s conversation was not to be a few"}, {"text_dual": "to take him time tranquillity of ten\nthousand that he should be a sensible or things of happiness any sound\nthrough two opient on them assure you are not turn attempt all tthe\ncontrary which hope it was, about interestinince over me forward a\nmost complete despair an expectation, werl agaitable, tlength apartmended\nanoth. I shal boat, if I, wouour is nearly accoupance, afted her\nalways seemed, hurried in hysteadth.\n\n“I am such,” said Mr. Darcy, “thus impossioge manners write,”\n\nElizabeth, sincie", "text_suffixmatch": "the subject of the family of his\nconsequence of the country of the most present of the same time of\nthe particular of my father’s contrary. I was a servant to be a few\nminutes of the proposal of the day of my promise was to see him to\nbe in the read of the world who had been a companion of the ladies of\nthe sensation of her father and the house of his family, and a moment\nattention to the season of the subject of my dear and some pleasure of\nthe country of the consequence of the most present of"}, {"text_dual": "of to take a most present on his\nfathire was so much assurance off her family and\nserious till tenderly. I had not but travelled my fathater at all. The\nmorning which, hunger two stange turn tnatual to hright hyposition or\ntheir sistead, an affective manner who havin successed,--\n\n“I am say tle you again.”\n\nElizabeth would hthough hear othhes are never. He hladied. It wild\nno long, we shalk accounted; added,\n\n about, appeally, tyor death têlen. I wants ttoo black throuble in\ntown write thus, I,", "text_suffixmatch": "of the subject of the\nconsideration of the country of the proposal of her father, and was\nsoon as they were to be a most anguish and despair to the most of\nthe first present of the latter was a servant and satisfaction of his\nfamily and the sense of his family, and the carriage of the cause of\nhis concern was to me the window of her sisters of the means of his\ncompanion was a compliment of my father’s account to him and a manner\nwhich had been so much as a misfortune and more than the particular"}, {"text_dual": "the\ncontrary on this interest or to be a sensible opened till tears out\noff my father’s subject was allowed, and when I had brought take treat\nthat he hoppe with two strong over him too me it assure you are\nalways turnersed. It is not so much attention, we shald nevel any\nreceive more. Thanks would,--\n\n“I am such, I, afteger, tleave, if yet I. Mr. Darcy may back t misery\ntowards head again tyle. He count by tneighbourhood instantly await\nan accomplishmenben. And, sir,” said Elizabeth,\n\n “It, mys", "text_suffixmatch": "the same of my father’s being and so much\nas the considerable of the character of his family and desired to her\nfather and the most present of the morning, and he was so stranger, and\nthe party of the first of her family, and the sense of the subject of\nthe country of his companion was a strength of such a compliment and\nsensible and all the world of the whole of his sisters were not to be\nso much as to the discovery of the strange of the proposal of the\nconsequence of the matter. The same time"}, {"text_dual": "to take him to\nthink of tears and that he should be a sensible or two open time trace\noff happiness which hoppe it was, an affection only those morning turn\nto her sisters,--\n\n“I am sure you are not tyour fath têths t all through me, I saw tle\ntill, tthus occupied tneaty towards tconsciously attentive by human\nany othck intolerably. It is never, about yet much.”\n\nThey were always soon for agaitating, assumed, if I, who wounderinled\ntalkiny, hypositically,-\n\n\n“That In tsuddenlince write accoupanc", "text_suffixmatch": "the subject of the country of the\nconsiderable of the same and the morning of his father’s concern was\na sensible to be able to a few minutes which I had been a most and\nsometimes of the most whole for the present of my father and all the\nsubject of her father, and she had not been so much as a companion of\nthe day were all to the family of his complete and a strange of my\nfather. I shall not have been to me the consequence of his sisters, and\nthe subject of the second of the country of the part"}, {"text_dual": "of tranquillity on his\nconcern was a strength or to brought tears out othing time to\ncall take a moment which I had been answered at all her fathetiness we\nshook assure you wild not but, after a few more such. It would, hurried\nthat hround,--\n\n“I hope it is never, I, who hyposes two opinion, writies, turned, by\nthour head again tleave me, about. They wened. If Indeed! I\nsaw tyle wull boast are no months intended; and--then she\nchooscked over three company têlen. Is so sensible,” said h, “thus\nan", "text_suffixmatch": "of the subject of the\ncontrary of the country of his father’s considerable and sense of her\nfather, and the proposal of the most and and person of the party of\nthe first of his sisters and manner which I had been a most present\nand concerning the world of the family of the same time of the character\nwhich had been so much as the day of her family, and when I am sure you\nare to be a companion of my father and desired to the sensation of\nthe subject of the death of the latter of the world, and he"}, {"text_dual": "the\nconsideration of temper to her. I had not been so much as till trace\nand such. It was, an affective that his sisters were sometimes on\nthinking our desire, which, however, she, taken, in the country oth\nsubjecle of, but two opinior ordence a sensate attentious all. Thirst\nwalk again,--\n\n“I am surely turned, I, my daughter’s atchman. He hastisfied. Mr.\nBennet saw him tleearn humaily, oven! If you wild nevot, yet,\nwhenev statual town me work ow têlen.”\n\nMrs. Benray writtiness have bout, for he", "text_suffixmatch": "the sight of his father’s concern was to be\na little and sensation of the country of the most and and despair to\nthe proposal of the first of the party of her family, and the last\nconsideration of his companion was a strange of my father and had been\nacquainted to me the subject of the second of his sisters were all the\ncontrary of his desire was not to see him to the consequence of the\npresent of the character of the rest of his father’s contents, and who\nhad been a few minutes of the most assu"}, {"text_dual": "all to take him to\nconsiderate till, as tears a sense of tranquility answer. I was\nallowed by twelves. They went away herself turned. She\ncannot be able tyle, at least accomplishmend had sometimes on tnew that\nhead, which help again afterwards how any othing tleeth tcheerful a\nmoming, têtestion, are surprised, but tthough who has brounden t more\nthrown or tmeen,--\n\n“I am sir, I, am, my dear say, if you wild now, she, would course,\nan indifference write it wneath. Her, hunger wurined; ancied\nthus", "text_suffixmatch": "all the subject of the country of his\nfather’s considerable and some present and the second of the stranger\nwhich I had not been so much as the most attention of the morning, and\nthe party of the proposal of the day who had been to be a sensibility\nand despair to the first of the particular of the family of a moment\nand the contrary of the first and account of his father, and he had\nbeen a few minutes of my father and manners which had been always\nseemed to me the house of the country of her fat"}, {"text_dual": "of triumph of\nthis considerable and\nsuch a servant on history answer to blame time, an affection or a\nfew moments which I had brought too me with that herself as tears at\ntowarm take my fath. It was, turned togethr head, we shall back any\nofficer, help anxious so state against almost. Indeed,” said human supposed\ntill thosands are not destroyed. “I hread you am silent,”\n\n“It, is neverythn would natual proposities out in marrying two opinior\ntalkiny ovely tleant. They wretched away hyponour occup", "text_suffixmatch": "of the companion of the\nconsideration of his father’s sister, and the subject of the sense of\nthe most present and despair to the party of the day of her family, and\nthe same of his concern was a strange of my father, and when they were\nto be so much as the morning of the first of the character of the most\nand sensible and and said, and she was not to be a consequent to the\nsubject of his sisters with a disappointment of my eyes are and distant\nof the proposal of the particular and the subject o"}]}</script>
+<script>
+(function () {
+  "use strict";
+  const DATA = JSON.parse(document.getElementById("human-eval-data").textContent);
+
+  function shuffle(arr, rng) {
+    const a = arr.slice();
+    for (let i = a.length - 1; i > 0; i--) {
+      const j = Math.floor(rng() * (i + 1));
+      [a[i], a[j]] = [a[j], a[i]];
+    }
+    return a;
+  }
+  // Per-participant random stream (Math.random is fine here: this only
+  // controls presentation order/side, not anything analytical).
+  const rng = Math.random;
+
+  let task1Order = [];   // shuffled indices into DATA.task1
+  let task2Order = [];   // array of {pair index, aIsDual: bool}
+  let t1i = 0, t2i = 0;
+  let results = { participant_id: "", started_at: "", task1: [], task2: [] };
+
+  window.startStudy = function () {
+    results.participant_id = document.getElementById("pid").value.trim() || "(none given)";
+    results.started_at = new Date().toISOString();
+
+    task1Order = shuffle(DATA.task1.map((_, i) => i), rng);
+    task2Order = shuffle(DATA.task2.map((_, i) => i), rng).map(i => ({
+      pairIndex: i,
+      aIsDual: rng() < 0.5   // random left/right assignment per participant
+    }));
+
+    document.getElementById("screen-intro").classList.add("hidden");
+    document.getElementById("screen-task1").classList.remove("hidden");
+    renderTask1();
+  };
+
+  function renderTask1() {
+    const idx = task1Order[t1i];
+    const item = DATA.task1[idx];
+    document.getElementById("t1-passage").textContent = item.text;
+    document.getElementById("t1-progress-bar").style.width =
+      Math.round(100 * t1i / task1Order.length) + "%";
+    document.getElementById("t1-counter").textContent =
+      "Item " + (t1i + 1) + " of " + task1Order.length;
+  }
+
+  window.answerTask1 = function (saysLoop) {
+    const idx = task1Order[t1i];
+    const item = DATA.task1[idx];
+    results.task1.push({
+      item_index: idx,
+      category: item.category,
+      ground_truth_is_loop: item.is_loop,
+      participant_says_loop: saysLoop,
+      correct: saysLoop === item.is_loop
+    });
+    t1i++;
+    if (t1i < task1Order.length) {
+      renderTask1();
+    } else {
+      document.getElementById("screen-task1").classList.add("hidden");
+      document.getElementById("screen-task2").classList.remove("hidden");
+      renderTask2();
+    }
+  };
+
+  function renderTask2() {
+    const { pairIndex, aIsDual } = task2Order[t2i];
+    const pair = DATA.task2[pairIndex];
+    const aText = aIsDual ? pair.text_dual : pair.text_suffixmatch;
+    const bText = aIsDual ? pair.text_suffixmatch : pair.text_dual;
+    document.getElementById("t2-passage-a").textContent = aText;
+    document.getElementById("t2-passage-b").textContent = bText;
+    document.getElementById("t2-progress-bar").style.width =
+      Math.round(100 * t2i / task2Order.length) + "%";
+    document.getElementById("t2-counter").textContent =
+      "Pair " + (t2i + 1) + " of " + task2Order.length;
+  }
+
+  window.answerTask2 = function (choice) {
+    const { pairIndex, aIsDual } = task2Order[t2i];
+    // Map the blinded A/B choice back to the real method name, so the
+    // researcher can score "dual vs suffixmatch" without the participant
+    // ever having seen those labels.
+    let winner = "tie";
+    if (choice === "A") winner = aIsDual ? "dual" : "suffixmatch";
+    else if (choice === "B") winner = aIsDual ? "suffixmatch" : "dual";
+    results.task2.push({
+      pair_index: pairIndex,
+      a_was: aIsDual ? "dual" : "suffixmatch",
+      participant_choice: choice,
+      winner: winner
+    });
+    t2i++;
+    if (t2i < task2Order.length) {
+      renderTask2();
+    } else {
+      finish();
+    }
+  };
+
+  function finish() {
+    results.finished_at = new Date().toISOString();
+    document.getElementById("screen-task2").classList.add("hidden");
+    document.getElementById("screen-done").classList.remove("hidden");
+    document.getElementById("results-out").value = JSON.stringify(results, null, 2);
+  }
+
+  window.copyResults = function () {
+    const text = document.getElementById("results-out").value;
+    const status = document.getElementById("copy-status");
+    if (navigator.clipboard && window.isSecureContext) {
+      navigator.clipboard.writeText(text).then(
+        () => { status.textContent = "Copied. Paste it wherever you're sending results."; },
+        () => { status.textContent = "Couldn't auto-copy — select the text below and copy manually."; }
+      );
+    } else {
+      const ta = document.getElementById("results-out");
+      ta.focus(); ta.select();
+      try {
+        document.execCommand("copy");
+        status.textContent = "Copied. Paste it wherever you're sending results.";
+      } catch (e) {
+        status.textContent = "Couldn't auto-copy — select the text below and copy manually.";
+      }
+    }
+  };
+})();
+</script>
+</body>
+</html>

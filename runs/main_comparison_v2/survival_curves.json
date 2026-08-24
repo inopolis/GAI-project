@@ -1,0 +1,235 @@
+{
+  "baseline": {
+    "greedy": {
+      "km_times": [
+        75,
+        86,
+        97,
+        231,
+        288,
+        424,
+        427
+      ],
+      "km_survival": [
+        0.8,
+        0.73333,
+        0.66667,
+        0.6,
+        0.53333,
+        0.46667,
+        0.4
+      ],
+      "n_censored": 60,
+      "n_total": 150,
+      "rmst": 318.55,
+      "survival_auc": 0.6371,
+      "event": "persistent_cycle_R5_Pmax60"
+    },
+    "lt_temp_0.05": {
+      "km_times": [
+        75,
+        86,
+        87,
+        97,
+        105,
+        106,
+        110,
+        112,
+        116,
+        174,
+        230,
+        478
+      ],
+      "km_survival": [
+        0.92,
+        0.86,
+        0.82,
+        0.78,
+        0.76,
+        0.72,
+        0.7,
+        0.68,
+        0.62,
+        0.6,
+        0.58,
+        0.54
+      ],
+      "n_censored": 27,
+      "n_total": 50,
+      "rmst": 333.45,
+      "survival_auc": 0.6669,
+      "event": "persistent_cycle_R5_Pmax60"
+    },
+    "lt_temp_0.1": {
+      "km_times": [
+        75,
+        87,
+        93,
+        101,
+        107,
+        155,
+        185
+      ],
+      "km_survival": [
+        0.98667,
+        0.97333,
+        0.96667,
+        0.96,
+        0.95333,
+        0.94667,
+        0.94
+      ],
+      "n_censored": 141,
+      "n_total": 150,
+      "rmst": 476.45,
+      "survival_auc": 0.9529,
+      "event": "persistent_cycle_R5_Pmax60"
+    },
+    "lt_temp_0.15": {
+      "km_times": [
+        205
+      ],
+      "km_survival": [
+        0.96
+      ],
+      "n_censored": 48,
+      "n_total": 50,
+      "rmst": 488.2,
+      "survival_auc": 0.9764,
+      "event": "persistent_cycle_R5_Pmax60"
+    },
+    "lt_rep_penalty_1.3": {
+      "km_times": [
+        236
+      ],
+      "km_survival": [
+        0.99333
+      ],
+      "n_censored": 149,
+      "n_total": 150,
+      "rmst": 498.25,
+      "survival_auc": 0.9965,
+      "event": "persistent_cycle_R5_Pmax60"
+    },
+    "lt_no_repeat_4gram": {
+      "km_times": [
+        0,
+        500
+      ],
+      "km_survival": [
+        1.0,
+        1.0
+      ],
+      "n_censored": 150,
+      "n_total": 150,
+      "rmst": 500.0,
+      "survival_auc": 1.0,
+      "event": "persistent_cycle_R5_Pmax60"
+    },
+    "lt_suffixmatch_a3.0": {
+      "km_times": [
+        0,
+        500
+      ],
+      "km_survival": [
+        1.0,
+        1.0
+      ],
+      "n_censored": 150,
+      "n_total": 150,
+      "rmst": 500.0,
+      "survival_auc": 1.0,
+      "event": "persistent_cycle_R5_Pmax60"
+    },
+    "lt_fsd": {
+      "km_times": [
+        0,
+        500
+      ],
+      "km_survival": [
+        1.0,
+        1.0
+      ],
+      "n_censored": 150,
+      "n_total": 150,
+      "rmst": 500.0,
+      "survival_auc": 1.0,
+      "event": "persistent_cycle_R5_Pmax60"
+    },
+    "lt_lzpenalty": {
+      "km_times": [
+        0,
+        500
+      ],
+      "km_survival": [
+        1.0,
+        1.0
+      ],
+      "n_censored": 150,
+      "n_total": 150,
+      "rmst": 500.0,
+      "survival_auc": 1.0,
+      "event": "persistent_cycle_R5_Pmax60"
+    },
+    "lt_risk_only": {
+      "km_times": [
+        0,
+        500
+      ],
+      "km_survival": [
+        1.0,
+        1.0
+      ],
+      "n_censored": 150,
+      "n_total": 150,
+      "rmst": 500.0,
+      "survival_auc": 1.0,
+      "event": "persistent_cycle_R5_Pmax60"
+    },
+    "lt_adaptive": {
+      "km_times": [
+        0,
+        500
+      ],
+      "km_survival": [
+        1.0,
+        1.0
+      ],
+      "n_censored": 150,
+      "n_total": 150,
+      "rmst": 500.0,
+      "survival_auc": 1.0,
+      "event": "persistent_cycle_R5_Pmax60"
+    },
+    "lt_dual_eps0.01": {
+      "km_times": [
+        0,
+        500
+      ],
+      "km_survival": [
+        1.0,
+        1.0
+      ],
+      "n_censored": 150,
+      "n_total": 150,
+      "rmst": 500.0,
+      "survival_auc": 1.0,
+      "event": "persistent_cycle_R5_Pmax60"
+    },
+    "lt_dual_eps0.05": {
+      "km_times": [
+        0,
+        500
+      ],
+      "km_survival": [
+        1.0,
+        1.0
+      ],
+      "n_censored": 150,
+      "n_total": 150,
+      "rmst": 500.0,
+      "survival_auc": 1.0,
+      "event": "persistent_cycle_R5_Pmax60"
+    }
+  }
+}
