@@ -118,7 +118,7 @@ def build_configs():
     add("lt_fsd", "loop_regime", key=True,
         fsd=dict(temperature=0.10, top_p=1.0, alpha=4.0, n_min=3, n_max=6))
     add("lt_lzpenalty", "loop_regime", key=True,
-        # Authentic reimplementation of Ginart, Kodali, Lee, Xiong, Savarese,
+        # Reimplementation of Ginart, Kodali, Lee, Xiong, Savarese,
         # Emmons, "LZ Penalty: An Information-Theoretic Repetition Penalty
         # for Autoregressive Language Models" (arXiv:2504.20131, TMLR 2026).
         # alpha=0.15 matches the paper's reported sweet-spot value; buffer/
@@ -766,6 +766,7 @@ def eval_checkpoint(ckpt_path, data_dir, n_chars, n_seeds, device, out_dir,
         diag = {"kl_bits": [], "entropy_q": [], "entropy_p": [],
                 "risk_achieved": [], "lambda_mean": [],
                 "dual_feasible_rate": [], "dual_structurally_infeasible_rate": [],
+                "dual_near_boundary_rate": [],
                 "dual_min_risk_mean": [], "dual_violation_mean": [],
                 "dual_violation_max": [], "dual_tolerance_mean": [],
                 "dual_n_doublings_mean": [], "dual_n_doublings_max": []}

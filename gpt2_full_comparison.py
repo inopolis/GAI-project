@@ -319,7 +319,8 @@ def main():
         acc = {"rep_mass_3": [], "compression": [], "longest_rep_sub": [],
                "mc_nll_bits": [], "spelling_error": [], "entropy_4char": []}
         diag = {"kl_bits": [], "risk_achieved": [], "lambda_mean": [],
-                "dual_feasible_rate": [], "dual_structurally_infeasible_rate": []}
+                "dual_feasible_rate": [], "dual_structurally_infeasible_rate": [],
+                "dual_near_boundary_rate": []}
         cps_val = None
 
         for pi, (pname, ptext) in enumerate(TEST_PROMPTS):

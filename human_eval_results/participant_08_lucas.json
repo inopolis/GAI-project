@@ -1,0 +1,231 @@
+{
+  "participant_id": "Lucas",
+  "started_at": "2026-08-31T09:24:18.437Z",
+  "task1": [
+    {
+      "item_index": 9,
+      "category": "nonlooping",
+      "ground_truth_is_loop": false,
+      "participant_says_loop": false,
+      "correct": true
+    },
+    {
+      "item_index": 2,
+      "category": "looping",
+      "ground_truth_is_loop": true,
+      "participant_says_loop": true,
+      "correct": true
+    },
+    {
+      "item_index": 15,
+      "category": "borderline",
+      "ground_truth_is_loop": false,
+      "participant_says_loop": false,
+      "correct": true
+    },
+    {
+      "item_index": 5,
+      "category": "looping",
+      "ground_truth_is_loop": true,
+      "participant_says_loop": true,
+      "correct": true
+    },
+    {
+      "item_index": 12,
+      "category": "borderline",
+      "ground_truth_is_loop": false,
+      "participant_says_loop": false,
+      "correct": true
+    },
+    {
+      "item_index": 7,
+      "category": "nonlooping",
+      "ground_truth_is_loop": false,
+      "participant_says_loop": false,
+      "correct": true
+    },
+    {
+      "item_index": 1,
+      "category": "looping",
+      "ground_truth_is_loop": true,
+      "participant_says_loop": true,
+      "correct": true
+    },
+    {
+      "item_index": 16,
+      "category": "borderline",
+      "ground_truth_is_loop": false,
+      "participant_says_loop": false,
+      "correct": true
+    },
+    {
+      "item_index": 10,
+      "category": "nonlooping",
+      "ground_truth_is_loop": false,
+      "participant_says_loop": false,
+      "correct": true
+    },
+    {
+      "item_index": 3,
+      "category": "looping",
+      "ground_truth_is_loop": true,
+      "participant_says_loop": true,
+      "correct": true
+    },
+    {
+      "item_index": 14,
+      "category": "borderline",
+      "ground_truth_is_loop": false,
+      "participant_says_loop": true,
+      "correct": false
+    },
+    {
+      "item_index": 6,
+      "category": "nonlooping",
+      "ground_truth_is_loop": false,
+      "participant_says_loop": false,
+      "correct": true
+    },
+    {
+      "item_index": 0,
+      "category": "looping",
+      "ground_truth_is_loop": true,
+      "participant_says_loop": true,
+      "correct": true
+    },
+    {
+      "item_index": 17,
+      "category": "borderline",
+      "ground_truth_is_loop": false,
+      "participant_says_loop": false,
+      "correct": true
+    },
+    {
+      "item_index": 8,
+      "category": "nonlooping",
+      "ground_truth_is_loop": false,
+      "participant_says_loop": false,
+      "correct": true
+    },
+    {
+      "item_index": 4,
+      "category": "looping",
+      "ground_truth_is_loop": true,
+      "participant_says_loop": true,
+      "correct": true
+    },
+    {
+      "item_index": 13,
+      "category": "borderline",
+      "ground_truth_is_loop": false,
+      "participant_says_loop": false,
+      "correct": true
+    },
+    {
+      "item_index": 11,
+      "category": "nonlooping",
+      "ground_truth_is_loop": false,
+      "participant_says_loop": false,
+      "correct": true
+    }
+  ],
+  "task2": [
+    {
+      "pair_index": 5,
+      "method_a": "dual",
+      "method_b": "lzpenalty",
+      "a_was": "lzpenalty",
+      "participant_choice": "A",
+      "winner": "lzpenalty"
+    },
+    {
+      "pair_index": 10,
+      "method_a": "fsd",
+      "method_b": "lzpenalty",
+      "a_was": "fsd",
+      "participant_choice": "A",
+      "winner": "fsd"
+    },
+    {
+      "pair_index": 1,
+      "method_a": "dual",
+      "method_b": "suffixmatch",
+      "a_was": "suffixmatch",
+      "participant_choice": "A",
+      "winner": "suffixmatch"
+    },
+    {
+      "pair_index": 7,
+      "method_a": "suffixmatch",
+      "method_b": "fsd",
+      "a_was": "suffixmatch",
+      "participant_choice": "B",
+      "winner": "fsd"
+    },
+    {
+      "pair_index": 3,
+      "method_a": "dual",
+      "method_b": "fsd",
+      "a_was": "fsd",
+      "participant_choice": "A",
+      "winner": "fsd"
+    },
+    {
+      "pair_index": 8,
+      "method_a": "suffixmatch",
+      "method_b": "lzpenalty",
+      "a_was": "lzpenalty",
+      "participant_choice": "A",
+      "winner": "lzpenalty"
+    },
+    {
+      "pair_index": 0,
+      "method_a": "dual",
+      "method_b": "suffixmatch",
+      "a_was": "dual",
+      "participant_choice": "B",
+      "winner": "suffixmatch"
+    },
+    {
+      "pair_index": 11,
+      "method_a": "fsd",
+      "method_b": "lzpenalty",
+      "a_was": "lzpenalty",
+      "participant_choice": "B",
+      "winner": "fsd"
+    },
+    {
+      "pair_index": 4,
+      "method_a": "dual",
+      "method_b": "lzpenalty",
+      "a_was": "dual",
+      "participant_choice": "B",
+      "winner": "lzpenalty"
+    },
+    {
+      "pair_index": 9,
+      "method_a": "suffixmatch",
+      "method_b": "lzpenalty",
+      "a_was": "suffixmatch",
+      "participant_choice": "B",
+      "winner": "lzpenalty"
+    },
+    {
+      "pair_index": 2,
+      "method_a": "dual",
+      "method_b": "fsd",
+      "a_was": "dual",
+      "participant_choice": "B",
+      "winner": "fsd"
+    },
+    {
+      "pair_index": 6,
+      "method_a": "suffixmatch",
+      "method_b": "fsd",
+      "a_was": "fsd",
+      "participant_choice": "A",
+      "winner": "fsd"
+    }
+  ],
+  "finished_at": "2026-08-31T09:34:52.816Z"
+}

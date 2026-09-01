@@ -101,13 +101,13 @@ def summarize_task1(blobs):
 
 
 def summarize_task2(blobs):
-    print("\n=== Part 2: pairwise preference (dual vs suffixmatch) ===")
+    print("\n=== Part 2: pairwise preference (all method pairings) ===")
     all_records = []
     for b in blobs:
         pid = b.get("participant_id", b["_source_file"])
         c = Counter(r["winner"] for r in b["task2"])
-        print(f"  {pid:<20} dual={c.get('dual',0)} suffixmatch={c.get('suffixmatch',0)} "
-              f"tie={c.get('tie',0)}")
+        summary = "  ".join(f"{k}={v}" for k, v in sorted(c.items()))
+        print(f"  {pid:<20} {summary}")
         for r in b["task2"]:
             r = dict(r); r["participant_id"] = pid
             all_records.append(r)
@@ -116,25 +116,52 @@ def summarize_task2(blobs):
         print("  (no data)")
         return
 
-    c = Counter(r["winner"] for r in all_records)
-    n_dual, n_sfx, n_tie = c.get("dual", 0), c.get("suffixmatch", 0), c.get("tie", 0)
-    n_total = n_dual + n_sfx + n_tie
-    print(f"\n  POOLED: dual={n_dual}  suffixmatch={n_sfx}  tie={n_tie}  "
-          f"(n={n_total})")
+    # Group by pair-TYPE (method_a, method_b), order-independent, since older
+    # result blobs (pre-expansion) may only have dual/suffixmatch and lack
+    # method_a/method_b -- back-fill those from the only two winners possible
+    # in that older format so old and new result files can still be combined.
+    for r in all_records:
+        if "method_a" not in r:
+            r["method_a"], r["method_b"] = "dual", "suffixmatch"
 
-    # Two-sided sign test on decisive (non-tie) comparisons: is dual
-    # preferred more often than chance among cases with a stated preference?
-    n_decisive = n_dual + n_sfx
-    if n_decisive > 0:
-        p_dual = n_dual / n_decisive
-        lo, hi = clopper_pearson(n_dual, n_decisive)
-        print(f"  Among decisive comparisons (excl. ties): dual preferred "
-              f"{n_dual}/{n_decisive} ({100*p_dual:.1f}%), 95% CI "
-              f"[{lo*100:.1f}%, {hi*100:.1f}%]")
-        print("  (50% = no preference either way; this is a small-n pilot "
-              "statistic, not a claim of significance on its own.)")
-    else:
-        print("  No decisive comparisons (all ties).")
+    by_pair = defaultdict(list)
+    for r in all_records:
+        key = tuple(sorted((r["method_a"], r["method_b"])))
+        by_pair[key].append(r)
+
+    print(f"\n  By pairing (n={len(all_records)} total comparisons, "
+          f"{len(by_pair)} distinct pairings):")
+    for (m1, m2), records in sorted(by_pair.items()):
+        c = Counter(r["winner"] for r in records)
+        n1, n2, tie = c.get(m1, 0), c.get(m2, 0), c.get("tie", 0)
+        n_decisive = n1 + n2
+        if n_decisive > 0:
+            lo, hi = clopper_pearson(n1, n_decisive)
+            print(f"    {m1} vs {m2}: {m1}={n1} {m2}={n2} tie={tie}  "
+                  f"({m1} preferred {100*n1/n_decisive:.0f}% of decisive votes, "
+                  f"95% CI [{lo*100:.0f}%, {hi*100:.0f}%])")
+        else:
+            print(f"    {m1} vs {m2}: {m1}={n1} {m2}={n2} tie={tie}  (all ties)")
+
+    # Pooled per-method win rate across every pairing it appeared in -- a
+    # simple tally, NOT a Bradley-Terry or other model-based ranking; useful
+    # as an at-a-glance summary only, and only as informative as the (small,
+    # pilot-scale) n behind it.
+    wins, appearances = Counter(), Counter()
+    for r in all_records:
+        appearances[r["method_a"]] += 1
+        appearances[r["method_b"]] += 1
+        if r["winner"] != "tie":
+            wins[r["winner"]] += 1
+    print("\n  Pooled win rate per method (simple tally across all its pairings, "
+          "not a fitted ranking model):")
+    for method in sorted(appearances):
+        n = appearances[method]
+        w = wins.get(method, 0)
+        print(f"    {method:<14} won {w}/{n} comparisons it appeared in "
+              f"({100*w/n:.0f}%)")
+    print("  (This is a small-n pilot statistic throughout; no significance "
+          "claim is made from it alone.)")
 
 
 def main():

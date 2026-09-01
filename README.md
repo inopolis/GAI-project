@@ -39,6 +39,17 @@ sampling_eval.py              Main decoding-strategy comparison (character model
                                equal-budget sweeps, multiple loop definitions,
                                survival analysis, prompt-clustered paired
                                bootstrap, per-step diagnostics (opt-in).
+merge_sampling_eval_runs.py   Merges two or more sampling_eval.py --only output
+                               dirs (e.g. a full run plus a later partial rerun)
+                               into one complete result set, recomputing every
+                               derived artifact via sampling_eval.py's own
+                               functions rather than hand-patching CSVs.
+common_kl_comparison.py       Fair common-distortion comparison: KL(q||p),
+                               standard recurrence risk, and per-step latency
+                               for EVERY decoder (LZ, FSD, repetition penalty,
+                               SuffixMatch, all RR modes) against the same
+                               reference distribution p and the same risk
+                               definition -- not only the RR family.
 validate_loop_event_v2.py     Calibrate/freeze/validate the character-level
                                persistent-loop event on corpora disjoint from
                                every headline-experiment corpus.
@@ -156,7 +167,7 @@ Decoders compared (see `src/decoding.py` docstrings for full detail on each):
 | `lt_no_repeat_Ngram` | — | Hard constraint; kept separate, directly forbids the measured event |
 | `lt_suffixmatch_*` | `SuffixMatchDecoder` | Homemade LZ77-style baseline. **Not** the published Look-back algorithm (renamed from the earlier, misleading `LookBackDecoder`) |
 | `lt_fsd` | `FSDDecoder` | Good-faith FSD-*style* reconstruction, not a certified reproduction |
-| `lt_lzpenalty` | `LZPenaltyDecoder` | Authentic reimplementation of Ginart et al., *LZ Penalty* (arXiv:2504.20131, TMLR 2026) |
+| `lt_lzpenalty` | `LZPenaltyDecoder` | Reimplementation of Ginart et al., *LZ Penalty* (arXiv:2504.20131, TMLR 2026), following its formula and dynamic range — **not "authentic"**: one indexing-convention deviation from the published algorithm is unverified against a reference implementation, so treat it the same as the FSD-*style* baseline, not as a certified reproduction |
 | `lt_risk_only`, `lt_adaptive` | `RecurrenceRiskDecoder` (`mode="fixed"` / `"adaptive"`) | No exact projection guarantee |
 | `lt_dual_eps*` | `RecurrenceRiskDecoder` (`mode="dual"`) | The **only** mode entitled to the exact minimum-distortion claim; lambda is solved from eps every step in log-space (see `_solve_dual_lambda`) |
 
@@ -176,7 +187,37 @@ Writes `runs/main_comparison/per_step_diagnostics/*.jsonl`. This is a
 short, four-config rerun, not a full 13-config one — the other configs
 never populate `per_step_log` and are unaffected by the dual-mode fix.
 
-## 7. Generalization checks
+**Merging a partial `--only` rerun back into a full run's output**: `sampling_eval.py`'s
+`--only` mode overwrites every derived file (`metrics_*.csv`, `pareto_data.csv`,
+`loop_robustness.csv`, `survival_curves.json`, `all_results.json`, `samples_*.txt`)
+with ONLY the subset of configs it just ran — pointing `--only` at an existing
+full run's `--out_dir` silently destroys every other config's data in those
+files. Always give a partial rerun its own fresh `--out_dir`, then merge:
+```bash
+python3 merge_sampling_eval_runs.py \
+  --runs runs/main_comparison_partial runs/main_comparison \
+  --out_dir runs/main_comparison_final --n_chars 500
+```
+Later directories in `--runs` win on strategy-name conflicts; neither input
+directory is modified.
+
+## 7. Common-distortion comparison (fair KL/risk/latency across ALL decoders)
+
+`sampling_eval.py`'s tables report KL(q‖p) only for the recurrence-risk modes,
+since only `RecurrenceRiskDecoder` computed a comparable figure. This scores
+LZ Penalty, FSD-style, repetition penalty, SuffixMatch, and all RR modes
+against the SAME reference distribution and the SAME standard risk
+definition, plus plain temperature sampling as a built-in sanity check
+(`q == p` exactly, KL should print as `0.0000b`):
+```bash
+python3 common_kl_comparison.py \
+  --ckpt runs/cosine/best.pt --out_dir runs/common_kl_comparison \
+  --n_seeds 10 --n_chars 500 --prompt_set test
+```
+Validated correct on a small pilot run (5 dev prompts × 1 seed × 20 chars);
+not yet run at this full, headline scale.
+
+## 8. Generalization checks
 
 **Non-fiction corpus, same architecture** (same protocol, disjoint corpus):
 ```bash
@@ -200,7 +241,7 @@ python3 gpt2_full_comparison.py --model gpt2 --n_seeds 10 --n_tokens 200 \
   --out_dir runs/gpt2_full_comparison
 ```
 
-## 8. Hazard-aware extension (synthetic-validated, real-model transfer tested honestly)
+## 9. Hazard-aware extension (synthetic-validated, real-model transfer tested honestly)
 
 ```bash
 python3 synthetic_fsm_hazard.py          # exact DP ground truth
@@ -211,14 +252,14 @@ Validated where ground truth is exactly known; found not to transfer to the
 real model under the specific rollout estimator tested. Reported in the
 paper as a scope-limited null result of that estimator, not a general claim.
 
-## 9. Significance testing and figures
+## 10. Significance testing and figures
 
 ```bash
 python3 compute_significance.py
 python3 plot_results.py --dir runs/main_comparison --out runs/main_comparison/plots
 ```
 
-## 10. Human evaluation
+## 11. Human evaluation
 
 `human_eval_tool.html` is a single self-contained file — open it directly in
 any browser (`file://...`, no server, no internet, works fully offline).
@@ -234,7 +275,7 @@ python3 aggregate_human_eval.py results_participant1.json results_participant2.j
 
 See `last_paper.tex`, Section "Human evaluation", for the full protocol.
 
-## 11. Full reproduction, start to finish
+## 12. Full reproduction, start to finish
 
 ```bash
 pip install -r requirements.txt

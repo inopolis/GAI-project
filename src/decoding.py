@@ -51,15 +51,30 @@ Theory (RecurrenceRiskDecoder) -- stated precisely:
                       REWARD recurrence -- and the entropy term can drive the
                       raw update negative.
 
-  Infinite-penalty limit -- corrected statement:
+  Infinite-penalty limit -- corrected statement, STILL not "exactly" even in
+  the degenerate case (found on a second review pass; the first correction
+  below was itself incomplete):
   With a multi-order risk risk(v) = (1/N) sum_n 1[v completes a repeated n-gram],
   letting lambda -> infinity concentrates q on argmin_v risk(v) (reweighted by p),
   NOT on the complement of a single order's blocked set. When some token has
   risk = 0 the limit is a hard block of the UNION over orders n_min..n_max; when
   every token has positive risk the limit keeps the minimum-risk tokens instead
-  of being undefined. The limit therefore reproduces STANDARD no-repeat-n-gram
-  only in the single-order case n_min = n_max. This is stated as such; the
-  earlier blanket claim was wrong.
+  of being undefined. Even restricted to the single-order case (n_min = n_max),
+  where this DOES converge to the same SURVIVING SET as no_repeat_ngram_filtering
+  (both keep exactly the risk=0 / not-previously-followed tokens, reweighted by
+  p), it is not correct to call the two "the same" without qualification: when
+  EVERY token has positive risk at that order (no safe continuation exists),
+  no_repeat_ngram_filtering bans the entire vocabulary -- verified directly to
+  produce an all--inf logit vector, which torch.softmax turns into an all-NaN
+  probability tensor and torch.multinomial then raises RuntimeError, i.e. hard
+  no-repeat CRASHES generation in this case -- while RecurrenceRiskDecoder's
+  large-but-finite lambda gracefully concentrates on the minimum-risk tokens
+  instead. The two mechanisms therefore agree on the surviving distribution
+  whenever a risk=0 token exists, and diverge in behavior (not merely in
+  degree) exactly when one does not. "Reproduces standard no-repeat-n-gram"
+  is accurate only with this qualification attached, in the single-order case;
+  it is not accurate, in any case, as an unqualified "becomes hard no-repeat
+  as lambda->infinity" statement, which is not made here.
 
 Implementation note on recurrence risk:
   risk(v) is computed from an INCREMENTALLY MAINTAINED hash map from each
@@ -231,9 +246,16 @@ class SuffixMatchDecoder:
         return best_len, followers
 
     def step(self, logits, generated_ids):
+        # self.last_q: the actual sampling distribution this step, exposed
+        # (not just sampled from) so an external harness can compute
+        # KL(q||p) and E_q[risk] against a common reference p -- same
+        # opt-in-by-reading pattern as RecurrenceRiskDecoder.per_step_log,
+        # added for the common-distortion comparison across ALL decoders,
+        # not only the recurrence-risk family.
         if len(generated_ids) < 2:
             logits = logits / max(self.temperature, 1e-6)
             probs  = torch.softmax(top_p_filtering(logits.unsqueeze(0), self.top_p).squeeze(0), dim=-1)
+            self.last_q = probs
             return int(torch.multinomial(probs, 1).item())
 
         hist = generated_ids[max(0, len(generated_ids) - self.max_history):]
@@ -248,6 +270,7 @@ class SuffixMatchDecoder:
         logits = logits / max(self.temperature, 1e-6)
         logits = top_p_filtering(logits.unsqueeze(0), self.top_p).squeeze(0)
         probs  = torch.softmax(logits, dim=-1)
+        self.last_q = probs
         return int(torch.multinomial(probs, 1).item())
 
 
@@ -338,6 +361,7 @@ class FSDDecoder:
         adjusted = adjusted / max(self.temperature, 1e-6)
         adjusted = top_p_filtering(adjusted.unsqueeze(0), self.top_p).squeeze(0)
         probs = torch.softmax(adjusted, dim=-1)
+        self.last_q = probs  # exposed for the common-distortion comparison
         token = int(torch.multinomial(probs, 1).item())
         self._register(token)
         return token
@@ -359,10 +383,15 @@ class LZPenaltyDecoder:
     """
     Reimplementation of the LZ penalty, Ginart, Kodali, Lee, Xiong, Savarese,
     and Emmons, "LZ Penalty: An Information-Theoretic Repetition Penalty for
-    Autoregressive Language Models" (arXiv:2504.20131; TMLR 2026). This is a
-    real, verified, accepted paper, not a "-style" reconstruction of an
-    unclear method, and this implementation follows its closed-form penalty
-    (their eq. 14) directly:
+    Autoregressive Language Models" (arXiv:2504.20131; TMLR 2026), a real,
+    verified, accepted paper with one unambiguous closed-form penalty (their
+    eq. 14), which this implementation follows directly for its formula and
+    dynamic range. NOT to be called "authentic": per review, the "extending
+    a match" indexing convention below is this implementation's own choice,
+    not a verified match to the authors' code (no reference implementation
+    was available to check against) -- report it, like the FSD-style
+    baseline, as a reimplementation with a documented, unresolved deviation,
+    not as a certified reproduction of the published method's exact numbers:
 
         Delta|C_LZ|(a) =
             log(V)                         if lambda(a) = 0  (no match at all)
@@ -475,6 +504,7 @@ class LZPenaltyDecoder:
         adjusted = adjusted / max(self.temperature, 1e-6)
         adjusted = top_p_filtering(adjusted.unsqueeze(0), self.top_p).squeeze(0)
         probs = torch.softmax(adjusted, dim=-1)
+        self.last_q = probs  # exposed for the common-distortion comparison
         token = int(torch.multinomial(probs, 1).item())
         self._all_ids.append(token)
         return token
@@ -567,6 +597,10 @@ class RecurrenceRiskDecoder:
         self.hp_history   = []   # H(p) in bits
         self.risk_history = []   # E_q[risk] actually achieved
         self.feasible_history = []   # dual mode only: was eps attainable at all
+        self.near_boundary_history = []  # dual mode only: eps within float32
+        # tolerance of min_v risk(v) -- distinguishes the boundary case
+        # (no finite lambda satisfies complementary slackness exactly, only
+        # the limit; see _solve_dual_lambda) from an ordinary interior point.
         self.structurally_infeasible_history = []  # dual mode only: TRUE infeasibility
         # (min_v risk(v) > eps, proven, not a bracket/search limitation --
         # see _solve_dual_lambda docstring). Renamed from the earlier
@@ -593,6 +627,7 @@ class RecurrenceRiskDecoder:
         self.kl_history = []; self.hq_history = []
         self.hp_history = []; self.risk_history = []
         self.feasible_history = []; self.structurally_infeasible_history = []
+        self.near_boundary_history = []
         self.min_risk_history = []; self.violation_history = []
         self.tolerance_history = []; self.n_doublings_history = []
 
@@ -731,19 +766,51 @@ class RecurrenceRiskDecoder:
             found, then bisects within it -- so "the cap was too small" is
             no longer a possible failure mode by construction.
 
+        BOUNDARY CASE, found on review: at exactly eps == min_v risk(v), the
+        primal problem (P) is feasible -- the degenerate distribution
+        concentrated on argmin(risk) achieves E_q[risk] = eps exactly -- but
+        NO FINITE lambda attains this via the exponential-tilting form (F):
+        g(lambda) -> min_v risk(v) only as lambda -> infinity, so there is no
+        lambda satisfying complementary slackness g(lambda) = eps at this
+        exact point, only a supremum approached in the limit (this is a gap
+        in the theorem as originally stated, not only an implementation
+        detail). `risk` is a float32 tensor while `self.eps` is a Python
+        float (effectively float64); reproduced directly: constructing
+        eps == float(risk.min()) exactly in float64 still fails the naive
+        `min_attainable_risk > self.eps` check due to float32 rounding of
+        the risk value alone (e.g. risk.min() rounds to a float32 value
+        VISIBLY ABOVE the intended float64 eps for eps=0.1), which would
+        misreport a boundary case that IS solvable (up to floating-point
+        precision, since non-minimal terms underflow to exactly 0.0 once
+        lambda is large enough -- verified empirically, see paper Section
+        ~\ref{ssec:dual-fix}) as `structurally_infeasible`, conflating a
+        genuine mathematical impossibility with float32 rounding noise --
+        exactly the kind of numerical/structural conflation this diagnostic
+        was built to eliminate. Fixed with an explicit tolerance and a
+        distinct `near_boundary` flag so this case is neither silently
+        misclassified as infeasible nor silently indistinguishable from an
+        ordinary feasible point in any saved diagnostic.
+
         Returns a dict: lambda, achieved, feasible, structurally_infeasible,
-        min_attainable_risk, violation, tolerance, n_doublings.
+        near_boundary, min_attainable_risk, violation, tolerance, n_doublings.
         """
+        # float32 tensor vs Python float comparison tolerance: risk values
+        # are sums of 1/n_sizes terms (n_sizes typically 1-10), so float32's
+        # ~1.2e-7 relative precision near these magnitudes is comfortably
+        # covered by 1e-6 absolute without masking genuine infeasibility at
+        # any eps granularity actually used in this project (0.01 steps).
+        BOUNDARY_TOL = 1e-6
         min_attainable_risk = float(risk.min())
         p = torch.exp(log_p)
         g0 = float((p * risk).sum())
         if g0 <= self.eps:
             return {"lambda": 0.0, "achieved": g0, "feasible": True,
-                    "structurally_infeasible": False,
+                    "structurally_infeasible": False, "near_boundary": False,
                     "min_attainable_risk": min_attainable_risk,
                     "violation": 0.0, "tolerance": 0.0, "n_doublings": 0}
 
-        if min_attainable_risk > self.eps:
+        near_boundary = abs(min_attainable_risk - self.eps) <= BOUNDARY_TOL
+        if min_attainable_risk > self.eps + BOUNDARY_TOL:
             # Proven infeasible: no lambda can satisfy eps, since even
             # concentrating all mass on argmin(risk) gives exactly
             # min_attainable_risk > eps. Use a large-but-finite lambda so
@@ -754,7 +821,7 @@ class RecurrenceRiskDecoder:
             log_q = self._log_q_of_lambda(log_p, risk, big_lambda)
             achieved = float((torch.exp(log_q) * risk).sum())
             return {"lambda": big_lambda, "achieved": achieved, "feasible": False,
-                    "structurally_infeasible": True,
+                    "structurally_infeasible": True, "near_boundary": near_boundary,
                     "min_attainable_risk": min_attainable_risk,
                     "violation": max(0.0, achieved - self.eps),
                     "tolerance": float("nan"), "n_doublings": 0}
@@ -765,24 +832,37 @@ class RecurrenceRiskDecoder:
         # anything a float32/float64 risk-weighted logit shift could need
         # (Appendix: order-of-magnitude estimate), so this loop terminates
         # in practice essentially always at single-digit doubling counts.
+        # Near the boundary (min_v risk(v) within BOUNDARY_TOL of eps), the
+        # float32-rounded risk floor itself can sit fractionally above the
+        # float64 eps by an amount smaller than BOUNDARY_TOL but nonzero, so
+        # g(lambda) can never cross a STRICT self.eps threshold even as
+        # lambda->infinity -- the exit condition must use the same tolerance
+        # as the entry-gate check above, or this loop always burns all 60
+        # doublings for exactly this (feasible, not pathological) case.
+        target = self.eps + (BOUNDARY_TOL if near_boundary else 0.0)
         hi = 1.0
         n_doublings = 0
         log_q_hi = self._log_q_of_lambda(log_p, risk, hi)
         g_hi = float((torch.exp(log_q_hi) * risk).sum())
-        while g_hi > self.eps and n_doublings < 60:
+        while g_hi > target and n_doublings < 60:
             hi *= 2.0
             n_doublings += 1
             log_q_hi = self._log_q_of_lambda(log_p, risk, hi)
             g_hi = float((torch.exp(log_q_hi) * risk).sum())
 
-        if g_hi > self.eps:
-            # Should not happen given the min_attainable_risk<=eps guard
-            # above, but report honestly rather than silently proceed if
-            # 60 doublings genuinely was not enough (e.g. a pathological
-            # risk vector at the edge of float precision).
+        if g_hi > target:
+            # Not the ordinary case, but NOT necessarily a search failure
+            # either: at or very near eps == min_v risk(v), g(lambda) only
+            # approaches min_v risk(v) as lambda -> infinity in EXACT
+            # arithmetic and may still read as fractionally above self.eps
+            # after 60 doublings even though the true limiting distribution
+            # is achievable (near_boundary=True flags exactly this case, see
+            # _solve_dual_lambda's docstring). Away from that boundary this
+            # would indicate a genuinely pathological risk vector; report
+            # honestly either way rather than silently proceed.
             achieved = g_hi
             return {"lambda": hi, "achieved": achieved, "feasible": False,
-                    "structurally_infeasible": False,
+                    "structurally_infeasible": False, "near_boundary": near_boundary,
                     "min_attainable_risk": min_attainable_risk,
                     "violation": max(0.0, achieved - self.eps),
                     "tolerance": float("nan"), "n_doublings": n_doublings}
@@ -792,14 +872,14 @@ class RecurrenceRiskDecoder:
             mid = 0.5 * (lo + hi)
             log_q_m = self._log_q_of_lambda(log_p, risk, mid)
             g_m = float((torch.exp(log_q_m) * risk).sum())
-            if g_m > self.eps:
+            if g_m > target:
                 lo = mid
             else:
                 hi = mid
         log_q_final = self._log_q_of_lambda(log_p, risk, hi)
         achieved = float((torch.exp(log_q_final) * risk).sum())
         return {"lambda": hi, "achieved": achieved, "feasible": True,
-                "structurally_infeasible": False,
+                "structurally_infeasible": False, "near_boundary": near_boundary,
                 "min_attainable_risk": min_attainable_risk,
                 "violation": max(0.0, achieved - self.eps),
                 "tolerance": float(hi - lo), "n_doublings": n_doublings}
@@ -810,15 +890,26 @@ class RecurrenceRiskDecoder:
         materialize-then-relog step, so no underflow floor is needed): a
         vanishing q(v) contributes exp(log_q(v))~=0 times a finite
         log-ratio, i.e. correctly ~0 to the sum, rather than a corrupted
-        floored log value."""
+        floored log value -- PROVIDED log_q(v) itself stays finite. When
+        log_q(v) is exactly -inf (possible when top_p filtering runs AFTER
+        the projection, per its own "voids exactness" warning above: a
+        masked entry's log-prob is genuinely -inf, not merely very
+        negative), the naive product is 0 * (-inf) = NaN in IEEE754, not 0,
+        silently poisoning every downstream mean. Fixed by the standard
+        information-theory convention 0*log(0/p) := 0, applied via an
+        explicit mask rather than relying on the arithmetic to already
+        behave that way."""
         q = torch.exp(log_q)
-        return float((q * (log_q - log_p)).sum() / math.log(2.0))
+        term = q * (log_q - log_p)
+        return float(torch.where(q > 0, term, torch.zeros_like(term)).sum() / math.log(2.0))
 
     @staticmethod
     def _entropy_bits(log_d):
-        """H(d) in bits, from log-probabilities directly, same rationale."""
+        """H(d) in bits, from log-probabilities directly, same rationale and
+        same 0*log(0) := 0 fix as _kl_bits for entries where log_d is -inf."""
         d = torch.exp(log_d)
-        return float(-(d * log_d).sum() / math.log(2.0))
+        term = d * log_d
+        return float(-torch.where(d > 0, term, torch.zeros_like(term)).sum() / math.log(2.0))
 
 
     def step(self, logits, generated_ids=None):
@@ -843,6 +934,7 @@ class RecurrenceRiskDecoder:
             q_logits = top_p_filtering(q_logits.unsqueeze(0), self.top_p).squeeze(0)
             log_q = F.log_softmax(q_logits, dim=-1)
             q = torch.exp(log_q)
+            self.last_q = q  # exposed for the common-distortion comparison
             self.kl_history.append(self._kl_bits(log_q, log_p))
             self.hq_history.append(self._entropy_bits(log_q))
             self.hp_history.append(self._entropy_bits(log_p))
@@ -871,6 +963,7 @@ class RecurrenceRiskDecoder:
             self.alpha_history.append(lam)
             self.feasible_history.append(d["feasible"])
             self.structurally_infeasible_history.append(d["structurally_infeasible"])
+            self.near_boundary_history.append(d["near_boundary"])
             self.min_risk_history.append(d["min_attainable_risk"])
             self.violation_history.append(d["violation"])
             self.tolerance_history.append(d["tolerance"])
@@ -890,6 +983,7 @@ class RecurrenceRiskDecoder:
             if step_record is not None:
                 step_record.update({"lambda": lam, "achieved": achieved})
 
+        self.last_q = q  # exposed for the common-distortion comparison
         kl = self._kl_bits(log_q, log_p)
         hq = self._entropy_bits(log_q)
         hp = self._entropy_bits(log_p)
@@ -920,6 +1014,8 @@ class RecurrenceRiskDecoder:
             out["dual_feasible_rate"] = (sum(self.feasible_history) / n) if n else float("nan")
             out["dual_structurally_infeasible_rate"] = (
                 sum(self.structurally_infeasible_history) / n) if n else float("nan")
+            out["dual_near_boundary_rate"] = (
+                sum(self.near_boundary_history) / n) if n else float("nan")
             out["dual_min_risk_mean"] = f(self.min_risk_history)
             out["dual_violation_mean"] = f(self.violation_history)
             out["dual_violation_max"]  = (max(self.violation_history) if self.violation_history else float("nan"))
