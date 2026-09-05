@@ -96,7 +96,7 @@ def cluster_ci(oa, ob, groups, mt, nb=3000, seed=0):
 PAIRS = [
     ("lt_risk_only", "lt_temp_0.1"),
     ("lt_risk_only", "lt_rep_penalty_1.3"),
-    ("lt_risk_only", "lt_lookback_a3.0"),
+    ("lt_risk_only", "lt_suffixmatch_a3.0"),
     ("lt_risk_only", "lt_dual_eps0.05"),
     ("lt_risk_only", "lt_adaptive"),
     ("lt_adaptive", "lt_dual_eps0.05"),

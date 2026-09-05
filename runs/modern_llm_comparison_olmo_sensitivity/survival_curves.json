@@ -1,0 +1,106 @@
+{
+  "temperature_reference": {
+    "km_times": [
+      96,
+      101,
+      103,
+      131
+    ],
+    "km_survival": [
+      0.94,
+      0.92,
+      0.9,
+      0.88
+    ],
+    "n_censored": 44,
+    "n_total": 50,
+    "rmst": 144.47,
+    "event": "persistent_cycle_R6_Pmax20_tokens"
+  },
+  "lt_suffixmatch_a3.0": {
+    "km_times": [
+      0,
+      150
+    ],
+    "km_survival": [
+      1.0,
+      1.0
+    ],
+    "n_censored": 50,
+    "n_total": 50,
+    "rmst": 150.0,
+    "event": "persistent_cycle_R6_Pmax20_tokens"
+  },
+  "lt_fsd": {
+    "km_times": [
+      0,
+      150
+    ],
+    "km_survival": [
+      1.0,
+      1.0
+    ],
+    "n_censored": 50,
+    "n_total": 50,
+    "rmst": 150.0,
+    "event": "persistent_cycle_R6_Pmax20_tokens"
+  },
+  "lt_risk_only": {
+    "km_times": [
+      96,
+      130,
+      143,
+      150
+    ],
+    "km_survival": [
+      0.94,
+      0.92,
+      0.9,
+      0.88
+    ],
+    "n_censored": 44,
+    "n_total": 50,
+    "rmst": 146.22,
+    "event": "persistent_cycle_R6_Pmax20_tokens"
+  },
+  "lt_adaptive": {
+    "km_times": [
+      130
+    ],
+    "km_survival": [
+      0.98
+    ],
+    "n_censored": 49,
+    "n_total": 50,
+    "rmst": 149.59,
+    "event": "persistent_cycle_R6_Pmax20_tokens"
+  },
+  "lt_dual_eps0.01": {
+    "km_times": [
+      0,
+      150
+    ],
+    "km_survival": [
+      1.0,
+      1.0
+    ],
+    "n_censored": 50,
+    "n_total": 50,
+    "rmst": 150.0,
+    "event": "persistent_cycle_R6_Pmax20_tokens"
+  },
+  "lt_dual_eps0.05": {
+    "km_times": [
+      0,
+      150
+    ],
+    "km_survival": [
+      1.0,
+      1.0
+    ],
+    "n_censored": 50,
+    "n_total": 50,
+    "rmst": 150.0,
+    "event": "persistent_cycle_R6_Pmax20_tokens"
+  }
+}

@@ -22,9 +22,9 @@
     "cluster_ci_hi": 15.86
   },
   {
-    "comparison": "lt_risk_only vs lt_lookback_a3.0",
+    "comparison": "lt_risk_only vs lt_suffixmatch_a3.0",
     "method_a": "lt_risk_only",
-    "method_b": "lt_lookback_a3.0",
+    "method_b": "lt_suffixmatch_a3.0",
     "n_prompts": 15,
     "obs_dRMST": -7.13,
     "p_exact_signflip": 0.125,

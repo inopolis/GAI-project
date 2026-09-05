@@ -1,0 +1,214 @@
+{
+  "greedy": {
+    "km_times": [
+      96
+    ],
+    "km_survival": [
+      0.9
+    ],
+    "n_censored": 45,
+    "n_total": 50,
+    "rmst": 144.6,
+    "event": "persistent_cycle_R6_Pmax20_tokens"
+  },
+  "temperature_reference": {
+    "km_times": [
+      96,
+      101,
+      103,
+      131
+    ],
+    "km_survival": [
+      0.94,
+      0.92,
+      0.9,
+      0.88
+    ],
+    "n_censored": 44,
+    "n_total": 50,
+    "rmst": 144.47,
+    "event": "persistent_cycle_R6_Pmax20_tokens"
+  },
+  "lt_temp_0.05": {
+    "km_times": [
+      96,
+      101,
+      108,
+      115
+    ],
+    "km_survival": [
+      0.92,
+      0.9,
+      0.88,
+      0.86
+    ],
+    "n_censored": 43,
+    "n_total": 50,
+    "rmst": 143.16,
+    "event": "persistent_cycle_R6_Pmax20_tokens"
+  },
+  "lt_temp_0.1": {
+    "km_times": [
+      96,
+      101,
+      103,
+      131
+    ],
+    "km_survival": [
+      0.94,
+      0.92,
+      0.9,
+      0.88
+    ],
+    "n_censored": 44,
+    "n_total": 50,
+    "rmst": 144.47,
+    "event": "persistent_cycle_R6_Pmax20_tokens"
+  },
+  "lt_temp_0.15": {
+    "km_times": [
+      96,
+      101,
+      129,
+      146
+    ],
+    "km_survival": [
+      0.96,
+      0.94,
+      0.92,
+      0.9
+    ],
+    "n_censored": 45,
+    "n_total": 50,
+    "rmst": 146.35,
+    "event": "persistent_cycle_R6_Pmax20_tokens"
+  },
+  "lt_rep_penalty_1.3": {
+    "km_times": [
+      0,
+      150
+    ],
+    "km_survival": [
+      1.0,
+      1.0
+    ],
+    "n_censored": 50,
+    "n_total": 50,
+    "rmst": 150.0,
+    "event": "persistent_cycle_R6_Pmax20_tokens"
+  },
+  "lt_no_repeat_3gram": {
+    "km_times": [
+      0,
+      150
+    ],
+    "km_survival": [
+      1.0,
+      1.0
+    ],
+    "n_censored": 50,
+    "n_total": 50,
+    "rmst": 150.0,
+    "event": "persistent_cycle_R6_Pmax20_tokens"
+  },
+  "lt_suffixmatch_a3.0": {
+    "km_times": [
+      0,
+      150
+    ],
+    "km_survival": [
+      1.0,
+      1.0
+    ],
+    "n_censored": 50,
+    "n_total": 50,
+    "rmst": 150.0,
+    "event": "persistent_cycle_R6_Pmax20_tokens"
+  },
+  "lt_fsd": {
+    "km_times": [
+      0,
+      150
+    ],
+    "km_survival": [
+      1.0,
+      1.0
+    ],
+    "n_censored": 50,
+    "n_total": 50,
+    "rmst": 150.0,
+    "event": "persistent_cycle_R6_Pmax20_tokens"
+  },
+  "lt_lzpenalty": {
+    "km_times": [
+      0,
+      150
+    ],
+    "km_survival": [
+      1.0,
+      1.0
+    ],
+    "n_censored": 50,
+    "n_total": 50,
+    "rmst": 150.0,
+    "event": "persistent_cycle_R6_Pmax20_tokens"
+  },
+  "lt_risk_only": {
+    "km_times": [
+      96,
+      130,
+      143,
+      150
+    ],
+    "km_survival": [
+      0.94,
+      0.92,
+      0.9,
+      0.88
+    ],
+    "n_censored": 44,
+    "n_total": 50,
+    "rmst": 146.22,
+    "event": "persistent_cycle_R6_Pmax20_tokens"
+  },
+  "lt_adaptive": {
+    "km_times": [
+      130
+    ],
+    "km_survival": [
+      0.98
+    ],
+    "n_censored": 49,
+    "n_total": 50,
+    "rmst": 149.59,
+    "event": "persistent_cycle_R6_Pmax20_tokens"
+  },
+  "lt_dual_eps0.01": {
+    "km_times": [
+      0,
+      150
+    ],
+    "km_survival": [
+      1.0,
+      1.0
+    ],
+    "n_censored": 50,
+    "n_total": 50,
+    "rmst": 150.0,
+    "event": "persistent_cycle_R6_Pmax20_tokens"
+  },
+  "lt_dual_eps0.05": {
+    "km_times": [
+      0,
+      150
+    ],
+    "km_survival": [
+      1.0,
+      1.0
+    ],
+    "n_censored": 50,
+    "n_total": 50,
+    "rmst": 150.0,
+    "event": "persistent_cycle_R6_Pmax20_tokens"
+  }
+}

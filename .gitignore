@@ -36,3 +36,9 @@ dist/
 
 # Matplotlib cache
 .matplotlib/
+
+# Pretrained modern-LLM weights (HF_HOME pointed here for the Block 2
+# modern-model experiment) -- multi-GB per model, never commit these.
+# Character-model checkpoints under runs/*/best.pt are NOT covered by this
+# (they're small, already tracked, and this only ignores this directory).
+hf_cache/

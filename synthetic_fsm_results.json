@@ -18,44 +18,90 @@
       "local_loop_rate": 0.4513333333333333,
       "local_kl": 0.34454561008865925,
       "hazard_loop_rate": 0.246,
-      "hazard_kl": 0.26614395623746273
+      "hazard_kl": 0.26614395623746273,
+      "oracle_lambda": 2.376882780675154,
+      "oracle_eps_achieved": 0.3,
+      "oracle_kl_total_bits": 0.4621338012398767,
+      "oracle_kl_per_step": 0.07702230020664612,
+      "oracle_residual": 1.7763568394002505e-15,
+      "local_kl_over_oracle_kl": 4.473322780081411,
+      "hazard_kl_over_oracle_kl": 3.4554142829208527
     },
     {
       "eps": 0.2,
       "local_loop_rate": 0.4106666666666667,
       "local_kl": 0.38440879234508785,
       "hazard_loop_rate": 0.17866666666666667,
-      "hazard_kl": 0.23815528169284322
+      "hazard_kl": 0.23815528169284322,
+      "oracle_lambda": 3.1544903593387787,
+      "oracle_eps_achieved": 0.2,
+      "oracle_kl_total_bits": 0.7369456415170789,
+      "oracle_kl_per_step": 0.12282427358617981,
+      "oracle_residual": 5.995204332975845e-15,
+      "local_kl_over_oracle_kl": 3.129746108983636,
+      "hazard_kl_over_oracle_kl": 1.9389919821161512
     },
     {
       "eps": 0.1,
       "local_loop_rate": 0.38333333333333336,
       "local_kl": 0.4249204543931039,
       "hazard_loop_rate": 0.05566666666666667,
-      "hazard_kl": 0.39195741818671287
+      "hazard_kl": 0.39195741818671287,
+      "oracle_lambda": 4.324415360781085,
+      "oracle_eps_achieved": 0.1,
+      "oracle_kl_total_bits": 1.1053271787490324,
+      "oracle_kl_per_step": 0.18422119645817206,
+      "oracle_residual": 4.884981308350689e-15,
+      "local_kl_over_oracle_kl": 2.3065774327960313,
+      "hazard_kl_over_oracle_kl": 2.1276456006283073
     },
     {
       "eps": 0.05,
       "local_loop_rate": 0.21933333333333332,
       "local_kl": 0.4722551956973449,
       "hazard_loop_rate": 0.013,
-      "hazard_kl": 0.6314501054982475
+      "hazard_kl": 0.6314501054982475,
+      "oracle_lambda": 5.4024178727823555,
+      "oracle_eps_achieved": 0.05,
+      "oracle_kl_total_bits": 1.3456503331892933,
+      "oracle_kl_per_step": 0.2242750555315489,
+      "oracle_residual": 4.440892098500626e-16,
+      "local_kl_over_oracle_kl": 2.1056964831780527,
+      "hazard_kl_over_oracle_kl": 2.8155164380704885
     },
     {
       "eps": 0.02,
       "local_loop_rate": 0.094,
       "local_kl": 0.5361786704856835,
       "hazard_loop_rate": 0.003,
-      "hazard_kl": 0.8099458827689606
+      "hazard_kl": 0.8099458827689606,
+      "oracle_lambda": 6.769200203453999,
+      "oracle_eps_achieved": 0.02,
+      "oracle_kl_total_bits": 1.5252414585435898,
+      "oracle_kl_per_step": 0.25420690975726495,
+      "oracle_residual": 2.220446049250313e-15,
+      "local_kl_over_oracle_kl": 2.109221464505687,
+      "hazard_kl_over_oracle_kl": 3.1861678486330494
     },
     {
       "eps": 0.01,
       "local_loop_rate": 0.049,
       "local_kl": 0.565790842411396,
       "hazard_loop_rate": 0.0026666666666666666,
-      "hazard_kl": 0.8771114803796131
+      "hazard_kl": 0.8771114803796131,
+      "oracle_lambda": 7.783846979418399,
+      "oracle_eps_achieved": 0.009999999999999998,
+      "oracle_kl_total_bits": 1.5974337687828857,
+      "oracle_kl_per_step": 0.26623896146381426,
+      "oracle_residual": 7.771561172376096e-16,
+      "local_kl_over_oracle_kl": 2.1251241339757674,
+      "hazard_kl_over_oracle_kl": 3.294452004909977
     }
   ],
+  "oracle_summary": {
+    "avg_local_kl_over_oracle": 2.7082814005867637,
+    "avg_hazard_kl_over_oracle": 2.803031359546471
+  },
   "local_kl_ceiling": 0.6129423938133529,
   "local_kl_ceiling_probe": [
     {
