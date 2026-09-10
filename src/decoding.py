@@ -386,12 +386,33 @@ class LZPenaltyDecoder:
     Autoregressive Language Models" (arXiv:2504.20131; TMLR 2026), a real,
     verified, accepted paper with one unambiguous closed-form penalty (their
     eq. 14), which this implementation follows directly for its formula and
-    dynamic range. NOT to be called "authentic": per review, the "extending
-    a match" indexing convention below is this implementation's own choice,
-    not a verified match to the authors' code (no reference implementation
-    was available to check against) -- report it, like the FSD-style
-    baseline, as a reimplementation with a documented, unresolved deviation,
-    not as a certified reproduction of the published method's exact numbers:
+    dynamic range. NOT to be called "authentic": the authors have since
+    released a reference implementation (github.com/tginart/sglang,
+    python/sglang/srt/sampling/penaltylib/lz_penalty.py, their footnote 2).
+    Checked against it on review: this class is NOT a faithful reproduction,
+    in more than the indexing-convention uncertainty documented below.
+    The reference implementation computes every vocabulary token's own best
+    achievable (length, distance) independently -- a full per-candidate
+    search -- and applies eq. 14's three-case formula uniformly to all of
+    them. This class instead finds the single best buffer/window match ONCE,
+    applies eq. 14 only to the one token that would complete THAT match, and
+    scores every other candidate with a separate, simpler nearest-occurrence
+    heuristic that is not eq. 14 at all. The two also appear to differ in
+    sign convention: the reference implementation's score, subtracted from
+    logits, saturates at exactly 0 for a token that never appeared (neutral,
+    not actively rewarded), whereas this class's Delta|C_LZ|, ADDED to
+    logits, gives a genuinely novel token the maximum positive bonus
+    log2(V). Verified numerically on constructed buffer/window examples
+    (see chat record / project notes), not merely inspected. Correcting this
+    would change every "LZ Penalty (reimpl.)" number in the paper and
+    requires re-running every table that includes it; left for a subsequent
+    revision rather than committed to here, per explicit review guidance
+    that this round should not commit to a new large compute pass. Until
+    then, treat every number this class produces as illustrative of the
+    mechanism family, not a reproduction of the published algorithm's actual
+    output. The indexing-convention uncertainty originally documented here
+    (kept below for the record) is consequently no longer the primary
+    caveat -- it is one of at least three known deviations, not the only one:
 
         Delta|C_LZ|(a) =
             log(V)                         if lambda(a) = 0  (no match at all)

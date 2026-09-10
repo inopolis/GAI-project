@@ -279,15 +279,32 @@ def solve_oracle_lambda(P, horizon, w, start, target_eps, lam_max=1000.0, iters=
 
 
 def dual_calibrate(p_row, risk_row, eps, lam_max=200.0, iters=40):
+    """One-step KL projection: min KL(q||p) s.t. E_q[risk] <= eps.
+
+    FIXED (found on review): feasibility used to be read off from q's
+    behavior AT lam_max, which is a correct proxy for "the achievable
+    infimum" but was never actually returned to, or checked by, any
+    caller -- every caller silently discarded the feasible flag and used
+    q_of(hi) regardless, meaning a structurally infeasible eps (eps below
+    the achievable floor min_v risk(v), the SAME boundary case already
+    handled explicitly for this paper's real dual solver, Section 5) was
+    resolved silently to "whatever lam_max achieves" with no record left
+    anywhere that the requested eps was never actually met. Feasibility is
+    now checked explicitly against the closed-form achievable floor
+    (min risk among states with positive prior mass -- the exact
+    lambda->infinity limit, not merely lam_max's approximation to it) and
+    every caller now must consume the returned flag.
+    """
     def q_of(lam):
         wgt = p_row * np.exp(-lam * risk_row)
         return wgt / wgt.sum()
     g0 = float((p_row * risk_row).sum())
     if g0 <= eps:
         return 0.0, g0, True
+    min_risk = float(risk_row[p_row > 0].min())
+    if eps < min_risk - 1e-12:
+        return lam_max, min_risk, False
     lo, hi = 0.0, lam_max
-    g_hi = float((q_of(hi) * risk_row).sum())
-    feasible = g_hi <= eps
     for _ in range(iters):
         mid = 0.5 * (lo + hi)
         g_m = float((q_of(mid) * risk_row).sum())
@@ -295,7 +312,7 @@ def dual_calibrate(p_row, risk_row, eps, lam_max=200.0, iters=40):
             lo = mid
         else:
             hi = mid
-    return hi, float((q_of(hi) * risk_row).sum()), feasible
+    return hi, float((q_of(hi) * risk_row).sum()), True
 
 
 def kl(q, p):
@@ -303,10 +320,120 @@ def kl(q, p):
     return float((q[m] * (np.log2(q[m] + 1e-300) - np.log2(p[m] + 1e-300))).sum())
 
 
+# ---------------------------------------------------------------------------
+# EXACT (non-simulated) forward propagation of the ONE-STEP local/hazard
+# controlled process, and a bisection that finds the one-step eps achieving
+# a given SEQUENCE-LEVEL loop probability -- fixing a defect found on
+# review: Table (oracle comparison) originally called dual_calibrate(...,
+# eps) directly with the SAME eps grid used for the oracle's target_eps,
+# but these are two different quantities. dual_calibrate's eps bounds the
+# ONE-STEP expected risk E_q[risk] at a single step, re-solved fresh at
+# every step; the oracle's target_eps bounds P(loop anywhere within the
+# WHOLE horizon), a sequence-level probability. Table 6 (tab:synthetic)'s
+# own "matched-distortion" comparison sidesteps this by matching on KL
+# instead, which is well-posed regardless of what eps means for each
+# mechanism; the oracle comparison must instead be corrected by finding,
+# for local and hazard separately, the one-step eps whose OWN resulting
+# sequence-level loop probability equals the oracle's target_eps, then
+# comparing KL at that properly-matched operating point. Both quantities
+# below are computed EXACTLY over the finite (state, window) space -- no
+# Monte Carlo, so no simulation noise to fight during the bisection.
+# ---------------------------------------------------------------------------
+
+def controlled_forward_exact(P, w, horizon, mode, step_eps, f_table, start=0):
+    """Exact forward propagation of the one-step-projected process (mode
+    'local' or 'hazard') under a FIXED one-step budget step_eps re-solved
+    independently at every node. Returns (eps_achieved, kl_total_bits,
+    infeasible_mass): eps_achieved is the exact P(loop within horizon);
+    kl_total_bits is the exact expected total path KL; infeasible_mass is
+    the total probability mass, summed over every node visited along the
+    way, at which step_eps was structurally below the achievable one-step
+    floor (dual_calibrate's feasible=False) -- surfaced explicitly rather
+    than silently absorbed, per review."""
+    start_win = (start,)
+    dist = {(start, start_win): 1.0}
+    looped_mass = 0.0
+    kl_total = 0.0
+    infeasible_mass = 0.0
+    for t in range(horizon):
+        remaining = horizon - t - 1
+        new_dist = {}
+        for (s, win), m in dist.items():
+            p_row = P[s, :]
+            if mode == "local":
+                risk_row = np.array([1.0 if sp in win else 0.0 for sp in range(S)])
+            elif mode == "hazard":
+                risk_row = np.array([
+                    1.0 if sp in win else f_table[remaining][(sp, (win + (sp,))[-w:])]
+                    for sp in range(S)
+                ])
+            else:
+                raise ValueError(mode)
+            lam, ach, feasible = dual_calibrate(p_row, risk_row, step_eps)
+            if not feasible:
+                infeasible_mass += m
+            q_row = p_row * np.exp(-lam * risk_row)
+            q_row = q_row / q_row.sum()
+            kl_total += m * kl(q_row, p_row)
+            for sp in range(S):
+                qp = q_row[sp]
+                if qp <= 0:
+                    continue
+                if sp in win:
+                    looped_mass += m * qp
+                else:
+                    new_win = (win + (sp,))[-w:]
+                    key = (sp, new_win)
+                    new_dist[key] = new_dist.get(key, 0.0) + m * qp
+        dist = new_dist
+    return looped_mass, kl_total, infeasible_mass
+
+
+def solve_step_eps_for_target(P, w, horizon, mode, f_table, target_eps, start=0, iters=40):
+    """Bisects the one-step budget so the EXACT resulting sequence-level
+    loop probability matches target_eps -- the corrected counterpart to
+    solve_oracle_lambda, now for local/hazard instead of the oracle, so
+    all three mechanisms in Table (oracle comparison) are finally compared
+    at the SAME sequence-level operating point."""
+    def achieved(step_eps):
+        return controlled_forward_exact(P, w, horizon, mode, step_eps, f_table, start)
+
+    eps_hi, kl_hi, infeas_hi = achieved(1.0)  # step_eps=1: risk<=1 always, trivially feasible
+    if eps_hi <= target_eps:
+        return {"step_eps": 1.0, "eps_achieved": eps_hi, "kl_bits_per_step": kl_hi / horizon,
+                "infeasible_mass": infeas_hi, "hit_floor": False}
+
+    eps_lo, kl_lo, infeas_lo = achieved(0.0)  # step_eps=0: tightest possible one-step control
+    if eps_lo > target_eps:
+        # Even the most aggressive one-step control achievable cannot reach
+        # this sequence-level target -- report the best-achievable point
+        # honestly (this IS the local/hazard analog of the per-step KL
+        # ceiling already documented in Section 6) rather than pretending a
+        # match was found.
+        return {"step_eps": 0.0, "eps_achieved": eps_lo, "kl_bits_per_step": kl_lo / horizon,
+                "infeasible_mass": infeas_lo, "hit_floor": True}
+
+    lo, hi = 0.0, 1.0
+    best = {"step_eps": 0.0, "eps_achieved": eps_lo, "kl_bits_per_step": kl_lo / horizon,
+            "infeasible_mass": infeas_lo, "hit_floor": False}
+    for _ in range(iters):
+        mid = 0.5 * (lo + hi)
+        eps_m, kl_m, infeas_m = achieved(mid)
+        if eps_m > target_eps:
+            hi = mid
+        else:
+            lo = mid
+            best = {"step_eps": mid, "eps_achieved": eps_m, "kl_bits_per_step": kl_m / horizon,
+                    "infeasible_mass": infeas_m, "hit_floor": False}
+    return best
+
+
 def simulate(P, decoder, eps, f_table, n, horizon, w, start=0, seed=0):
     rr = np.random.default_rng(seed)
     loops = 0
     kls = []
+    infeasible_steps = 0
+    total_steps = 0
     states_range = np.arange(S)
     for _ in range(n):
         s = start
@@ -329,6 +456,9 @@ def simulate(P, decoder, eps, f_table, n, horizon, w, start=0, seed=0):
                 else:
                     raise ValueError(decoder)
                 lam, ach, feas = dual_calibrate(p_row, risk_row, eps)
+                total_steps += 1
+                if not feas:
+                    infeasible_steps += 1
                 q_row = p_row * np.exp(-lam * risk_row)
                 q_row = q_row / q_row.sum()
                 step_kls.append(kl(q_row, p_row))
@@ -342,7 +472,8 @@ def simulate(P, decoder, eps, f_table, n, horizon, w, start=0, seed=0):
             loops += 1
         if step_kls:
             kls.append(float(np.mean(step_kls)))
-    return loops / n, (float(np.mean(kls)) if kls else 0.0)
+    infeasible_rate = (infeasible_steps / total_steps) if total_steps else 0.0
+    return loops / n, (float(np.mean(kls)) if kls else 0.0), infeasible_rate
 
 
 def main():
@@ -355,32 +486,55 @@ def main():
     f_table = build_hazard_table(P, H, W)
     print(f"  done in {time.time()-t0:.1f}s\n")
 
-    raw_rate, _ = simulate(P, "raw", None, f_table, N_MC, H, W, seed=0)
+    raw_rate, _, _ = simulate(P, "raw", None, f_table, N_MC, H, W, seed=0)
     print(f"RAW baseline (T={T0}): empirical loop-by-{H} rate = {raw_rate:.3f}\n")
 
     eps_grid = [0.30, 0.20, 0.10, 0.05, 0.02, 0.01]
     results = {"raw_loop_rate": raw_rate, "T0": T0, "H": H, "W": W, "S": S,
                "eps_grid": eps_grid, "rows": []}
 
-    print(f"{'eps':>6} | {'local: loop%':>13} {'KL/step':>9} | {'hazard: loop%':>14} {'KL/step':>9} "
+    # FIXED (found on review): this table used to call simulate(P, "local"/
+    # "hazard", eps, ...) with eps fed DIRECTLY as the one-step per-step risk
+    # bound (dual_calibrate's own eps), while solve_oracle_lambda's target_eps
+    # is a SEQUENCE-LEVEL loop probability -- two different quantities under
+    # the same symbol and the same grid values, so "Local KL/step at eps=X"
+    # and "Oracle KL/step at eps=X" were not measured at the same operating
+    # point (local/hazard's own resulting sequence-level loop probability at
+    # per-step eps=X is generally NOT X, e.g. hazard's eps=0.30 empirically
+    # gives ~25-30% depending on run, not exactly 30%). Fixed by bisecting
+    # local/hazard's own per-step budget (solve_step_eps_for_target) so their
+    # OWN exact sequence-level loop probability also matches the SAME target
+    # eps as the oracle, then comparing KL at that properly-matched point.
+    # Both local/hazard and oracle are now EXACT (no Monte Carlo) throughout
+    # this table, via the same finite-state forward-propagation method.
+    print(f"{'eps':>6} | {'local: achieved':>16} {'KL/step':>9} {'infeas':>7} | "
+          f"{'hazard: achieved':>17} {'KL/step':>9} {'infeas':>7} "
           f"| {'ORACLE KL/step':>15} {'local/oracle':>13} {'hazard/oracle':>14}")
     print("-" * 66)
     for eps in eps_grid:
-        lr, lkl = simulate(P, "local", eps, f_table, N_MC, H, W, seed=1)
-        hr, hkl = simulate(P, "hazard", eps, f_table, N_MC, H, W, seed=2)
-        # Sequence-level oracle at this SAME target eps -- exact, not simulated
-        # (Q*'s achieved eps matches the target to numerical precision by
-        # construction, so no "closest match" scan is needed here the way
-        # local's eps is scanned to match hazard's KL below).
+        local = solve_step_eps_for_target(P, W, H, "local", f_table, eps)
+        hazard = solve_step_eps_for_target(P, W, H, "hazard", f_table, eps)
+        lkl, hkl = local["kl_bits_per_step"], hazard["kl_bits_per_step"]
         orc = solve_oracle_lambda(P, H, W, start=0, target_eps=eps)
         okl = orc["kl_bits_per_step"]
         local_ratio = (lkl / okl) if okl > 0 else float("inf")
         hazard_ratio = (hkl / okl) if okl > 0 else float("inf")
-        print(f"{eps:>6.2f} | {lr*100:>12.1f}% {lkl:>9.4f} | {hr*100:>13.1f}% {hkl:>9.4f} "
-              f"| {okl:>15.4f} {local_ratio:>12.1f}x {hazard_ratio:>13.1f}x")
+        print(f"{eps:>6.2f} | {local['eps_achieved']*100:>15.1f}% {lkl:>9.4f} "
+              f"{local['infeasible_mass']/H:>6.1%} | "
+              f"{hazard['eps_achieved']*100:>16.1f}% {hkl:>9.4f} {hazard['infeasible_mass']/H:>6.1%} "
+              f"| {okl:>15.4f} {local_ratio:>12.2f}x {hazard_ratio:>13.2f}x")
         results["rows"].append({
-            "eps": eps, "local_loop_rate": lr, "local_kl": lkl,
-            "hazard_loop_rate": hr, "hazard_kl": hkl,
+            "eps": eps,
+            "local_eps_achieved": local["eps_achieved"], "local_kl": lkl,
+            "local_infeasible_rate": local["infeasible_mass"] / H,
+            "local_hit_floor": local["hit_floor"],
+            "hazard_eps_achieved": hazard["eps_achieved"], "hazard_kl": hkl,
+            # Alias for the matched-distortion block below (Table 6), which
+            # predates this fix and expects "hazard_loop_rate": now exact
+            # (bisected to match target eps, not simulated), not a rename.
+            "hazard_loop_rate": hazard["eps_achieved"],
+            "hazard_infeasible_rate": hazard["infeasible_mass"] / H,
+            "hazard_hit_floor": hazard["hit_floor"],
             "oracle_lambda": orc["lambda"], "oracle_eps_achieved": orc["eps_achieved"],
             "oracle_kl_total_bits": orc["kl_bits"], "oracle_kl_per_step": okl,
             "oracle_residual": orc["residual"],
@@ -416,7 +570,7 @@ def main():
     # hazard rows (avoids re-simulating the same local configuration 6 times).
     local_scan_cache = {}
     for eps in local_scan_eps:
-        lr, lkl = simulate(P, "local", float(eps), f_table, 2000, H, W, seed=3)
+        lr, lkl, _ = simulate(P, "local", float(eps), f_table, 2000, H, W, seed=3)
         local_scan_cache[float(eps)] = (lr, lkl)
 
     # Does local's own achievable KL keep rising as eps -> 0, or does it hit a
@@ -434,7 +588,7 @@ def main():
     ceiling_probe_eps = [0.001, 0.0001, 0.00001, 0.0]
     ceiling_probe_rows = []
     for eps in ceiling_probe_eps:
-        lr, lkl = simulate(P, "local", eps, f_table, 6000, H, W, seed=3)
+        lr, lkl, _ = simulate(P, "local", eps, f_table, 6000, H, W, seed=3)
         print(f"  eps={eps:<10g} local loop%={lr*100:6.2f}  local KL/step={lkl:.4f}")
         ceiling_probe_rows.append({"eps": eps, "loop_rate": lr, "kl": lkl})
     ceiling_kl = ceiling_probe_rows[-1]["kl"]  # eps=0.0: tightest possible constraint
@@ -479,7 +633,15 @@ def main():
           f"hazard beats local in {n_hazard_wins}/{len(comparable_rows)}.")
 
     with open("synthetic_fsm_results.json", "w") as fp:
-        json.dump(results, fp, indent=2)
+        def _json_default(o):
+            if isinstance(o, (np.bool_,)):
+                return bool(o)
+            if isinstance(o, (np.integer,)):
+                return int(o)
+            if isinstance(o, (np.floating,)):
+                return float(o)
+            raise TypeError(f"Object of type {o.__class__.__name__} is not JSON serializable")
+        json.dump(results, fp, indent=2, default=_json_default)
     print(f"\nTotal time: {time.time()-t0:.1f}s")
     print("Saved -> synthetic_fsm_results.json")
 

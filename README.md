@@ -167,7 +167,7 @@ Decoders compared (see `src/decoding.py` docstrings for full detail on each):
 | `lt_no_repeat_Ngram` | — | Hard constraint; kept separate, directly forbids the measured event |
 | `lt_suffixmatch_*` | `SuffixMatchDecoder` | Homemade LZ77-style baseline. **Not** the published Look-back algorithm (renamed from the earlier, misleading `LookBackDecoder`) |
 | `lt_fsd` | `FSDDecoder` | Good-faith FSD-*style* reconstruction, not a certified reproduction |
-| `lt_lzpenalty` | `LZPenaltyDecoder` | Reimplementation of Ginart et al., *LZ Penalty* (arXiv:2504.20131, TMLR 2026), following its formula and dynamic range — **not "authentic"**: one indexing-convention deviation from the published algorithm is unverified against a reference implementation, so treat it the same as the FSD-*style* baseline, not as a certified reproduction |
+| `lt_lzpenalty` | `LZPenaltyDecoder` | Reimplementation of Ginart et al., *LZ Penalty* (arXiv:2504.20131, TMLR 2026), following its formula and dynamic range — **not "authentic"**: checked against the authors' now-released reference implementation (`github.com/tginart/sglang`) and confirmed to diverge from it in more than the previously-flagged indexing-convention detail (applies the eq. 14 formula to a single identified match rather than per-candidate, and appears to differ in sign convention for novel tokens — see the class docstring). Every `lt_lzpenalty` number in this project should be read as illustrating the mechanism family, not as reproducing the published algorithm |
 | `lt_risk_only`, `lt_adaptive` | `RecurrenceRiskDecoder` (`mode="fixed"` / `"adaptive"`) | No exact projection guarantee |
 | `lt_dual_eps*` | `RecurrenceRiskDecoder` (`mode="dual"`) | The **only** mode entitled to the exact minimum-distortion claim; lambda is solved from eps every step in log-space (see `_solve_dual_lambda`) |
 
@@ -240,6 +240,35 @@ python3 validate_loop_event_subword.py --model gpt2 --out_dir loop_event_subword
 python3 gpt2_full_comparison.py --model gpt2 --n_seeds 10 --n_tokens 200 \
   --out_dir runs/gpt2_full_comparison
 ```
+
+**Compact modern-LLM validation (OLMo-2-0425-1B, Qwen2.5-3B, Mistral-7B-v0.3)** — same
+pilot/calibrate/compare protocol, at a reduced, explicitly-compact scale (5 seeds x
+10 prompts x 150 tokens); `--dtype` defaults to float32 on CPU/MPS (matching every
+other experiment's precision) and bfloat16 on CUDA; on unified-memory hardware where
+the full model does not fit under the default HuggingFace loading path, weights are
+loaded directly onto the target device (`device_map` + `low_cpu_mem_usage=True`,
+verified bit-identical to the default path on a smaller model first):
+```bash
+python3 pretrained_subword_pilot.py --model allenai/OLMo-2-0425-1B --n_prompts 5 --n_seeds 5
+python3 validate_loop_event_subword.py --model allenai/OLMo-2-0425-1B --out_dir loop_event_subword_report_olmo
+python3 modern_llm_comparison.py --model allenai/OLMo-2-0425-1B --n_seeds 5 --n_tokens 150 \
+  --event_report loop_event_subword_report_olmo/loop_event_subword_report.json \
+  --out_dir runs/modern_llm_comparison_olmo
+# repeat for mistralai/Mistral-7B-v0.3, Qwen/Qwen2.5-3B (Qwen's pilot showed no
+# measurable regime at any tested temperature -- no full comparison follows for it)
+```
+
+**Sensitivity and Pareto analysis** (generation-length and detector-threshold
+sensitivity, Pareto plots of loop rate vs. KL) — entirely post-hoc from
+already-saved artifacts, no model loading or regeneration:
+```bash
+python3 sensitivity_pareto_analysis.py
+```
+`modern_llm_comparison.py` saves each sample's raw generated token ids
+(`gen_ids` in `all_results.json`) specifically so detector-threshold sensitivity
+can be recomputed later without re-running generation; the primary character-model
+and GPT-2 comparisons instead recompute directly from saved text/onset arrays,
+since detector-threshold sensitivity there requires no retokenization risk.
 
 ## 9. Hazard-aware extension (synthetic-validated, real-model transfer tested honestly)
 
