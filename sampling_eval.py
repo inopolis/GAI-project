@@ -116,7 +116,7 @@ def build_configs():
         lookback=dict(temperature=0.10, top_p=1.0, alpha=3.0,
                       max_history=400, ref_len=20))
     add("lt_fsd", "loop_regime", key=True,
-        fsd=dict(temperature=0.10, top_p=1.0, alpha=4.0, n_min=3, n_max=6))
+        fsd=dict(temperature=0.10, top_p=1.0, alpha=3.0, n_max=3))
     add("lt_lzpenalty", "loop_regime", key=True,
         # Reimplementation of Ginart, Kodali, Lee, Xiong, Savarese,
         # Emmons, "LZ Penalty: An Information-Theoretic Repetition Penalty

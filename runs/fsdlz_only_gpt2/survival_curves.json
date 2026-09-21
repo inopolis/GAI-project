@@ -1,0 +1,42 @@
+{
+  "lt_fsd": {
+    "km_times": [
+      0,
+      200
+    ],
+    "km_survival": [
+      1.0,
+      1.0
+    ],
+    "n_censored": 100,
+    "n_total": 100,
+    "rmst": 200.0,
+    "event": "persistent_cycle_R5_Pmax20_tokens"
+  },
+  "lt_lzpenalty": {
+    "km_times": [
+      60,
+      71,
+      76,
+      90,
+      124,
+      170,
+      171,
+      195
+    ],
+    "km_survival": [
+      0.99,
+      0.98,
+      0.97,
+      0.96,
+      0.95,
+      0.94,
+      0.93,
+      0.92
+    ],
+    "n_censored": 92,
+    "n_total": 100,
+    "rmst": 193.56,
+    "event": "persistent_cycle_R5_Pmax20_tokens"
+  }
+}

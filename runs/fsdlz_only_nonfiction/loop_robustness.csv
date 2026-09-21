@@ -1,0 +1,3 @@
+strategy,category,checkpoint,rmst_persistent,rmst_ngram8,rmst_ngram10,rmst_ngram12,rmst_ngram16,rmst_lrs20,rmst_compress,loop_rate_persistent,loop_rate_ngram8,loop_rate_ngram10,loop_rate_ngram12,loop_rate_ngram16,loop_rate_lrs20,loop_rate_compress
+lt_fsd,loop_regime,nonfiction_baseline,486.05,105.45,144.9,156.65,208.35,280.75,493.4,0.1667,1.0,1.0,1.0,1.0,0.9933,0.1333
+lt_lzpenalty,loop_regime,nonfiction_baseline,498.3,49.3,58.25,63.85,77.45,118.35,497.2,0.02,1.0,1.0,1.0,1.0,1.0,0.0267

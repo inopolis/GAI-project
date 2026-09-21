@@ -1,0 +1,3 @@
+strategy,category,checkpoint,hard_constraint,survival_auc_persistent,rmst_persistent,loop_rate_persistent,survival_auc_ngram10_RETRACTED_DO_NOT_USE,rmst_ngram10_RETRACTED_DO_NOT_USE,loop_rate_ngram10_RETRACTED_DO_NOT_USE,mc_nll_bpc,ngram_sim_4,spelling_error,compression,longest_rep_sub,chars_per_sec
+lt_fsd,loop_regime,cosine,False,0.9975,498.75,0.0133,0.2944,147.2,1.0,1.0994,0.2163,0.0259,0.4964,30.3333,
+lt_lzpenalty,loop_regime,cosine,False,1.0,500.0,0.0,0.1332,66.6,1.0,0.9237,0.1803,0.0075,0.3453,41.58,

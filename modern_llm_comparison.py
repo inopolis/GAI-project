@@ -314,7 +314,7 @@ def make_configs(vocab_size):
     C["lt_suffixmatch_a3.0"] = lambda: SuffixMatchDecoder(
         temperature=0.10, top_p=1.0, alpha=3.0, max_history=400, ref_len=20)
     C["lt_fsd"] = lambda: FSDDecoder(
-        temperature=0.10, top_p=1.0, alpha=4.0, n_min=2, n_max=4)
+        temperature=0.10, top_p=1.0, alpha=3.0, n_max=3)
     C["lt_lzpenalty"] = lambda: LZPenaltyDecoder(
         temperature=0.10, top_p=1.0, alpha=0.15,
         buffer_size=32, window_size=512, vocab_size=vocab_size)

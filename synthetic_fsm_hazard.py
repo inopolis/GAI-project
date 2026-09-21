@@ -429,6 +429,18 @@ def solve_step_eps_for_target(P, w, horizon, mode, f_table, target_eps, start=0,
 
 
 def simulate(P, decoder, eps, f_table, n, horizon, w, start=0, seed=0):
+    """KL convention, made explicit and made to match the oracle's own exact
+    treatment (found inconsistent on review -- this function used to keep
+    stepping, and kept charging KL, for the FULL horizon even after a
+    trajectory had already looped, while the oracle's exact derivation
+    (oracle_forward_exact / controlled_forward_exact) treats a loop as
+    ABSORBING: once a path loops, no further transition is modeled and no
+    further KL is charged, since g[r]'s own recursion terminates the "loop
+    happens now" branch with a fixed weight rather than continuing it).
+    Fixed to match: the step that CAUSES the loop still pays its own KL (a
+    real decision was made and its distortion is real), but no step AFTER
+    that one contributes -- mirrored via an explicit break right after the
+    loop-causing transition is drawn."""
     rr = np.random.default_rng(seed)
     loops = 0
     kls = []
@@ -468,10 +480,12 @@ def simulate(P, decoder, eps, f_table, n, horizon, w, start=0, seed=0):
                 looped = True
             window = (window + (s_next,))[-w:]
             s = s_next
+            if looped:
+                break  # absorbing: no further steps/KL once looped
         if looped:
             loops += 1
         if step_kls:
-            kls.append(float(np.mean(step_kls)))
+            kls.append(float(np.sum(step_kls)) / horizon)
     infeasible_rate = (infeasible_steps / total_steps) if total_steps else 0.0
     return loops / n, (float(np.mean(kls)) if kls else 0.0), infeasible_rate
 

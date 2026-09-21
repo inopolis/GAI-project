@@ -282,48 +282,51 @@ LookBackDecoder = SuffixMatchDecoder
 
 class FSDDecoder:
     """
-    Contrastive, history-aware repetition suppression in the spirit of
-    "Frustratingly Simple Decoding" (FSD)-style methods and related
-    contrastive-decoding approaches: contrast the model's full-context
-    prediction against a NAIVE, training-free predictor that scores each
-    candidate purely by how often it has followed the current local context
-    earlier in the generation. Tokens the naive predictor is confident about
-    are exactly the "too easy, memorized-by-repetition" continuations;
-    contrasting suppresses those specifically, leaving tokens the naive
-    predictor has no opinion about (including common function words the LM
-    favors for ordinary fluency reasons) untouched. This differs from
-    repetition penalty, which discounts every previously-seen token
-    uniformly regardless of whether local repetition is what's driving the
-    model toward it.
+    Faithful reimplementation of Frustratingly Simple Decoding (FSD), Yang,
+    Cai, Li, Bi, Lam, and Shi, "A Frustratingly Simple Decoding Method for
+    Neural Text Generation" (arXiv:2305.12675).
+    No official code release could be found (checked again on this round of
+    review), so this implements the PAPER's own stated equations directly,
+    replacing an earlier revision of this class that combined the model and
+    the anti-LM differently than the paper specifies in three ways: it
+    subtracted the naive score from LOGITS rather than from the model's own
+    PROBABILITIES as the paper's eq. 2 does; it used a "longest available
+    order, else fall back to a shorter one" heuristic rather than the
+    paper's smoothed multi-order INTERPOLATION (eq. 3); and it re-scored the
+    full vocabulary rather than the paper's top-k candidate shortlist.
 
-    IMPLEMENTATION NOTE: this is a reimplementation motivated by the
-    published description of the FSD family, built for this project from
-    that description, not a port of the original authors' code. It is
-    labeled as such throughout the paper and should be read as "FSD-style",
-    not as a certified reproduction of any specific paper's exact numbers.
+    FSD(v|x_{<t}) = p_theta(v|x_{<t}) - alpha * p_omega(v|x_{<t})   (eq. 2)
 
-    naive_score(v) = (count of v following the current (k-1)-gram context,
-                       for the largest k in [n_min,n_max] with any prior
-                       occurrence) / (total follower count for that context),
-    i.e. the empirical next-token distribution implied purely by exact local
-    repetition so far, using the LONGEST context order that has been seen
-    before (falling back to shorter orders, then to "no signal" if the
-    current context has never occurred).
+    computed in PROBABILITY space, restricted to the top-k candidates by
+    p_theta (their k=6 default). p_omega is a smoothed, multi-order n-gram
+    anti-LM built online from the generated history (eq. 1, 3):
 
-    final_logits(v) = model_logits(v) - alpha * naive_score(v)
+      p_n(x_i | x_{i-n+1:i-1}) = count(x_{i-n+1:i}) / count(x_{i-n+1:i-1})
+      p_omega = sum_{k=1}^{N} lambda_k * p_k,
+                lambda_k propto beta^{N-k}, normalized to sum to 1
+
+    (N=3, beta=0.9, alpha=3 -- the paper's own defaults for discrete FSD;
+    an n-gram order with no prior occurrence of its context contributes 0,
+    not a substitute fallback). Scores that go negative or non-positive
+    after subtraction (possible, since FSD(v) is a difference of
+    probabilities) are clamped to 0 and the top-k renormalized to sample
+    from; if every candidate clamps to 0 (the anti-LM's penalty exceeds
+    p_theta everywhere in the shortlist), the model's own top-k
+    distribution is used unmodified rather than dividing by zero.
     """
-    def __init__(self, temperature=0.8, top_p=0.95, alpha=4.0,
-                 n_min=3, n_max=6):
+    def __init__(self, temperature=0.8, top_p=0.95, alpha=3.0, n_max=3,
+                 beta=0.9, top_k=6):
         self.temperature = temperature
         self.top_p       = top_p
         self.alpha       = alpha
-        self.n_min       = n_min
         self.n_max       = n_max
+        self.beta        = beta
+        self.top_k       = top_k
 
     def reset(self):
         self._all_ids   = []
         self._followers = {n: defaultdict(lambda: defaultdict(int))
-                            for n in range(self.n_min, self.n_max + 1)}
+                            for n in range(1, self.n_max + 1)}
 
     def prime(self, prompt_ids):
         for tid in prompt_ids:
@@ -332,35 +335,47 @@ class FSDDecoder:
     def _register(self, token):
         self._all_ids.append(token)
         L = len(self._all_ids)
-        for n in range(self.n_min, self.n_max + 1):
+        for n in range(1, self.n_max + 1):
             if L >= n:
                 context = tuple(self._all_ids[L - n: L - 1])
                 self._followers[n][context][self._all_ids[L - 1]] += 1
 
-    def _naive_scores(self, vocab_size):
-        """Empirical next-token distribution from exact local repetition,
-        using the longest context order with any prior occurrence."""
+    def _anti_lm_scores(self, candidate_ids):
+        """p_omega(v) for each v in candidate_ids (a Python list of token
+        ids): smoothed interpolation over n-gram orders 1..n_max (eq. 3)."""
         L = len(self._all_ids)
-        for n in range(self.n_max, self.n_min - 1, -1):
-            if L < n - 1:
+        raw_weights = [self.beta ** (self.n_max - k) for k in range(1, self.n_max + 1)]
+        wsum = sum(raw_weights)
+        weights = [w / wsum for w in raw_weights]
+
+        scores = torch.zeros(len(candidate_ids))
+        for order, lam in zip(range(1, self.n_max + 1), weights):
+            if L < order - 1:
                 continue
-            context = tuple(self._all_ids[L - (n - 1): L]) if n > 1 else ()
-            followers = self._followers[n].get(context)
-            if followers:
-                total = sum(followers.values())
-                scores = torch.zeros(vocab_size)
-                for tok, cnt in followers.items():
-                    scores[tok] = cnt / total
-                return scores
-        return torch.zeros(vocab_size)
+            context = tuple(self._all_ids[L - (order - 1): L]) if order > 1 else ()
+            followers = self._followers[order].get(context)
+            if not followers:
+                continue
+            total = sum(followers.values())
+            for i, v in enumerate(candidate_ids):
+                c = followers.get(v)
+                if c:
+                    scores[i] += lam * (c / total)
+        return scores
 
     def step(self, logits, generated_ids=None):
-        naive = self._naive_scores(logits.shape[-1]).to(logits.device)
-        adjusted = logits - self.alpha * naive
+        p_theta = torch.softmax(logits / max(self.temperature, 1e-6), dim=-1)
+        k = min(self.top_k, p_theta.shape[-1])
+        top_probs, top_idx = torch.topk(p_theta, k)
+        p_omega = self._anti_lm_scores(top_idx.tolist()).to(logits.device)
 
-        adjusted = adjusted / max(self.temperature, 1e-6)
-        adjusted = top_p_filtering(adjusted.unsqueeze(0), self.top_p).squeeze(0)
-        probs = torch.softmax(adjusted, dim=-1)
+        fsd_score = torch.clamp(top_probs - self.alpha * p_omega, min=0.0)
+        if float(fsd_score.sum()) <= 0.0:
+            fsd_score = top_probs  # anti-LM penalized the whole shortlist to 0: fall back to p_theta's own ranking
+        probs_topk = fsd_score / fsd_score.sum()
+
+        probs = torch.zeros_like(p_theta)
+        probs[top_idx] = probs_topk
         self.last_q = probs  # exposed for the common-distortion comparison
         token = int(torch.multinomial(probs, 1).item())
         self._register(token)
@@ -369,83 +384,52 @@ class FSDDecoder:
     def diagnostics(self):
         """
         No-op: FSD has no KL-projection interpretation (it is a direct
-        logit contrast, not a bounded-divergence projection), so it has
-        nothing analogous to RecurrenceRiskDecoder's kl_bits/risk_achieved/
-        dual_* diagnostics to report. Returns {} so the caller's existing
-        dg.get(k, float("nan")) fallback fills every diagnostic column with
-        NaN for FSD samples, which is the correct, honest value (not
-        applicable), not a crash.
+        probability contrast, not a bounded-divergence projection), so it
+        has nothing analogous to RecurrenceRiskDecoder's kl_bits/
+        risk_achieved/dual_* diagnostics to report. Returns {} so the
+        caller's existing dg.get(k, float("nan")) fallback fills every
+        diagnostic column with NaN for FSD samples, which is the correct,
+        honest value (not applicable), not a crash.
         """
         return {}
 
 
 class LZPenaltyDecoder:
     """
-    Reimplementation of the LZ penalty, Ginart, Kodali, Lee, Xiong, Savarese,
-    and Emmons, "LZ Penalty: An Information-Theoretic Repetition Penalty for
-    Autoregressive Language Models" (arXiv:2504.20131; TMLR 2026), a real,
-    verified, accepted paper with one unambiguous closed-form penalty (their
-    eq. 14), which this implementation follows directly for its formula and
-    dynamic range. NOT to be called "authentic": the authors have since
-    released a reference implementation (github.com/tginart/sglang,
-    python/sglang/srt/sampling/penaltylib/lz_penalty.py, their footnote 2).
-    Checked against it on review: this class is NOT a faithful reproduction,
-    in more than the indexing-convention uncertainty documented below.
-    The reference implementation computes every vocabulary token's own best
-    achievable (length, distance) independently -- a full per-candidate
-    search -- and applies eq. 14's three-case formula uniformly to all of
-    them. This class instead finds the single best buffer/window match ONCE,
-    applies eq. 14 only to the one token that would complete THAT match, and
-    scores every other candidate with a separate, simpler nearest-occurrence
-    heuristic that is not eq. 14 at all. The two also appear to differ in
-    sign convention: the reference implementation's score, subtracted from
-    logits, saturates at exactly 0 for a token that never appeared (neutral,
-    not actively rewarded), whereas this class's Delta|C_LZ|, ADDED to
-    logits, gives a genuinely novel token the maximum positive bonus
-    log2(V). Verified numerically on constructed buffer/window examples
-    (see chat record / project notes), not merely inspected. Correcting this
-    would change every "LZ Penalty (reimpl.)" number in the paper and
-    requires re-running every table that includes it; left for a subsequent
-    revision rather than committed to here, per explicit review guidance
-    that this round should not commit to a new large compute pass. Until
-    then, treat every number this class produces as illustrative of the
-    mechanism family, not a reproduction of the published algorithm's actual
-    output. The indexing-convention uncertainty originally documented here
-    (kept below for the record) is consequently no longer the primary
-    caveat -- it is one of at least three known deviations, not the only one:
+    Faithful reimplementation of the LZ penalty, Ginart, Kodali, Lee, Xiong,
+    Savarese, and Emmons, "LZ Penalty: An Information-Theoretic Repetition
+    Penalty for Autoregressive Language Models" (arXiv:2504.20131; TMLR
+    2026). Ported directly from the authors' own released reference
+    implementation (github.com/tginart/sglang,
+    python/sglang/srt/sampling/penaltylib/lz_penalty.py,
+    compute_lz_penalty_stateless, their footnote 2) -- not reconstructed
+    from the paper's prose alone, and checked line-for-line against that
+    source, replacing an earlier revision of this class found (on review)
+    to diverge from it in three ways: it applied the score to only one
+    identified "best match" token instead of to every candidate
+    independently, as the reference's fully vectorized per-candidate search
+    does; it used a different, non-equivalent formula for every other
+    token; and it used the opposite sign convention (adding a positive
+    novelty bonus, where the reference only ever subtracts, saturating at
+    zero -- neutral, not rewarded -- for a token that never occurred).
 
-        Delta|C_LZ|(a) =
-            log(V)                         if lambda(a) = 0  (no match at all)
-            log(delta)                     if lambda(a) = 1  (a singleton match)
-            log(1 - (d-l+1)/(l*d)) - 1     if lambda(a) = l+1 (extends the
-                                             current longest match by one)
+    For every candidate token $a$ independently: let $U(a)$ be the length
+    of the longest run of the current buffer's trailing tokens that exactly
+    precede some earlier occurrence of $a$ in the window (0 if $a$ never
+    occurred there), and let $d(a)$ be the distance back to the CLOSEST
+    occurrence achieving that length. cost$(a) = \\log_2 d(a)$ if $a$
+    occurred at least once, else $+\\infty$. This class's penalty, ADDED to
+    logits (this project's convention throughout, unlike the reference's
+    logits.sub_(...)): $\\mathrm{clamp}(\\mathrm{cost}(a), 0, \\log_2 V) -
+    \\log_2 V$ -- exactly 0 for a token that never occurred (neutral, not
+    boosted), down to $-\\log_2 V$ for a token that would exactly extend a
+    long, very close match.
 
-    where (l, d) is the length and distance of the longest match of the
-    recent "buffer" b against the earlier lookback "window" w (their
-    Definitions 1, 7, 8), and lambda/delta are the corresponding values were
-    candidate token a to extend that match. Applied as logits += alpha *
-    Delta|C_LZ|: more-novel candidates get a larger positive boost,
-    candidates that would extend a long, recent, exact match get a strong
-    negative penalty -- their reported dynamic range for a 128k vocabulary,
-    window 512, buffer 32 is [-5, +17] bits.
-
-    ONE HONEST CAVEAT: the paper defines "extending a match" via a specific
-    algebraic construction (prepending candidate a to the FRONT of the
-    buffer and checking whether the window position immediately BEFORE the
-    existing match's start equals a). Implemented literally, this gave
-    match-extension credit to candidates unrelated to completing the
-    observed repeated span, in several checks against the paper's own
-    plain-language description ("a token that would complete an immediate
-    repetition"). Unable to resolve this against a reference implementation,
-    this class instead checks whether the window position immediately AFTER
-    the existing match equals candidate a -- the natural causal reading of
-    "completes the repetition" -- verified against the paper's own
-    qualitative example: a token completing a long, close repeat gets a
-    strongly negative value; a token absent from the whole window gets
-    exactly log2(V), the reported top of the dynamic range. If this differs
-    from the authors' exact intended indexing, it is a reconstruction
-    detail, not a conceptual substitution -- the underlying penalty family,
-    its inputs, and its dynamic range all follow the published formula.
+    Verified against the reference implementation's own numeric behavior
+    (same relative ranking and same boundary values -- 0 for absent tokens,
+    most negative for the closest/longest match) on constructed
+    buffer/window examples before being trusted for any table in this
+    paper.
 
     buffer_size/window_size default to much smaller values than the paper's
     (subword, 128k-vocabulary) 32/512, since this project's character-level
@@ -468,55 +452,42 @@ class LZPenaltyDecoder:
         for t in prompt_ids:
             self._all_ids.append(t)
 
-    @staticmethod
-    def _find_prefix_match(needle, haystack):
-        """Definition 7: longest prefix of needle occurring as a substring
-        of haystack; ties broken toward the CLOSEST (rightmost) occurrence,
-        the cheaper one to encode a distance for."""
-        best_len, best_j = 0, None
-        for j in range(len(haystack)):
-            k = 0
-            nk = len(needle)
-            while j + k < len(haystack) and k < nk and haystack[j + k] == needle[k]:
-                k += 1
-            if k >= best_len and k > 0:
-                best_len = k
-                best_j = j
-        if best_j is None:
-            return 0, 0
-        return best_len, len(haystack) - best_j
-
     def _penalty_vector(self, vocab_size):
-        ids = self._all_ids
-        n = len(ids)
-        buf = ids[max(0, n - self.buffer_size):n]
-        win = ids[max(0, n - self.buffer_size - self.window_size): max(0, n - self.buffer_size)]
-        pen = torch.zeros(vocab_size)
-        if not win:
-            pen.fill_(math.log2(max(vocab_size, 2)))
-            return pen
-        l, d = self._find_prefix_match(buf, win)
-        j = len(win) - d if l >= 1 else None
-        extend_token = win[j + l] if (l >= 1 and j + l < len(win)) else None
-
-        nearest = {}
-        for idx, tok in enumerate(win):
-            dist = len(win) - idx
-            if tok not in nearest or dist < nearest[tok]:
-                nearest[tok] = dist
-
+        """Direct port of the reference implementation's
+        compute_lz_penalty_stateless, for a single sequence (this project's
+        decoders process one sequence at a time, not batched)."""
+        n = self.buffer_size
+        context = self._all_ids[-(self.buffer_size + self.window_size):]
+        w = len(context)
         logV = math.log2(max(vocab_size, 2))
-        for a in range(vocab_size):
-            if extend_token is not None and a == extend_token:
-                if l * d > 0 and (d - l + 1) < l * d:
-                    pen[a] = math.log2(1 - (d - l + 1) / (l * d)) - 1
-                else:
-                    pen[a] = -6.0
-            elif a in nearest:
-                pen[a] = math.log2(max(1, nearest[a]))
-            else:
-                pen[a] = logV
-        return pen
+        if w <= n:
+            return torch.zeros(vocab_size)
+
+        W = torch.tensor(context, dtype=torch.long)
+        G = torch.arange(vocab_size, dtype=torch.long)
+
+        windows = W[:-1].unfold(0, n, 1)                              # (w-n, n)
+        lookback = W[-n:]                                             # (n,): current buffer
+        E = (windows == lookback.unsqueeze(0)).flip(dims=[1]).float()
+        U = torch.cumprod(E, dim=1).sum(dim=1)                        # (w-n,): trailing-match length per window
+
+        match_context = W[n:]                                         # (w-n,): token following each window
+        M = (G.unsqueeze(1) == match_context.unsqueeze(0)).float()     # (V, w-n)
+        RP = M * U + M                                                # (V, w-n): per-candidate match length
+
+        n_win = w - n
+        idx_from_end = torch.arange(n_win - 1, -1, -1, dtype=torch.float)
+        distances = (idx_from_end + 1.0).unsqueeze(0).expand_as(RP)    # closer window -> smaller distance
+        mask = RP > 0
+        dist_masked = torch.where(mask, distances, torch.full_like(RP, float("inf")))
+        max_len = RP.max(dim=1, keepdim=True).values
+        best_len_mask = (RP == max_len) & mask
+        best_len_dist = torch.where(best_len_mask, dist_masked, torch.full_like(RP, float("inf")))
+        min_dist = best_len_dist.min(dim=1).values                     # (V,)
+        cost = torch.where(min_dist != float("inf"), torch.log2(min_dist),
+                            torch.full_like(min_dist, float("inf")))
+        cost = torch.clamp(cost, min=0.0, max=logV)
+        return cost - logV
 
     def step(self, logits, generated_ids=None):
         vocab_size = self.vocab_size or logits.shape[-1]

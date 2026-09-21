@@ -30,6 +30,48 @@ def clopper_pearson(k, n, alpha=0.05):
     return float(lo), float(hi)
 
 
+def cluster_level_clopper_pearson(records, value_fn, participant_fn=lambda r: r["participant_id"],
+                                   alpha=0.05):
+    """Valid small-sample CI for a preference proportion, found needed on
+    review: a nonparametric bootstrap over participants (below) DEGENERATES
+    to a zero-width [k%, k%] interval whenever every participant happens to
+    agree (e.g. all 9 preferred the same method in every one of their votes
+    for a pairing) -- every resample then also agrees, so the bootstrap
+    reports spurious certainty about what a not-yet-observed participant
+    would do, rather than genuine uncertainty. This collapses each
+    participant's OWN (possibly multiple) decisive votes for a pairing into
+    ONE cluster-level data point -- that participant's majority preference,
+    or excluded if they split exactly evenly -- then applies the EXACT
+    (Clopper-Pearson) binomial CI to those n<=9 independent cluster-level
+    observations. Exact binomial CIs are valid by construction at any n,
+    including unanimous n/n, where they still report a non-degenerate
+    interval (e.g. 9/9 gives [66.4%, 100%], not a point) -- the standard
+    fix for exactly this small-sample boundary pathology.
+    Returns (point_estimate, lo, hi, n_clusters, k_preferred_first)."""
+    per_participant = defaultdict(list)
+    for r in records:
+        v = value_fn(r)
+        if v is not None:
+            per_participant[participant_fn(r)].append(v)
+    k = 0  # clusters preferring "first" (value_fn == 1.0)
+    n = 0
+    for pid, vals in per_participant.items():
+        if not vals:
+            continue
+        mean = sum(vals) / len(vals)
+        if mean > 0.5:
+            k += 1
+            n += 1
+        elif mean < 0.5:
+            n += 1
+        # mean == 0.5 (participant split exactly evenly): excluded, neither
+        # cluster nor decisive -- the cluster-level analog of a tie.
+    if n == 0:
+        return float("nan"), float("nan"), float("nan"), 0, 0
+    lo, hi = clopper_pearson(k, n, alpha)
+    return k / n, lo, hi, n, k
+
+
 def participant_cluster_bootstrap_ci(records, value_fn, participant_fn=lambda r: r["participant_id"],
                                       n_boot=10000, alpha=0.05, seed=0):
     """95% CI for a proportion, resampling PARTICIPANTS (clusters) with
@@ -200,11 +242,14 @@ def summarize_task2(blobs):
                 if r["winner"] == m2:
                     return 0.0
                 return None  # tie: excluded from the decisive-vote proportion
-            _, lo, hi = participant_cluster_bootstrap_ci(records, _decisive_pref)
+            _, lo, hi, n_clust, k_clust = cluster_level_clopper_pearson(records, _decisive_pref)
             print(f"    {m1} vs {m2}: {m1}={n1} {m2}={n2} tie={tie}  "
-                  f"({m1} preferred {100*n1/n_decisive:.0f}% of decisive votes, "
-                  f"95% CI [{lo*100:.0f}%, {hi*100:.0f}%] -- participant-clustered "
-                  f"bootstrap, not pooled-judgment Clopper-Pearson)")
+                  f"({m1} preferred {100*n1/n_decisive:.0f}% of decisive votes; "
+                  f"at the participant level, {m1} preferred by {k_clust}/{n_clust} participants, "
+                  f"95% CI [{lo*100:.0f}%, {hi*100:.0f}%] -- exact (Clopper-Pearson) "
+                  f"on participant-level majority preference, not pooled-judgment "
+                  f"or bootstrap, since a nonparametric bootstrap degenerates to a "
+                  f"zero-width interval whenever all participants agree)")
         else:
             print(f"    {m1} vs {m2}: {m1}={n1} {m2}={n2} tie={tie}  (all ties)")
 

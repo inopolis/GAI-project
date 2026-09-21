@@ -259,7 +259,7 @@ def build_configs():
     add("lt_suffixmatch_a3.0",
         suffixmatch=dict(temperature=0.10, top_p=1.0, alpha=3.0,
                          max_history=400, ref_len=20))
-    add("lt_fsd", fsd=dict(temperature=0.10, top_p=1.0, alpha=4.0, n_min=2, n_max=4))
+    add("lt_fsd", fsd=dict(temperature=0.10, top_p=1.0, alpha=3.0, n_max=3))
     add("lt_lzpenalty",
         # buffer/window at the paper's own subword defaults (their 128k-vocab
         # setting), not the char-model's scaled-down 8/128: GPT-2's ~50k

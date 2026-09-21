@@ -102,6 +102,11 @@ PAIRS = [
     ("lt_adaptive", "lt_dual_eps0.05"),
     ("lt_adaptive", "lt_rep_penalty_1.3"),
     ("lt_dual_eps0.01", "lt_dual_eps0.05"),
+    ("lt_risk_only", "lt_fsd"),
+    ("lt_risk_only", "lt_lzpenalty"),
+    ("lt_fsd", "lt_suffixmatch_a3.0"),
+    ("lt_fsd", "lt_lzpenalty"),
+    ("lt_lzpenalty", "lt_suffixmatch_a3.0"),
 ]
 
 

@@ -1,0 +1,30 @@
+{
+  "lt_fsd": {
+    "km_times": [
+      0,
+      150
+    ],
+    "km_survival": [
+      1.0,
+      1.0
+    ],
+    "n_censored": 50,
+    "n_total": 50,
+    "rmst": 150.0,
+    "event": "persistent_cycle_R6_Pmax20_tokens"
+  },
+  "lt_lzpenalty": {
+    "km_times": [
+      0,
+      150
+    ],
+    "km_survival": [
+      1.0,
+      1.0
+    ],
+    "n_censored": 50,
+    "n_total": 50,
+    "rmst": 150.0,
+    "event": "persistent_cycle_R6_Pmax20_tokens"
+  }
+}

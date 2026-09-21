@@ -1,0 +1,36 @@
+[
+  {
+    "strategy": "fsd",
+    "checkpoint": "cosine",
+    "n_samples": 150,
+    "kl_bits_mean": 2.1836,
+    "kl_bits_lo": 2.1237,
+    "kl_bits_hi": 2.2389,
+    "risk_achieved_mean": 0.4054,
+    "risk_achieved_lo": 0.3961,
+    "risk_achieved_hi": 0.4147,
+    "latency_ms_mean": 12.9218,
+    "latency_ms_lo": 8.5051,
+    "latency_ms_hi": 16.929,
+    "loop_rate": 0.0133,
+    "rmst": 498.75,
+    "survival_auc": 0.9975
+  },
+  {
+    "strategy": "lzpenalty",
+    "checkpoint": "cosine",
+    "n_samples": 150,
+    "kl_bits_mean": 0.1856,
+    "kl_bits_lo": 0.1804,
+    "kl_bits_hi": 0.1911,
+    "risk_achieved_mean": 0.624,
+    "risk_achieved_lo": 0.6131,
+    "risk_achieved_hi": 0.6359,
+    "latency_ms_mean": 7.9145,
+    "latency_ms_lo": 5.9077,
+    "latency_ms_hi": 10.2398,
+    "loop_rate": 0.0,
+    "rmst": 500.0,
+    "survival_auc": 1.0
+  }
+]
