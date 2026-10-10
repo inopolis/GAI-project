@@ -42,3 +42,7 @@ dist/
 # Character-model checkpoints under runs/*/best.pt are NOT covered by this
 # (they're small, already tracked, and this only ignores this directory).
 hf_cache/
+tests/.official_cache/
+
+# Local LaTeX compile check (not part of the release): Tectonic binary and a small venv for PDF previews
+tools/

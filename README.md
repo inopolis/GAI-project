@@ -67,9 +67,24 @@ generalize_gpt2.py            Earlier, narrower subword generalization check
                                headline comparison; kept for its own record).
 
 synthetic_fsm_hazard.py       Synthetic finite-state hazard experiment with an
-                               exactly DP-computed hazard (ground truth known).
-build_hazard_dataset.py       Builds the real-model hazard-transfer dataset.
+                               exactly DP-computed hazard (ground truth known);
+                               every number (oracle, equal-distortion matching)
+                               is exact, no Monte Carlo.
+verify_bernoulli_bound.py     Checks the oracle against the Bernoulli-KL closed
+                               form to 1e-14 and runs the functional-form ablation.
+prompt_conditional_bound.py   Prompt-conditional event-level analysis from the
+                               sample-level records of common_kl_comparison.py.
+build_hazard_dataset.py       Builds the real-model hazard-estimator dataset
+                               (event detected on context + rollout; no padding).
 test_multistep_hazard.py      Multi-step hazard probe on the real model.
+analyze_hazard_transfer.py    Context-clustered analysis of both hazard designs.
+verify_human_eval_passages.py Identifies which saved run each human-evaluation
+                               passage came from.
+tests/                        Checks of the FSD-style and LZ Penalty decoders
+                               against the official / reference code at pinned
+                               commits (run: python3 tests/test_*.py).
+RELEASE_MANIFEST.md           Table-by-table map from the paper to code, commands,
+                               settings and saved results.
 compute_significance.py       Exact prompt-level significance calculations
                                (replaces ad-hoc inline recomputation).
 plot_results.py / plot_training.py
@@ -166,8 +181,8 @@ Decoders compared (see `src/decoding.py` docstrings for full detail on each):
 | `lt_temp_*`, `lt_rep_penalty_*` | — | Standard baselines |
 | `lt_no_repeat_Ngram` | — | Hard constraint; kept separate, directly forbids the measured event |
 | `lt_suffixmatch_*` | `SuffixMatchDecoder` | Homemade LZ77-style baseline. **Not** the published Look-back algorithm (renamed from the earlier, misleading `LookBackDecoder`) |
-| `lt_fsd` | `FSDDecoder` | Good-faith FSD-*style* reconstruction, not a certified reproduction |
-| `lt_lzpenalty` | `LZPenaltyDecoder` | Reimplementation of Ginart et al., *LZ Penalty* (arXiv:2504.20131, TMLR 2026), following its formula and dynamic range — **not "authentic"**: checked against the authors' now-released reference implementation (`github.com/tginart/sglang`) and confirmed to diverge from it in more than the previously-flagged indexing-convention detail (applies the eq. 14 formula to a single identified match rather than per-candidate, and appears to differ in sign convention for novel tokens — see the class docstring). Every `lt_lzpenalty` number in this project should be read as illustrating the mechanism family, not as reproducing the published algorithm |
+| `lt_fsd` | `FSDDecoder` | FSD-*style* adaptation: scoring and the recursive residual-mass anti-LM match the official code (`github.com/LHRYANG/FSD`, checked by `tests/test_fsd_against_official.py`), but it samples from the top-k FSD scores instead of taking the official argmax, and uses the temperature-scaled softmax. Not a reproduction of the official method |
+| `lt_lzpenalty` | `LZPenaltyDecoder` | Ported from the authors' reference implementation (`github.com/tginart/sglang`, `compute_lz_penalty_stateless`) and checked to reproduce it exactly on constructed cases (Ginart et al., *LZ Penalty*, arXiv:2504.20131) |
 | `lt_risk_only`, `lt_adaptive` | `RecurrenceRiskDecoder` (`mode="fixed"` / `"adaptive"`) | No exact projection guarantee |
 | `lt_dual_eps*` | `RecurrenceRiskDecoder` (`mode="dual"`) | The **only** mode entitled to the exact minimum-distortion claim; lambda is solved from eps every step in log-space (see `_solve_dual_lambda`) |
 
@@ -211,11 +226,15 @@ definition, plus plain temperature sampling as a built-in sanity check
 (`q == p` exactly, KL should print as `0.0000b`):
 ```bash
 python3 common_kl_comparison.py \
-  --ckpt runs/cosine/best.pt --out_dir runs/common_kl_comparison \
+  --ckpt runs/cosine/best.pt --out_dir runs/common_kl_comparison_v4_samples \
   --n_seeds 10 --n_chars 500 --prompt_set test
+python3 prompt_conditional_bound.py \
+  --samples runs/common_kl_comparison_v4_samples/common_kl_samples.csv
 ```
-Validated correct on a small pilot run (5 dev prompts × 1 seed × 20 chars);
-not yet run at this full, headline scale.
+Besides the aggregate table, the script writes `common_kl_samples.csv`
+(one row per generation: prompt, seed, loop event, total path KL), which
+`prompt_conditional_bound.py` uses for the prompt-conditional analysis
+(prompts are never pooled; uncertainty by resampling whole prompts).
 
 ## 8. Generalization checks
 
@@ -274,12 +293,14 @@ since detector-threshold sensitivity there requires no retokenization risk.
 
 ```bash
 python3 synthetic_fsm_hazard.py          # exact DP ground truth
-python3 build_hazard_dataset.py          # real-model hazard-transfer dataset
-python3 test_multistep_hazard.py         # multi-step hazard probe on the real model
+python3 verify_bernoulli_bound.py        # closed-form check + functional-form ablation
+python3 build_hazard_dataset.py --ckpt runs/cosine/best.pt --data_dir data_out --out hazard_dataset_v2.json
+python3 test_multistep_hazard.py --ckpt runs/cosine/best.pt --data_dir data_out --out multistep_hazard_probe_v2.json
+python3 analyze_hazard_transfer.py --dataset hazard_dataset_v2.json --probe multistep_hazard_probe_v2.json
 ```
-Validated where ground truth is exactly known; found not to transfer to the
-real model under the specific rollout estimator tested. Reported in the
-paper as a scope-limited null result of that estimator, not a general claim.
+The hazard estimator labels each rollout by whether the frozen detector fires
+on the earlier context plus the rollout, and never pads contexts; results and
+their interpretation are in Appendix F of the paper.
 
 ## 10. Significance testing and figures
 
@@ -288,21 +309,24 @@ python3 compute_significance.py
 python3 plot_results.py --dir runs/main_comparison --out runs/main_comparison/plots
 ```
 
-## 11. Human evaluation
+## 11. Pilot human evaluation
 
-`human_eval_tool.html` is a single self-contained file — open it directly in
-any browser (`file://...`, no server, no internet, works fully offline).
-It runs two blinded tasks (loop-detection agreement on real generated
-passages; pairwise preference on `dual` vs `suffixmatch` outputs the
-automatic metrics alone cannot resolve), randomizes order and left/right
-per participant, and ends with a "copy results" step that produces one JSON
-blob per participant. Send each participant's JSON blob back and aggregate:
+`human_eval_tool.html` is a single self-contained file: open it directly in
+any browser (`file://...`, no server, no internet, works fully offline), with
+an English or Russian interface. It runs two blinded tasks (loop-detection
+agreement on generated passages; pairwise preference among four decoders),
+randomizes order and left/right per participant, and ends with a "copy
+results" step that produces one JSON blob per participant. Aggregate:
 
 ```bash
-python3 aggregate_human_eval.py results_participant1.json results_participant2.json ...
+python3 aggregate_human_eval.py human_eval_results_v2/*.json
+python3 verify_human_eval_passages.py     # which saved run each passage came from
 ```
 
-See `last_paper.tex`, Section "Human evaluation", for the full protocol.
+The passages of the FSD-style decoder come from an intermediate version of
+that decoder (fixed interpolation weights), not the final one reported in the
+tables; `verify_human_eval_passages.py` shows this. The evaluation is a pilot
+reported in Appendix E of the paper.
 
 ## 12. Full reproduction, start to finish
 
@@ -341,3 +365,25 @@ succeeds; it says nothing about the sequence-level count of persistent
 loops. Zero observed loops across evaluated samples is reported throughout
 as a replicated *empirical* finding, never as something the theorem
 predicts or as a guarantee that "transfers."
+
+## 10. Reproducing the paper
+
+```
+python3 budget_ladder.py --out budget_ladder.json     # exact small-system experiments (~8 min)
+python3 tests/test_budget_ladder.py                    # identities and cross-checks of the above
+python3 frontier_comparison.py --help                  # fixed price vs fixed budget on the primary model
+python3 make_figures.py                                # figures/ from the saved results
+python3 build_paper.py                                 # paper_make.tex from paper_src/ + saved results
+python3 verify_paper_tables.py --tests                 # paper vs saved results, provenance, baseline tests
+```
+
+`paper_src/` holds the text; every table of the new analysis is generated from a
+saved result file by `build_paper.py`. `RELEASE_MANIFEST.md` lists the command and
+result directory behind every table.
+
+Optional local compile check of the article-class build (not part of the release; `tools/` is git-ignored):
+```
+python3 build_paper.py --article --out /tmp/paper_check/paper.tex && cp -r figures /tmp/paper_check/
+cd /tmp/paper_check && /path/to/repo/tools/tectonic/tectonic paper.tex       # downloads TeX packages on first use
+tools/venv/bin/python -c "import pymupdf"                                    # only for rendering PDF pages to images
+```

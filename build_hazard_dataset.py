@@ -221,7 +221,6 @@ def sample_contexts_from_files(samples_globs, itos_inv, n_contexts, min_ctx=40,
 
 
 @torch.no_grad()
-@torch.no_grad()
 def select_candidates(model, stoi, itos, context_ids, device, n_top=8, n_random=4, seed=0):
     """
     Given a context, return a set of candidate next-tokens to probe: the
@@ -242,6 +241,16 @@ def select_candidates(model, stoi, itos, context_ids, device, n_top=8, n_random=
     return top + rand_extra, probs.tolist()
 
 
+def rollout_loop_label(context_text, continuation_text):
+    """1 if the frozen loop event fires on the FULL text (earlier context plus
+    the rollout), 0 otherwise. The context alone must not already contain the
+    event (checked by the caller), so a hit means the event first fired inside
+    the rollout window. Detecting on the continuation alone would miss every
+    cycle that begins in the context and completes in the rollout, which is
+    exactly the case a hazard estimate is meant to capture."""
+    return int(persistent_loop_onset(context_text + continuation_text) >= 0)
+
+
 @torch.no_grad()
 def batched_rollout_labels_per_candidate(model, stoi, itos, candidates_per_context,
                                          k_rollouts, horizon, temperature, device,
@@ -250,67 +259,63 @@ def batched_rollout_labels_per_candidate(model, stoi, itos, candidates_per_conte
     For each (context, candidate_token) pair, force the candidate as the
     FIRST generated token, then continue k_rollouts independent stochastic
     continuations for the remaining (horizon-1) steps under the reference
-    temperature. This is the per-candidate hazard the projection actually
-    needs -- "if I choose v now, what is P(loop within the horizon)" --
-    matching the structure validated on the synthetic FSM, not an average
-    over whatever the model would have chosen on its own.
+    temperature, and label each rollout by whether the frozen loop event fires
+    on context + rollout (rollout_loop_label). This is the per-candidate
+    hazard the projection needs: "if I choose v now, what is P(loop within the
+    horizon)".
+
+    Rows are batched only with rows of the SAME context length, so no padding
+    is ever added: every row sees exactly its own context, as in real
+    decoding. (An earlier version left-padded variable-length contexts with a
+    real token id and fed them to a model that attends to every position,
+    which changes the next-token distribution.)
 
     candidates_per_context: list of (context_ids, candidate_token_list,
-    full_prob_vector) triples, one per context, as built by select_candidates.
-
-    Returns a flat list of examples: one per (context, candidate) pair, with
-    the empirical hazard label and the candidate identity/probability, so
-    compute_features() can be called per-example afterward.
+    full_prob_vector) triples, as built by select_candidates.
     """
-    unk = stoi.get(" ", 0)
     block_size = model.block_size
 
-    flat_ids = []
-    owner = []
+    rows = []          # (ex_idx, ids)
     examples_meta = []
-
     for ci, (ctx_ids, cand_list, probs) in enumerate(candidates_per_context):
         for cand in cand_list:
             ex_idx = len(examples_meta)
             examples_meta.append((ci, cand, probs[cand]))
             for _ in range(k_rollouts):
-                flat_ids.append(list(ctx_ids) + [cand])
-                owner.append(ex_idx)
+                rows.append((ex_idx, list(ctx_ids) + [cand]))
 
     hits = [0] * len(examples_meta)
     total = [0] * len(examples_meta)
 
-    for start in range(0, len(flat_ids), batch_size):
-        chunk = flat_ids[start:start+batch_size]
-        chunk_owner = owner[start:start+batch_size]
-        max_len = max(len(c) for c in chunk)
-        padded = [[unk]*(max_len-len(c)) + c for c in chunk]
-        idx = torch.tensor(padded, dtype=torch.long, device=device)
-        ctx_len = max_len  # includes the forced candidate token already
+    by_len = {}
+    for ex_idx, ids in rows:
+        by_len.setdefault(len(ids), []).append((ex_idx, ids))
 
-        for _ in range(horizon - 1):   # candidate already consumed 1 step
-            idx_cond = idx[:, -block_size:]
-            logits, _ = model(idx_cond)
-            logits = logits[:, -1, :] / max(temperature, 1e-6)
-            probs_step = torch.softmax(logits, dim=-1)
-            next_id = torch.multinomial(probs_step, num_samples=1)
-            idx = torch.cat([idx, next_id], dim=1)
+    done = 0
+    for L, group in sorted(by_len.items()):
+        for start in range(0, len(group), batch_size):
+            chunk = group[start:start + batch_size]
+            idx = torch.tensor([ids for _, ids in chunk], dtype=torch.long, device=device)
+            for _ in range(horizon - 1):   # candidate already consumed 1 step
+                logits, _ = model(idx[:, -block_size:])
+                probs_step = torch.softmax(logits[:, -1, :] / max(temperature, 1e-6), dim=-1)
+                idx = torch.cat([idx, torch.multinomial(probs_step, num_samples=1)], dim=1)
 
-        for row, ex_idx in zip(idx.tolist(), chunk_owner):
-            gen_part = row[ctx_len - 1:]  # candidate token + everything after
-            text = "".join(itos.get(str(int(t)), "?") for t in gen_part)
-            onset = persistent_loop_onset(text)
-            total[ex_idx] += 1
-            if onset >= 0:
-                hits[ex_idx] += 1
-
-        print(f"  rollout batch {start}-{start+len(chunk)} / {len(flat_ids)} done")
+            for (ex_idx, _), row in zip(chunk, idx.tolist()):
+                ci = examples_meta[ex_idx][0]
+                ctx_text = "".join(itos.get(str(int(t)), "?")
+                                   for t in candidates_per_context[ci][0])
+                cont_text = "".join(itos.get(str(int(t)), "?") for t in row[L - 1:])
+                total[ex_idx] += 1
+                hits[ex_idx] += rollout_loop_label(ctx_text, cont_text)
+            done += len(chunk)
+        print(f"  rollouts done: {done} / {len(rows)} (context length {L})")
 
     out = []
     for (ci, cand, p), h, t in zip(examples_meta, hits, total):
         out.append({"context_idx": ci, "candidate_token": cand,
                     "candidate_model_prob": p,
-                    "hazard_label": (h/t if t else float("nan"))})
+                    "hazard_label": (h / t if t else float("nan"))})
     return out
 
 
@@ -389,6 +394,11 @@ def main():
                                            strategy_filter=args.strategy_filter)
     print(f"  (strategy_filter={args.strategy_filter or 'disabled -- using all samples'})")
     print(f"Got {len(contexts)} contexts.")
+    n_before = len(contexts)
+    contexts = [c for c in contexts if persistent_loop_onset(c) < 0]
+    print(f"  kept {len(contexts)} of {n_before} contexts whose own text does not "
+          f"already contain the loop event (hazard is defined for contexts that "
+          f"have not yet looped).")
     if not contexts:
         print("No contexts found -- check --samples_glob paths. Aborting.")
         return
@@ -445,6 +455,7 @@ def main():
         extended_ids = ctx_ids + [cand]
         cand_immediate_risk = exact_risk_signal(extended_ids)
         dataset.append({
+            "context_idx": ci,
             **ctx_feats,
             "candidate_model_prob": ex["candidate_model_prob"],
             "candidate_immediate_risk": cand_immediate_risk,

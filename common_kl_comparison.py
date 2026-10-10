@@ -238,9 +238,11 @@ def main():
         configs = {k: v for k, v in configs.items() if k in set(args.only)}
 
     rows = []
+    all_sample_rows = []
     for name, factory in configs.items():
         print(f"  {name:<20}", end="", flush=True)
         kl_all, risk_all, lat_all, onsets, groups = [], [], [], [], []
+        sample_rows = []
         for pi, (pname, ptext) in enumerate(prompts):
             for seed in range(1, args.n_seeds + 1):
                 print(f"\r  {name:<22} sample {pi*args.n_seeds+seed}/"
@@ -258,6 +260,18 @@ def main():
                 lat_all.append(float(np.mean(lats)))
                 onsets.append(persistent_loop_onset(text))
                 groups.append(pi)
+                # Sample-level record: needed for prompt-conditional analyses
+                # (prompt_conditional_bound.py), which must keep each sample's
+                # loop event and path KL together and resample whole prompts.
+                sample_rows.append({
+                    "strategy": name, "prompt_index": pi, "seed": seed,
+                    "loop_onset": onsets[-1],
+                    "loop_event": int(onsets[-1] >= 0),
+                    "kl_bits_per_step_mean": kl_all[-1],
+                    "kl_bits_total": float(np.sum(kls)),
+                    "n_steps": len(kls),
+                    "risk_achieved_mean": risk_all[-1],
+                })
 
         row = {"strategy": name, "checkpoint": ckpt_name, "n_samples": len(kl_all)}
         for label, vals in [("kl_bits", kl_all), ("risk_achieved", risk_all),
@@ -268,6 +282,7 @@ def main():
         row["rmst"] = rmst(onsets, args.n_chars)
         row["survival_auc"] = survival_auc(onsets, args.n_chars)
         rows.append(row)
+        all_sample_rows.extend(sample_rows)
         print(f"\r  {name:<22} KL={row['kl_bits_mean']:.4f}b  "
               f"risk={row['risk_achieved_mean']:.4f}  "
               f"latency={row['latency_ms_mean']:.3f}ms  "
@@ -279,6 +294,10 @@ def main():
         w.writeheader(); w.writerows(rows)
     with open(os.path.join(args.out_dir, "common_kl_comparison.json"), "w") as f:
         json.dump(rows, f, indent=2)
+    if all_sample_rows:
+        with open(os.path.join(args.out_dir, "common_kl_samples.csv"), "w", newline="") as f:
+            w = csv.DictWriter(f, fieldnames=list(all_sample_rows[0].keys()))
+            w.writeheader(); w.writerows(all_sample_rows)
 
     print(f"\nWrote common_kl_comparison.{{csv,json}} -> {args.out_dir}/")
     print("\nPareto view (loop_rate vs KL, sorted by KL):")

@@ -80,12 +80,13 @@ def rollout_with_commitment(model, stoi, itos, ctx_ids, candidate, L, horizon,
                 next_id = torch.multinomial(probs, num_samples=1)
             idx = torch.cat([idx, next_id], dim=1)
 
-        gen_part_all = idx[:, len(ctx_ids):].tolist()
-        for gen_part in gen_part_all:
-            text = "".join(itos.get(str(int(t)), "?") for t in gen_part)
-            onset = persistent_loop_onset(text)
-            if onset >= 0:
-                hits += 1
+        # Label on the FULL text (earlier context + rollout): a cycle that
+        # begins in the context and completes in the rollout counts. The
+        # context itself is guaranteed event-free by main().
+        ctx_text = "".join(itos.get(str(int(c)), "?") for c in ctx_ids)
+        for gen_part in idx[:, len(ctx_ids):].tolist():
+            cont_text = "".join(itos.get(str(int(c)), "?") for c in gen_part)
+            hits += int(persistent_loop_onset(ctx_text + cont_text) >= 0)
 
     return hits / k_rollouts
 
@@ -137,6 +138,8 @@ def main():
     contexts = sample_contexts_from_files(args.samples_glob, itos, args.n_contexts,
                                            strategy_filter=args.strategy_filter)
     print(f"Got {len(contexts)} contexts.")
+    contexts = [c for c in contexts if persistent_loop_onset(c) < 0]
+    print(f"  kept {len(contexts)} contexts whose own text does not already contain the event.")
     if not contexts:
         print("No contexts found. Aborting.")
         return
@@ -145,7 +148,7 @@ def main():
 
     print("Selecting risky and novel candidates per context...")
     pairs = []  # (ctx_ids, candidate, is_risky)
-    for ctx in contexts:
+    for ci, ctx in enumerate(contexts):
         ids = [stoi.get(c, stoi.get(" ", 0)) for c in ctx]
         cands, probs = select_candidates(model, stoi, itos, ids, device, n_top=12, n_random=8)
         risky, novel = [], []
@@ -154,12 +157,12 @@ def main():
             (risky if r > 0 else novel).append(c)
         rng.shuffle(risky); rng.shuffle(novel)
         for c in risky[:args.n_risky_per_context]:
-            pairs.append((ids, c, True))
+            pairs.append((ci, ids, c, True))
         for c in novel[:args.n_novel_per_context]:
-            pairs.append((ids, c, False))
+            pairs.append((ci, ids, c, False))
 
-    n_risky = sum(1 for _, _, r in pairs if r)
-    n_novel = sum(1 for _, _, r in pairs if not r)
+    n_risky = sum(1 for _, _, _, r in pairs if r)
+    n_novel = sum(1 for _, _, _, r in pairs if not r)
     print(f"Probing {len(pairs)} (context, candidate) pairs "
           f"({n_risky} risky, {n_novel} novel) x {len(args.commitment_lengths)} "
           f"commitment lengths x {args.k_rollouts} rollouts each")
@@ -172,12 +175,12 @@ def main():
     import time
     t0 = time.time()
     done = 0
-    for pi, (ctx_ids, cand, is_risky) in enumerate(pairs):
+    for pi, (ci, ctx_ids, cand, is_risky) in enumerate(pairs):
         for L in args.commitment_lengths:
             hz = rollout_with_commitment(model, stoi, itos, ctx_ids, cand, L,
                                          args.horizon, args.temperature,
                                          args.k_rollouts, device)
-            results[L]["risky" if is_risky else "novel"].append(hz)
+            results[L]["risky" if is_risky else "novel"].append({"context_idx": ci, "hazard": hz})
         done += 1
         if done == 3:
             per_pair = (time.time() - t0) / done
@@ -193,13 +196,14 @@ def main():
     print("-" * 72)
     summary = []
     for L in args.commitment_lengths:
-        r = results[L]["risky"]; n = results[L]["novel"]
+        r = [x["hazard"] for x in results[L]["risky"]]
+        n = [x["hazard"] for x in results[L]["novel"]]
         rm = float(np.mean(r)) if r else float("nan")
         nm = float(np.mean(n)) if n else float("nan")
         gap = rm - nm
         print(f"{L:>22} {rm:>19.3f} {nm:>19.3f} {gap:>8.3f}")
         summary.append({"L": L, "risky_mean": rm, "novel_mean": nm, "gap": gap,
-                        "risky_vals": r, "novel_vals": n})
+                        "risky": results[L]["risky"], "novel": results[L]["novel"]})
 
     with open(args.out, "w") as f:
         json.dump(summary, f, indent=2)

@@ -1,0 +1,27 @@
+\begin{table}[ht]
+\centering
+\caption{Primary (fiction-trained, \textsc{cosine}) model, $T{=}0.10$, 15 test prompts, frozen detector. Loops are generations in which the detector fires, out of $n$ generations of 500 characters; RMST is in characters; mcNLL is the model-consistency NLL in bits per character and Sim the 4-gram similarity to a held-out corpus (Appendix~\ref{sec:protocol}); $\KL(q\Vert p)$ is the per-step mean in bits. \textsc{rr-dual} per-step feasibility is 100.0\%.}
+\label{tab:main}
+\begin{tabular}{@{}lrrrrr@{}}
+\toprule
+Method & Loops & RMST & mcNLL & Sim & $\KL(q\Vert p)$ \\
+\midrule
+Greedy & 140/150 & 130   & 0.820 & 0.089 & --- \\
+Temperature 0.05 & 43/50 & 170   & 0.831 & 0.116 & --- \\
+Temperature 0.10 & 43/150 & 404   & 0.886 & 0.155 & --- \\
+Temperature 0.15 & 0/50 & 500   & 0.926 & 0.181 & --- \\
+Repetition penalty 1.3 & 7/150 & 486   & 0.950 & 0.199 & --- \\
+No-repeat 4-gram$^{*}$ & 0/150 & 500   & 1.722 & 0.249 & --- \\
+SuffixMatch ($\alpha{=}3$) & 0/150 & 500   & 1.017 & 0.267 & --- \\
+FSD-style (adapted) & 3/150 & 498   & 1.099 & 0.211 & --- \\
+LZ Penalty (adapted) & 0/150 & 500   & 0.924 & 0.180 & --- \\
+\textsc{rr-fixed} ($\lambda{=}2$) & 4/150 & 493   & 0.934 & 0.189 & 0.037 \\
+\textsc{rr-adaptive} & 0/150 & 500   & 0.960 & 0.212 & 0.096 \\
+\textsc{rr-dual} ($\varepsilon{=}0.05$) & 0/150 & 500 & 1.938 & 0.212 & 11.186 \\
+\textsc{rr-dual} ($\varepsilon{=}0.01$) & 0/150 & 500 & 2.054 & 0.193 & 12.670 \\
+\bottomrule
+\end{tabular}
+
+\vspace{4pt}
+{\footnotesize $^{*}$Hard constraint on the measured event; excluded from significance testing (Section~\ref{ssec:hard-repeat}).}
+\end{table}

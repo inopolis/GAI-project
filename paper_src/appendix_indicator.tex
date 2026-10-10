@@ -1,0 +1,17 @@
+\section{Indicator-Risk Controller and Equal-Distortion Comparison}\label{app:indicator}
+This appendix keeps the first comparison made in the small system of Section~\ref{sec:small}: two one-step controllers, one with the repeat indicator as risk signal (the kind of signal the decoders on real models use) and one with the exact hazard (the fixed-budget controller of Section~\ref{sec:small}), against the event-level optimum, for $R=1$ and $N=6$. The optimum's KL computed sequentially (Proposition~\ref{prop:causal}) agrees with $d_{\mathrm{Ber}}(\epsilon\Vert p)$ to $<10^{-9}$ at every grid point (for example $0.7369456415$ bits for $\epsilon{=}0.20$ and $1.5974337688$ bits for $\epsilon{=}0.01$). The hazard-informed rows of Table~\ref{tab:oracle} are the fixed-budget column of Table~\ref{tab:ladder}.
+
+Two local surrogate controllers are compared with it. Each solves $\min_q\KL(q\Vert P(\cdot\mid h))$ subject to $\E_q[r]\le\varepsilon_{\text{step}}$ at every step: \emph{local} with $r$ the repeat indicator, and \emph{hazard-informed} with $r$ the exact hazard $H(h,v)$. The one-step budget $\varepsilon_{\text{step}}$ bounds a one-step expectation, whereas the optimum's $\epsilon$ bounds a sequence-level probability, so $\varepsilon_{\text{step}}$ is bisected, by exact forward propagation and without Monte Carlo, until each controller's own exact loop probability equals the target $\epsilon$. All three mechanisms are then compared at the same sequence-level operating point. The solver's feasibility flag is tracked: the hazard-informed (fixed-budget) controller's one-step budget is structurally below its achievable floor at 33--50\% of the probability mass, whereas the indicator controller is never infeasible.
+
+{{TABLE:oracle}}
+
+Even the hazard-informed controller spends 1.6--3.3 times the optimum's KL for the same loop probability (mean 2.2), and the indicator controller 2.3--5.1 times (mean 3.1). The hazard-informed controller is cheaper than the indicator controller at 5 of 6 grid points; at $\epsilon{=}0.01$ the indicator controller is slightly cheaper (2.3 against 2.4 times), where the hazard-informed controller's infeasibility binds most.
+
+\subsection{Comparison at exactly equal distortion}
+\label{ssec:equaldist}
+For each hazard-informed operating point, the indicator controller's budget is solved exactly so that its expected path KL per step equals the hazard-informed controller's, and both loop probabilities are read off exactly. The indicator controller has a KL ceiling: at $\varepsilon_{\text{step}}{=}0$ its distribution is concentrated on the one-step risk-minimizing states and tightening the budget cannot change it further. Its exact ceiling is $0.614985$ bits per step.
+
+{{TABLE:synthetic}}
+
+Among the five operating points whose KL is below the ceiling, the hazard-informed controller has the lower loop probability at all five, by 5.4--32.1 percentage points. At $\epsilon{=}0.01$ the hazard-informed KL (0.632) exceeds the ceiling; no indicator-controller configuration spends that much, and at its ceiling it already has a loop probability of 0.0\% at lower KL, so that point is not a comparison at equal distortion and is not counted as a win for either.
+

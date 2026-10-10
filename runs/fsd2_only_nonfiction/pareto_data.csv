@@ -1,0 +1,2 @@
+strategy,category,checkpoint,hard_constraint,survival_auc_persistent,rmst_persistent,loop_rate_persistent,survival_auc_ngram10_RETRACTED_DO_NOT_USE,rmst_ngram10_RETRACTED_DO_NOT_USE,loop_rate_ngram10_RETRACTED_DO_NOT_USE,mc_nll_bpc,ngram_sim_4,spelling_error,compression,longest_rep_sub,chars_per_sec
+lt_fsd,loop_regime,nonfiction_baseline,False,0.9743,487.15,0.16,0.2876,143.8,1.0,0.8753,0.1947,0.0296,0.4392,40.5333,

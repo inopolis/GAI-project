@@ -1,0 +1,202 @@
+\section{Additional Models}
+\label{sec:generalization}
+%==============================================================================
+
+\subsection{Pretrained subword pilot}
+Before a full comparison on a pretrained subword model, a cheap pilot checks that a measurable low-temperature repetition regime exists, without assuming that the character model's temperature range or the pathology itself transfers. GPT-2 (124M) with an uncalibrated placeholder token-level event ($R{=}5$, $P_{\max}{=}20$ tokens) gives Table~\ref{tab:gpt2pilot}.
+
+\begin{table}[ht]
+\centering
+\caption{GPT-2 pilot, 5 prompts $\times$ 5 seeds, 150 new tokens, uncalibrated placeholder event.}
+\label{tab:gpt2pilot}
+\begin{tabular}{@{}rrl@{}}
+\toprule
+$T$ & Loop rate & 95\% CI \\
+\midrule
+0.05 & 32.0\% & [14.9\%, 53.5\%] \\
+0.10 & 32.0\% & [14.9\%, 53.5\%] \\
+0.15 & 40.0\% & [21.1\%, 61.3\%] \\
+0.20 & 28.0\% & [12.1\%, 49.4\%] \\
+0.30 & 28.0\% & [12.1\%, 49.4\%] \\
+0.50 & 4.0\%  & [0.1\%, 20.4\%] \\
+0.70 & 0.0\%  & [0.0\%, 13.7\%] \\
+1.00 & 0.0\%  & [0.0\%, 13.7\%] \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+A measurable regime exists (peak 40.0\% at $T{=}0.15$, above the pilot's 10\% threshold), so the full comparison was run (Section~\ref{sec:gpt2-full}; see Section~\ref{ssec:inference} for the inference protocol) after replacing the placeholder with a calibrated event, following the calibrate/freeze/validate protocol of Section~\ref{sec:event} at the token level on this model's own tokenizer. The frozen token-level event ($R{=}5$, $P_{\max}{=}20$ tokens; \texttt{validate\_\allowbreak{}loop\_\allowbreak{}event\_\allowbreak{}subword.py}) has a pooled false-positive rate of 1.1\% (95\% CI [0.7\%, 1.9\%]) on a disjoint validation battery. It coincides numerically with the pilot's placeholder, but was calibrated and validated before use.
+
+\subsection{GPT-2 full comparison}
+\label{sec:gpt2-full}
+Table~\ref{tab:gpt2full} reports the same decoder classes as Table~\ref{tab:main}, run unmodified against GPT-2 through a thin HuggingFace generation loop (\texttt{gpt2\_\allowbreak{}full\_\allowbreak{}comparison.py}) that delegates every step to the same \texttt{.step()} interface. $T{=}0.10$; 10 prompts (written fresh and not inspected while choosing $T$, $\alpha$, or $\varepsilon$) $\times$ 10 seeds $\times$ 200 new tokens; risk order $n_{\min}{=}2,n_{\max}{=}4$ tokens (a phrase-length band appropriate to BPE tokens); LZ Penalty at the paper's subword defaults (buffer 32, window 512).
+
+\begin{table}[ht]
+\centering
+\caption{GPT-2 (124M), $T{=}0.10$, 10 prompts $\times$ 10 seeds, 200 new tokens, frozen validated event ($R{=}5$, $P_{\max}{=}20$ tokens).}
+\label{tab:gpt2full}
+\begin{tabular}{@{}lrrrr@{}}
+\toprule
+Method & $n$ & Loop \% & RMST (tok) & mcNLL \\
+\midrule
+Greedy                      & 100 & 30.0\% & 158.5 & 0.626 \\
+Temperature 0.05             & 100 & 30.0\% & 167.2 & 0.678 \\
+Temperature 0.10             & 100 & 34.0\% & 163.7 & 0.728 \\
+Temperature 0.15             & 100 & 34.0\% & 164.1 & 0.766 \\
+Repetition penalty 1.3        & 100 & 0.0\%  & 200.0 & 4.282 \\
+No-repeat 3-gram$^{*}$       & 100 & 0.0\%  & 200.0 & 2.347 \\
+SuffixMatch ($\alpha{=}3$)    & 100 & 4.0\%  & 198.3 & 1.203 \\
+FSD-style (adapted)          & 100 & 0.0\%  & 200.0 & 2.178 \\
+LZ Penalty (adapted)        & 100 & 8.0\%  & 193.6 & 1.532 \\
+\textsc{rr-fixed} ($\lambda{=}3$)   & 100 & 22.0\% & 180.7 & 0.847 \\
+\textsc{rr-adaptive}          & 100 & 19.0\% & 187.1 & 0.884 \\
+\textsc{rr-dual} ($\varepsilon{=}0.05$) & 100 & 0.0\% & 200.0 & 2.525 \\
+\textsc{rr-dual} ($\varepsilon{=}0.01$) & 100 & 0.0\% & 200.0 & 2.553 \\
+\bottomrule
+\end{tabular}
+
+\vspace{4pt}
+{\footnotesize $^{*}$Hard constraint on the measured event; excluded from the pattern discussed below on the same grounds as Table~\ref{tab:main}.}
+\end{table}
+
+Both dual configurations reach exactly 100.0\% per-step feasibility and 0/100 loops at 6.349--6.721 bits of KL: the same outcome as the primary model at roughly half its KL cost (11.2--12.7 bits), a difference that may reflect what concentrating away from a handful of risky tokens costs in a much larger subword vocabulary. No common numeric constant is claimed; only the dual mechanism's per-step feasibility, which does not depend on a corpus- or model-tuned constant, again reaches its target exactly.
+
+Configurations without the dual guarantee do not carry their primary-model effectiveness over. \textsc{rr-fixed} and \textsc{rr-adaptive}, essentially loop-free on the primary model (2.7\%, 0.0\%), reach only 22.0\% and 19.0\% loops on GPT-2 at the same hyperparameters. LZ Penalty rises from 0.0\% on the primary model to 8.0\% here, and SuffixMatch is close to zero but not exactly zero (4.0\%). FSD-style moves in the opposite direction from its primary-model behavior (2.0\% there, 0.0\% here), so being close to zero on one model does not predict which way a heuristic's residual rate moves on another. Repetition penalty and hard no-repeat fully suppress the event here (0.0\% each), more effectively than on the primary model (4.7\% for repetition penalty), at a steep mcNLL cost (4.282 and 2.347).
+
+\subsection{A second, independent character-model setting}
+To test whether the primary result is specific to one 848K-parameter model on one corpus, a second model of identical architecture was trained on a corpus disjoint in genre, register, and author from every corpus used elsewhere: Darwin's \emph{On the Origin of Species} and Adam Smith's \emph{The Wealth of Nations} for training, Thoreau's \emph{Walden} for validation, and Machiavelli's \emph{The Prince} for test (non-fiction, argumentative prose, against the primary model's dialogue- and narrative-heavy fiction). The loop event was re-confirmed and not re-tuned on this corpus's held-out text (a \texttt{--confirm\_\allowbreak{}only} mode reusing the frozen $R{=}5$, $P_{\max}{=}60$ setting, which avoids calibrating and validating on the same corpus): pooled false-positive rate 5/600 (0.8\%, 95\% CI [0.3\%, 1.9\%]), comparable to the primary battery's $\sim$1.3\%, and the synthetic sensitivity controls again behaved correctly on 98--100\% of constructed cases. Table~\ref{tab:generalization} gives the comparison.
+
+\begin{table}[ht]
+\centering
+\caption{Second, non-fiction-trained model, $T{=}0.10$, all 15 test prompts, re-confirmed event. Hyperparameters unchanged from Table~\ref{tab:main}.}
+\label{tab:generalization}
+\begin{tabular}{@{}lrrrrr@{}}
+\toprule
+Method & $n$ & Loop \% & RMST & mcNLL & $\KL(q\Vert p)$ \\
+\midrule
+Greedy                      & 150 & 100.0\% & 269   & 0.593 & --- \\
+Temperature 0.05             & 50  & 100.0\% & 325   & 0.603 & --- \\
+Temperature 0.10             & 150 & 64.7\%  & 396   & 0.617 & --- \\
+Temperature 0.15             & 50  & 26.0\%  & 458   & 0.641 & --- \\
+Repetition penalty 1.3        & 150 & 36.0\%  & 458   & 0.648 & --- \\
+No-repeat 4-gram$^{*}$       & 150 & 0.0\%   & 500   & 1.605 & --- \\
+SuffixMatch ($\alpha{=}3$)    & 150 & 0.0\%   & 500   & 0.706 & --- \\
+FSD-style (adapted)          & 150 & 16.0\%  & 487   & 0.875 & --- \\
+LZ Penalty (adapted)        & 150 & 2.0\%   & 498   & 0.649 & --- \\
+\textsc{rr-fixed} ($\lambda{=}2$)   & 150 & 51.3\%  & 439   & 0.615 & 0.018 \\
+\textsc{rr-adaptive}          & 150 & 21.3\%  & 479   & 0.633 & 0.077 \\
+\textsc{rr-dual} ($\varepsilon{=}0.05$) & 150 & 0.0\% & 500 & 1.994 & 12.891 \\
+\textsc{rr-dual} ($\varepsilon{=}0.01$) & 150 & 0.0\% & 500 & 2.146 & 14.727 \\
+\bottomrule
+\end{tabular}
+
+\vspace{4pt}
+{\footnotesize $^{*}$Hard constraint on the measured event; excluded from significance testing, as in Table~\ref{tab:main}.}
+\end{table}
+
+
+\subsection{What transfers and what does not}
+\textbf{The per-step feasibility rate is consistent across models; zero persistent loops is an empirical observation, not a proven consequence.} \textsc{rr-dual} reaches exactly 100.0\% per-step feasibility on this corpus at both $\varepsilon$, identical to the primary model. Feasibility is the quantity the theorem governs: it bounds the per-step \emph{expected} recurrence risk when the numerical projection succeeds, and its success rate stays consistent across corpora because $\lambda$ is re-solved from $p$ and $\risk$ at every step, with no corpus-tuned constant. The theorem says nothing about the sequence-level count of persistent loops, so 0/150 on both models is reported as a repeated empirical observation.
+
+\textbf{The fixed-hyperparameter modes do not transfer.} \textsc{rr-fixed} ($\lambda{=}2$, unchanged) rises from 2.7\% loops on the primary model to 51.3\% here, and \textsc{rr-adaptive} from 0.0\% to 21.3\%. The gap between \textsc{rr-dual} and \textsc{rr-fixed} on this corpus is large and highly significant (paired exact test, $\Delta$RMST $=+60.8$, $p{=}0.0001$). A fixed penalty strength suited to one corpus's risk and entropy statistics does not carry its effectiveness to a corpus with different repetition statistics, although the code and hyperparameters are identical. \textsc{rr-fixed}'s output here remains visibly cyclical (\emph{``the same manner as the produce of the country, the country which they have been sufficient to the produce of the same manner, and the profits of the same manner as the produce of the produce of the land and labour of the produce of the produce of''}).
+
+\textbf{The primary model's temperature-safe regime does not transfer.} $T{=}0.15$, which reached 0.0\% loops on the primary model, still shows 26.0\% here. The temperature sweep was not repeated for this model, so its safe threshold is unknown.
+
+Repetition penalty and \textsc{rr-adaptive} weaken substantially on this corpus (36.0\% and 21.3\% loops, from 4.7\% and 0.0\%). Among the history-aware and hard-constraint mechanisms, effectiveness transfers unevenly: SuffixMatch and hard no-repeat still reach 0/150, whereas FSD-style rises to 16.0\% (from 2.0\%) and LZ Penalty to 2.0\% (from 0.0\%). LZ Penalty's effectiveness also does not carry over to GPT-2 (0.0\% to 8.0\%). For FSD-style and LZ Penalty, unlike SuffixMatch and hard no-repeat, effectiveness is therefore a property of the model and corpus and not of the mechanism's design.
+
+\subsection{A compact validation across modern pretrained model families}
+\label{ssec:modern-llm}
+To test whether any of this transfers to modern pretrained models beyond GPT-2, three checkpoints spanning roughly an order of magnitude in size and three pretraining organizations were selected: OLMo-2-0425-1B (Allen AI, 1B), Qwen2.5-3B (Alibaba, 3B), and Mistral-7B-v0.3 (Mistral AI, 7B). Each follows the pilot, calibrate, compare protocol used for GPT-2, at the same compact scale across all three: 5 seeds $\times$ 10 fresh prompts $\times$ 150 new tokens (50 samples per configuration).
+
+All three models run in float32, matching the primary and GPT-2 experiments and not the faster bfloat16 default of this project's CUDA code, so that numerical precision does not vary across the models being compared. Mistral-7B-v0.3's weights do not fit in the 36GB unified-memory hardware under the default HuggingFace loading path, so they were loaded shard by shard directly onto the target device (\texttt{device\_\allowbreak{}map} with \texttt{low\_\allowbreak{}cpu\_\allowbreak{}mem\_\allowbreak{}usage=True}), verified bit-identical to the default path on a smaller model.
+
+\begin{table}[ht]
+\centering
+\caption{Pilot: loop rate (\%) by temperature, 5 prompts $\times$ 5 seeds, 150 new tokens, uncalibrated placeholder event ($R{=}5$, $P_{\max}{=}20$ tokens) per model's own tokenizer.}
+\label{tab:modernpilot}
+\begin{tabular}{@{}rrrr@{}}
+\toprule
+$T$ & OLMo-2-0425-1B & Mistral-7B-v0.3 & Qwen2.5-3B \\
+\midrule
+0.05 & 32.0\% & 12.0\% & 0.0\% \\
+0.10 & \textbf{44.0\%} & \textbf{20.0\%} & 0.0\% \\
+0.15 & 16.0\% & 8.0\%  & 0.0\% \\
+0.20 & 16.0\% & 12.0\% & 0.0\% \\
+0.30 & 12.0\% & 8.0\%  & 0.0\% \\
+0.50 & 8.0\%  & 0.0\%  & 0.0\% \\
+0.70 & 0.0\%  & 0.0\%  & 0.0\% \\
+1.00 & 0.0\%  & 0.0\%  & 0.0\% \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\textbf{Qwen2.5-3B shows no measurable regime at any tested temperature} (Table~\ref{tab:modernpilot}), 0/25 at each of eight temperatures including $T{=}0.05$, where every other model tested shows its pathology most strongly. This is a null result bounded by the tested budget, not evidence that the model cannot loop. An attempt to probe lower temperatures ($T\in\{0.005,0.01,0.02,0.03,0.05\}$) was abandoned before completion because of memory pressure from concurrent pilots, so no full comparison is reported for Qwen2.5-3B and no claim is made about lower temperatures, other prompt sets, or longer generations. Not every modern pretrained model exhibits this pathology at a moderate compute budget, and the reason for this one is unknown.
+
+OLMo and Mistral both show a clear regime (peaks of 44.0\% and 20.0\%, both at $T{=}0.10$), so both proceed to full comparisons (Tables~\ref{tab:olmofull} and~\ref{tab:mistralfull}), after calibration on each model's own tokenizer, never reusing another model's frozen $(R,P_{\max})$. Neither calibration met the pre-declared 1\% tolerance, and both fall back to the smallest worst-case upper CI on the grid. OLMo freezes at $R{=}6$, $P_{\max}{=}20$ tokens (worst-case upper CI 1.38\%; validation battery 0/1391, 95\% CI [0.0\%, 0.26\%], zero false positives on every one of seven held-out corpora). Mistral freezes at $R{=}5$, $P_{\max}{=}20$ tokens (worst-case upper CI 3.15\%; validation battery 22/1400, 1.6\%, 95\% CI [1.0\%, 2.4\%], all concentrated in \emph{Dracula}'s epistolary formulas at 11.0\%, with 0.0\% on the other six corpora). The same corpus-specific false-positive concentration seen for the primary event therefore reappears on an independent tokenizer and model, which suggests it is a property of that text and not of one detector implementation.
+
+\begin{table}[ht]
+\centering
+\caption{OLMo-2-0425-1B (1B), $T{=}0.10$, 10 prompts $\times$ 5 seeds, 150 new tokens, frozen event ($R{=}6$, $P_{\max}{=}20$ tokens). KL against the shared $T{=}0.10$ reference, as in Table~\ref{tab:commonkl}.}
+\label{tab:olmofull}
+\begin{tabular}{@{}lrrrr@{}}
+\toprule
+Method & Loop \% & RMST (tok) & mcNLL & $\KL(q\Vert p)$ \\
+\midrule
+Greedy                      & 10.0\% & 144.6 & 0.999 & --- \\
+Temperature 0.10 (reference) & 12.0\% & 144.5 & 0.979 & 0.000 \\
+Temperature 0.05             & 14.0\% & 143.2 & 0.994 & 0.017 \\
+Temperature 0.15             & 10.0\% & 146.3 & 1.037 & 0.018 \\
+Repetition penalty 1.3        & 0.0\%  & 150.0 & 1.510 & 2.213 \\
+No-repeat 3-gram$^{*}$       & 0.0\%  & 150.0 & 1.712 & 2.871 \\
+SuffixMatch ($\alpha{=}3$)    & \textbf{0.0\%}  & 150.0 & 1.270 & \textbf{0.223} \\
+FSD-style (adapted)          & 0.0\%  & 150.0 & 1.682 & 3.194 \\
+LZ Penalty (adapted)        & 0.0\%  & 150.0 & 1.496 & 2.040 \\
+\textsc{rr-fixed}             & 12.0\% & 146.2 & 1.083 & 0.015 \\
+\textsc{rr-adaptive}          & \textbf{2.0\%}  & 149.6 & 1.070 & 0.027 \\
+\textsc{rr-dual} ($\varepsilon{=}0.05$) & 0.0\% & 150.0 & 1.857 & 4.389 \\
+\textsc{rr-dual} ($\varepsilon{=}0.01$) & 0.0\% & 150.0 & 1.866 & 4.590 \\
+\bottomrule
+\end{tabular}
+
+\vspace{4pt}
+{\footnotesize $^{*}$Hard constraint on the measured event, excluded from ranking on the same grounds as Table~\ref{tab:main}.}
+\end{table}
+
+\begin{table}[ht]
+\centering
+\caption{Mistral-7B-v0.3 (7B), $T{=}0.10$, 10 prompts $\times$ 5 seeds, 150 new tokens, frozen event ($R{=}5$, $P_{\max}{=}20$ tokens).}
+\label{tab:mistralfull}
+\begin{tabular}{@{}lrrrr@{}}
+\toprule
+Method & Loop \% & RMST (tok) & mcNLL & $\KL(q\Vert p)$ \\
+\midrule
+Greedy                      & 10.0\% & 145.0 & 0.725 & --- \\
+Temperature 0.10 (reference) & 4.0\%  & 148.8 & 0.727 & 0.000 \\
+Temperature 0.05             & 6.0\%  & 147.2 & 0.724 & 0.013 \\
+Temperature 0.15             & 10.0\% & 146.2 & 0.756 & 0.014 \\
+Repetition penalty 1.3        & 0.0\%  & 150.0 & 1.976 & 8.059 \\
+No-repeat 3-gram$^{*}$       & 0.0\%  & 150.0 & 1.479 & 4.500 \\
+SuffixMatch ($\alpha{=}3$)    & 4.0\%  & 148.1 & 0.898 & 0.242 \\
+FSD-style (adapted)          & 2.0\%  & 149.4 & 1.509 & 4.459 \\
+LZ Penalty (adapted)        & 2.0\%  & 149.4 & 0.974 & 1.004 \\
+\textsc{rr-fixed}             & 4.0\%  & 148.5 & 0.791 & 0.016 \\
+\textsc{rr-adaptive}          & 4.0\%  & 148.3 & 0.790 & 0.013 \\
+\textsc{rr-dual} ($\varepsilon{=}0.05$) & 0.0\% & 150.0 & 1.805 & 6.739 \\
+\textsc{rr-dual} ($\varepsilon{=}0.01$) & 0.0\% & 150.0 & 1.843 & 7.257 \\
+\bottomrule
+\end{tabular}
+
+\vspace{4pt}
+{\footnotesize $^{*}$Hard constraint on the measured event, excluded from ranking on the same grounds as Table~\ref{tab:main}.}
+\end{table}
+
+\textbf{The adaptive controller's benefit is model-dependent.} On OLMo, \textsc{rr-adaptive} cuts the loop rate from the 12.0\% shared by the baseline and \textsc{rr-fixed} to 2.0\% at negligible KL cost (0.027 bits). This is not an artifact of the calibrated threshold: across a full $(R,P_{\max})$ sensitivity sweep (5 values of $R\in\{4,\ldots,8\}\times5$ values of $P_{\max}\in\{10,\ldots,40\}$, 25 grid points, using the raw generated token ids saved for this purpose), the ordering $\textsc{rr-adaptive}\le\textsc{rr-fixed}\le$ baseline holds at every grid point, with 0 reversals out of 25. On Mistral, \textsc{rr-adaptive} and \textsc{rr-fixed} are indistinguishable from the $T{=}0.10$ baseline at the frozen threshold (4.0\% for all three), and the same sweep shows no consistent direction: at looser thresholds ($R{=}3,4$) both sit below the baseline, at the calibrated and stricter thresholds ($R{=}5$--$7$, tight $P_{\max}$) at or slightly above it (e.g.\ $R{=}5$, $P_{\max}{=}10$: baseline 0.0\%, both variants 4.0\%). The same mechanism and hyperparameters help substantially on one 2024-generation checkpoint and do nothing distinguishable from noise on another; we have no explanation for this.
+
+\textbf{The cheapest route to zero measured loops differs by model.} On OLMo, SuffixMatch is the cheapest of the methods with zero observed loops (0.223 bits), whereas on the primary model LZ Penalty is (Table~\ref{tab:commonkl}). GPT-2 has no comparable KL ranking (loop rate, RMST, and mcNLL only), and SuffixMatch does not reach zero loops there (4.0\%). On Mistral, none of SuffixMatch (4.0\%), LZ Penalty (2.0\%), or FSD-style (2.0\%) reaches zero loops; among the external baselines only repetition penalty (8.059 bits) and the hard no-repeat constraint (4.500 bits) do. \textsc{rr-dual} remains the most expensive route to zero loops on both models (4.39--4.59 bits on OLMo, 6.74--7.26 bits on Mistral). The detector-threshold sweep covered a seven-configuration subset (the recurrence-risk family, SuffixMatch, and FSD-style); on OLMo, SuffixMatch and both dual configurations stay at exactly 0.0\% at every one of the 25 grid points, and on Mistral SuffixMatch's loop rate ranges 4.0--20.0\% across the 25 cells, consistent with the 4.0\% at the calibrated point. The sweep for FSD-style used an earlier implementation and is not reported, and LZ Penalty was not included.
+
+\textbf{Generation length does not hide a different picture at 150 tokens.} Re-censoring each sample's saved onset at shorter horizons (30, 60, 90, 120 tokens) shows OLMo's \textsc{rr-adaptive} advantage opening in the back half of generation (0.0\% for both \textsc{rr-adaptive} and baseline through 90 tokens; the baseline reaches 10--12\% by 150 tokens against 0--2\% for \textsc{rr-adaptive}). The Mistral null finding holds at every horizon tested.
+
+\textsc{rr-dual} reaches exactly 100.0\% per-step feasibility on both OLMo and Mistral (both $\varepsilon$, zero structurally infeasible and zero near-boundary steps), so the guarantee has held without exception on every model tested: the primary character model and its second checkpoint, the non-fiction model, GPT-2, OLMo, and Mistral. Together with the GPT-2 character-level $(R,P_{\max})$ sensitivity check (25 grid points, all zero-loop findings unchanged), this shows that a mechanism's effectiveness, unlike the dual mechanism's per-step feasibility, is an empirical property of a specific model and cannot be assumed to transfer from one modern checkpoint to the next.
+
+
+%==============================================================================

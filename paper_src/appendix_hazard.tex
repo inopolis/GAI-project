@@ -1,0 +1,34 @@
+\section{Estimating the Hazard on the Real Model}
+\label{sec:hazard-transfer}
+%==============================================================================
+
+Sequence-aware causal control needs the event-to-go hazard $H(h,v)$ (Section~\ref{ssec:bernoulli-bound}), which on a real model has to be estimated. This appendix reports a rollout-based estimator on the primary model and what it does and does not show.
+
+\subsection{Design}
+Contexts are cut from saved generations (greedy, $T{=}0.05$, $T{=}0.10$, and repetition-penalty runs): 70\% from the 100 characters preceding a detected loop onset and 30\% from uniformly random cut points. Contexts whose own text already contains the loop event are discarded, since the hazard is defined for generations that have not yet looped. For each context, 12 candidate next tokens are probed (the model's top 8 by probability and 4 lower-probability tokens). Each candidate is forced as the next token and $K{=}4$ independent stochastic continuations at $T{=}0.10$ are run for 150 characters in total. A rollout is labeled by whether the frozen detector fires on the \emph{full} text, the earlier context followed by the rollout, so that a cycle that starts in the context and completes in the rollout counts. Rows are batched only with rows of the same context length, so that no padding is ever added and every row sees exactly its own context, as in real decoding. A candidate is \emph{risky} if choosing it completes an already-seen $n$-gram ($\risk>0$) and \emph{novel} otherwise. A multi-step variant forces the candidate and then $L{-}1$ greedy steps ($L\in\{1,3,5,8,15\}$) before resuming sampling.
+
+\subsection{Results}
+\textbf{Single-token design.} After discarding contexts that already contain the event, 147 of 150 contexts remain, and 133 of them contain both risky and novel candidates (171 risky and 1593 novel (context, candidate) examples). The mean hazard label is 0.291 for risky candidates and 0.097 for novel ones. The per-context paired difference (risky minus novel, averaged over contexts) is 0.244, with a 95\% interval of $[0.188,0.303]$ from resampling whole contexts, and an exact sign-flip test (100{,}000 random sign flips) gives $p<10^{-4}$.
+
+\textbf{Multi-step commitment.} For 50 contexts with both a risky and a novel candidate, the separation grows with the number of forced greedy steps $L$ (Table~\ref{tab:hazardprobe}); all five paired differences are significant after Bonferroni adjustment across the five values of $L$.
+
+\begin{table}[ht]
+\centering
+\caption{Multi-step commitment probe: mean hazard label (5 rollouts of 150 characters per pair, event detected on context plus rollout) of risky and novel candidates, the paired per-context difference with a 95\% interval from resampling contexts, and the Bonferroni-adjusted sign-flip $p$-value (5 values of $L$; $p$-values are resolved to $10^{-5}$).}
+\label{tab:hazardprobe}
+\begin{tabular}{@{}rrrrrr@{}}
+\toprule
+$L$ & Risky mean & Novel mean & Paired difference & 95\% CI & Bonferroni $p$ \\
+\midrule
+1  & 0.336 & 0.112 & 0.216 & [0.124, 0.312] & $\le4\times10^{-4}$ \\
+3  & 0.360 & 0.119 & 0.236 & [0.148, 0.324] & $\le10^{-4}$ \\
+5  & 0.388 & 0.112 & 0.260 & [0.164, 0.364] & $\le10^{-4}$ \\
+8  & 0.440 & 0.115 & 0.320 & [0.208, 0.432] & $\le10^{-4}$ \\
+15 & 0.460 & 0.108 & 0.360 & [0.240, 0.484] & $\le10^{-4}$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\textbf{What this shows and does not show.} A rollout estimate of the hazard separates candidates that complete an already-seen $n$-gram from those that do not, on this model, by a margin that is large relative to its sampling uncertainty. It does not show that such an estimate is accurate enough, or calibrated enough, to drive a decoder: each label rests on 4--5 rollouts, 70\% of the contexts are cut from the 100 characters before a detected onset, so the base rates are those of that design and not of ordinary generation, and novel candidates still carry a hazard of about 0.10. No decoder using the estimate has been built or evaluated, so the event-level optimum remains out of reach on real text for lack of a usable hazard, not for lack of a rule.
+
+%==============================================================================

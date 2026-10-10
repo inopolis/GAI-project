@@ -1,0 +1,27 @@
+\section{Discussion}\label{sec:discussion}
+
+\subsection{What is established}
+In exactly solvable systems, the loss of a fixed per-step risk budget is a loss of allocation. The probability of a loop falls by the visit-weighted sum of per-step hazard reductions (Proposition~\ref{prop:accounting}); the cheapest allocation holds the price of risk constant (Proposition~\ref{prop:waste}); a fixed budget instead implies prices that vary by orders of magnitude, and its excess cost tracks their dispersion; and a fixed price recovers the optimum to within 12.5\% in all eight systems tested. The optimum itself is a causal rule, so per-step control is not inefficient because it is causal. It is inefficient when it holds the wrong quantity fixed.
+
+\subsection{How to read the numbers}
+\begin{itemize}[leftmargin=*,itemsep=2pt]
+\item \textbf{Zero observed loops is not a guarantee.} Every zero is a count of a syntactic detector firing in 50--150 generations at one temperature; with 150 generations the 95\% upper limit for a true rate is 2.4\%. The dual mode's guarantee is local: it bounds the expected recurrence risk at each step when the numerical projection succeeds, and it does not bound the probability of a loop.
+\item \textbf{KL is distortion, not text quality.} A pilot human evaluation (Appendix~\ref{sec:human-eval}, $n=9$) found no reliable readability difference among four decoders whose per-step KL differs by a factor of about 70; it neither supports nor contradicts a cost of distortion.
+\item \textbf{The 98\% excess is not a saving.} It is distance from a benchmark that needs the hazard (Section~\ref{ssec:eventlevel}).
+\end{itemize}
+
+\subsection{Alternatives to streaming control}\label{ssec:alternatives}
+When generation need not be streamed, rejecting a whole generation in which the detector fires and drawing a new one attains the event-level optimum at $Q(E)=0$ exactly: at the primary model's reference loop rate of 28.7\% it costs 0.49 bits and 1.4 generations per accepted sample, against 19--6300 bits per generation for the decoders of Table~\ref{tab:pcb}. Its cost grows as $1/(1-p)$, so it is unattractive when almost every generation loops (greedy decoding loops in 140 of 150), it needs a detector that can be evaluated on a completed generation, and it samples from the model conditioned on the detector not firing, which is only as good as the detector. Sequence-aware causal control with an estimated hazard is the streaming counterpart; a rollout estimate of the hazard separates risky from novel candidates (Appendix~\ref{sec:hazard-transfer}), but turning it into a calibrated per-step rule is not attempted here.
+
+\subsection{Limitations}
+\begin{itemize}[leftmargin=*,itemsep=2pt]
+\item \textbf{Exact systems are small.} The hazard is exact and the state space has 20 states; eight variants support robustness but are not a language model.
+\item \textbf{The theory is second order.} Proposition~\ref{prop:waste} is exact algebra and an asymptotic statement about cost; at large reductions it over-predicts (Figure~\ref{fig:waste}). It is stated for the hazard as risk signal; the recurrence-risk proxy of the language-model experiments is not the hazard, so the quantitative law is not claimed there.
+\item \textbf{One temperature, one primary model.} $T=0.10$, 15 prompts, 10 seeds on an 848K-parameter model; the other models are compared at 50--150 generations per configuration with no sample-level KL records.
+\item \textbf{Detector.} The pooled false-positive rate of about 1.3\% conceals per-corpus variance (\emph{Dracula}: 26/300, about seven times the pooled figure); the calibration of the subword detectors did not meet the pre-declared 1\% tolerance (Appendix~\ref{sec:generalization}); the detector does not capture semantic repetition.
+\item \textbf{Baselines.} FSD-style and LZ Penalty are adapted from the published methods and are not reproductions (Appendix~\ref{app:baselines}); SuffixMatch is our own heuristic.
+\item \textbf{Units and tolerances.} All KL values are in bits and all per-step values are means over the fixed generation length; solver tolerances, float32 computation and exact-computation residuals are stated in Appendix~\ref{app:baselines}.
+\end{itemize}
+
+\section{Conclusion}\label{sec:conclusion}
+A fixed per-step risk budget can waste KL when the goal is to prevent a loop anywhere in a sequence, because it fixes the level of one-step risk rather than its price. The loop probability falls by the sum of per-step hazard reductions, the cheapest allocation keeps the price constant, and a fixed budget instead prices histories very differently; to second order its excess cost is one plus the squared coefficient of variation of those prices. In exact systems a fixed price stays within 12.5\% of the minimum KL while a fixed budget costs 1.3 to more than 200 times as much, with and without infeasible budgets. {{CONCLUSION_LM}} What remains open is a sequence-aware causal decoder for real text, which needs an estimate of the event-to-go hazard; when streaming is not needed, rejection of loop-containing samples already attains the optimum for the event the detector defines.

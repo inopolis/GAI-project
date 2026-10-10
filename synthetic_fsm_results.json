@@ -1,5 +1,5 @@
 {
-  "raw_loop_rate": 0.695,
+  "raw_loop_rate": 0.6900240498561429,
   "T0": 0.6,
   "H": 6,
   "W": 2,
@@ -132,88 +132,66 @@
     "avg_local_kl_over_oracle": 3.0788759720339893,
     "avg_hazard_kl_over_oracle": 2.200662696224508
   },
-  "local_kl_ceiling": 0.6129423938133529,
-  "local_kl_ceiling_probe": [
-    {
-      "eps": 0.001,
-      "loop_rate": 0.005333333333333333,
-      "kl": 0.6132685648034107
-    },
-    {
-      "eps": 0.0001,
-      "loop_rate": 0.00016666666666666666,
-      "kl": 0.6156937844803428
-    },
-    {
-      "eps": 1e-05,
-      "loop_rate": 0.00016666666666666666,
-      "kl": 0.6127961902793444
-    },
-    {
-      "eps": 0.0,
-      "loop_rate": 0.0,
-      "kl": 0.6129423938133529
-    }
-  ],
+  "local_kl_ceiling": 0.6149847715689049,
   "matched_distortion_all_eps": [
     {
       "hazard_eps": 0.3,
       "hazard_kl": 0.25513075049459905,
       "hazard_loop_rate": 0.2999999999986732,
-      "local_eps_matched": 0.2631864406779661,
-      "local_kl_at_match": 0.25502175361341556,
-      "local_loop_rate_at_match": 0.439,
-      "loop_rate_gap_local_minus_hazard": 0.13900000000132678,
+      "local_step_eps_matched": 0.2669688441214265,
+      "local_kl_at_match": 0.2551307505067417,
+      "local_loop_rate_at_match": 0.445063449587914,
+      "loop_rate_gap_local_minus_hazard": 0.14506344958924078,
       "comparable_at_matched_kl": true
     },
     {
       "hazard_eps": 0.2,
       "hazard_kl": 0.24505760875510188,
       "hazard_loop_rate": 0.1999999999972039,
-      "local_eps_matched": 0.2801016949152542,
-      "local_kl_at_match": 0.2475468030069602,
-      "local_loop_rate_at_match": 0.4425,
-      "loop_rate_gap_local_minus_hazard": 0.24250000000279612,
+      "local_step_eps_matched": 0.28611311182612553,
+      "local_kl_at_match": 0.24505760875515148,
+      "local_loop_rate_at_match": 0.45175413002951875,
+      "loop_rate_gap_local_minus_hazard": 0.25175413003231484,
       "comparable_at_matched_kl": true
     },
     {
       "hazard_eps": 0.1,
       "hazard_kl": 0.29287170678999536,
       "hazard_loop_rate": 0.09999999999949054,
-      "local_eps_matched": 0.19552542372881354,
-      "local_kl_at_match": 0.29079148675734773,
-      "local_loop_rate_at_match": 0.411,
-      "loop_rate_gap_local_minus_hazard": 0.3110000000005094,
+      "local_step_eps_matched": 0.1984406913526478,
+      "local_kl_at_match": 0.2928717067866211,
+      "local_loop_rate_at_match": 0.42103356004030906,
+      "loop_rate_gap_local_minus_hazard": 0.3210335600408185,
       "comparable_at_matched_kl": true
     },
     {
       "hazard_eps": 0.05,
       "hazard_kl": 0.41233162248999927,
       "hazard_loop_rate": 0.04999999999307591,
-      "local_eps_matched": 0.0517457627118644,
-      "local_kl_at_match": 0.4146577903098142,
-      "local_loop_rate_at_match": 0.2485,
-      "loop_rate_gap_local_minus_hazard": 0.19850000000692408,
+      "local_step_eps_matched": 0.056371865208348026,
+      "local_kl_at_match": 0.41233162248921923,
+      "local_loop_rate_at_match": 0.25435156152381433,
+      "loop_rate_gap_local_minus_hazard": 0.2043515615307384,
       "comparable_at_matched_kl": true
     },
     {
       "hazard_eps": 0.02,
       "hazard_kl": 0.5326383415073914,
       "hazard_loop_rate": 0.019999999999866284,
-      "local_eps_matched": 0.017915254237288136,
-      "local_kl_at_match": 0.5110393045704664,
-      "local_loop_rate_at_match": 0.0955,
-      "loop_rate_gap_local_minus_hazard": 0.07550000000013371,
+      "local_step_eps_matched": 0.014550982108630706,
+      "local_kl_at_match": 0.5326383415064865,
+      "local_loop_rate_at_match": 0.07421065032332946,
+      "loop_rate_gap_local_minus_hazard": 0.05421065032346318,
       "comparable_at_matched_kl": true
     },
     {
       "hazard_eps": 0.01,
       "hazard_kl": 0.6317249819216143,
       "hazard_loop_rate": 0.009999999999848833,
-      "local_eps_matched": 0.001,
-      "local_kl_at_match": 0.601595545357557,
-      "local_loop_rate_at_match": 0.006,
-      "loop_rate_gap_local_minus_hazard": -0.003999999999848833,
+      "local_step_eps_matched": 0.0,
+      "local_kl_at_match": 0.6149847715689049,
+      "local_loop_rate_at_match": 5.158571012810882e-86,
+      "loop_rate_gap_local_minus_hazard": -0.009999999999848833,
       "comparable_at_matched_kl": false
     }
   ]

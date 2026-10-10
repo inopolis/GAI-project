@@ -1,0 +1,49 @@
+\section{Theory}\label{sec:theory}
+
+\subsection{The cost of changing a loop probability}\label{ssec:bernoulli-bound}
+Let $Q$ and $P$ be path measures on a common sequence space and $E$ any event. The chain rule for relative entropy applied to $Z=\mathbf{1}[E]$ gives
+\begin{multline}\label{eq:decomp}
+\KL(Q\Vert P)=d_{\mathrm{Ber}}\big(Q(E)\Vert P(E)\big)+Q(E)\,\KL\big(Q(\cdot\mid E)\Vert P(\cdot\mid E)\big)\\
++\big(1-Q(E)\big)\,\KL\big(Q(\cdot\mid E^c)\Vert P(\cdot\mid E^c)\big),
+\end{multline}
+with $d_{\mathrm{Ber}}(a\Vert b)=a\log_2\frac ab+(1-a)\log_2\frac{1-a}{1-b}$. It needs no Markov structure and no assumption about decoding. The last two terms are non-negative and vanish for $Q(\cdot\mid E)=P(\cdot\mid E)$ and $Q(\cdot\mid E^c)=P(\cdot\mid E^c)$, which is compatible with every value of $Q(E)$. They are the distortion of the conditional shape of the generation on each side of the event, the part of a divergence that is not needed to move the event probability.
+
+\begin{prop}[Minimum KL to move an event probability]\label{prop:min}
+With $p=P(E)\in(0,1)$, $\min_{Q:\,Q(E)=\epsilon}\KL(Q\Vert P)=d_{\mathrm{Ber}}(\epsilon\Vert p)$, attained uniquely by $Q^\star(x)=P(x)\,\epsilon/p$ for $x\in E$ and $Q^\star(x)=P(x)(1-\epsilon)/(1-p)$ for $x\notin E$.
+\end{prop}
+
+\begin{prop}[A causal realization of the optimum]\label{prop:causal}
+Let $2^{-\lambda}=\epsilon(1-p)/[p(1-\epsilon)]$, so that $Q^\star(x)\propto P(x)\,2^{-\lambda\mathbf{1}[x\in E]}$. For a history $h$ that has not triggered $E$,
+\[
+Q^\star(v\mid h)\ \propto\ P(v\mid h)\,\big[1-(1-2^{-\lambda})\,H(h,v)\big],
+\]
+a causal sequential rule that uses the exact hazard with one multiplier $\lambda$ for the whole generation.
+\end{prop}
+
+Both propositions are standard (Section~\ref{sec:related}); proofs are in Appendix~\ref{app:proofs}. They fix the benchmark: the minimum distortion for a loop probability $\epsilon$ is $d_{\mathrm{Ber}}(\epsilon\Vert p)$, a causal rule attains it when the exact hazard is available, so the gap measured below is not a statement about causality. Resampling a generation until $E$ does not occur realizes $Q=P(\cdot\mid E^c)$ at $\epsilon=0$, with $\KL=-\log_2(1-p)=d_{\mathrm{Ber}}(0\Vert p)$ bits and $1/(1-p)$ expected generations; it attains the bound but is not a streaming decoder.
+
+\subsection{Where the loop probability goes: an exact accounting}\label{ssec:accounting}
+For a Markov controller with kernels $q$, write $\Delta(h)=\E_{p}[H(h,\cdot)]-\E_{q}[H(h,\cdot)]$ for the one-step hazard reduction at history $h$, $\sigma^2(h)=\mathrm{Var}_{p(\cdot\mid h)}[H(h,\cdot)]$, and $w_Q(h)$, $w_P(h)$ for the probabilities that $Q$ and $P$ visit $h$ without having looped.
+
+\begin{prop}[Exact accounting]\label{prop:accounting}
+(a) $P(E)-Q(E)=\sum_h w_Q(h)\,\Delta(h)$. (b) $\sum_h w_P(h)\,\sigma^2(h)=p(1-p)$.
+\end{prop}
+Part (a) is the performance-difference identity \cite{kakade2002approximately} for the event; it says that the one-step hazard reduction is the right currency: the loop probability drops by exactly the visit-weighted sum of per-step reductions of the expected hazard. Part (b) is the law of total variance for the martingale $V(h_t)$ under $P$: the variance $p(1-p)$ of the event indicator is spread over histories as $w_P\sigma^2$, and a history with $\sigma^2(h)=0$ cannot change the loop probability at any price.
+
+\subsection{Budget versus price: a second-order waste law}\label{ssec:wastelaw}
+For small relative reductions the one-step cost is quadratic, $\KL(q\Vert p)\approx \Delta^2/(2\sigma^2\ln 2)$ bits, and the price implied by a reduction $\Delta$ is $\lambda_h=\Delta(h)/\sigma^2(h)$ (in nats per unit of hazard). Define
+\[
+D=\sum_h w_P\Delta,\qquad K_2=\frac1{2\ln2}\sum_h w_P\frac{\Delta^2}{\sigma^2},\qquad \pi_h=\frac{w_P\sigma^2}{p(1-p)},
+\]
+and let $\mathrm{CV}^2=\mathrm{Var}_\pi(\lambda_h)/\E_\pi[\lambda_h]^2$ be the squared coefficient of variation of the implied prices under the distribution $\pi$ over histories, and $\varphi=\sum_{h:\,\Delta(h)>0}\pi_h$ the share of the event's variance on the histories the controller touches.
+
+\begin{prop}[Waste law]\label{prop:waste}
+(i) Among all allocations with total reduction $D$, $K_2$ is minimal exactly when $\lambda_h$ is constant, and then $K^\star=D^2/(2\ln 2\,p(1-p))$, the second-order expansion of $d_{\mathrm{Ber}}(p-D\Vert p)$.
+(ii) For any allocation, $K_2/K^\star=1+\mathrm{CV}^2\ \ge\ 1/\varphi$.
+(iii) $\KL=K_2\,(1+o(1))$ when $\max_h\Delta/\sigma\to0$.
+\end{prop}
+The first part says that, to second order, the cheapest allocation holds the price constant, which is the fixed-price rule. The second part is algebraic: the excess cost is the dispersion of the prices an allocation implies, and it is at least the reciprocal of the share of the event's variance on the histories that receive any reduction (Cauchy--Schwarz on the touched histories).
+
+\textbf{What a fixed budget does.} Under a fixed budget $b$ the reduction at a history is $\Delta(h)=(V(h)-b)_+$, where $V(h)$ is the hazard level. The controller acts only where the level exceeds $b$ and ignores how much variance, hence how cheap leverage, a history holds. Two consequences follow. As the target reduction $D$ shrinks, $b$ rises toward the largest hazard level, the touched histories carry a vanishing share of $p(1-p)$, and $1/\varphi$ and the waste grow without bound. And histories with small $\sigma^2$ and $V>b$ receive a reduction at a huge implied price; at the extreme the budget is below the floor $\min_v H(h,v)$ and the step is infeasible, which is an infinite price. A fixed price has $\mathrm{CV}=0$ to second order by construction.
+
+\textbf{Outside the second-order regime} the exact optimum is the affine rule of Proposition~\ref{prop:causal}, an exponential tilt of a transformed hazard with one multiplier, and a fixed-price exponential tilt of the hazard itself is not exactly optimal; Section~\ref{sec:small} measures how close it is. Proposition~\ref{prop:waste} is a statement about the hazard as risk signal. A different risk signal, such as the recurrence risk on a language model, changes $\sigma^2$ and $\Delta$ but not the allocation principle; whether the quantitative law carries over is a question for the experiments, not for the proposition.

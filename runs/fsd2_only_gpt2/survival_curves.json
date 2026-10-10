@@ -1,0 +1,16 @@
+{
+  "lt_fsd": {
+    "km_times": [
+      0,
+      200
+    ],
+    "km_survival": [
+      1.0,
+      1.0
+    ],
+    "n_censored": 100,
+    "n_total": 100,
+    "rmst": 200.0,
+    "event": "persistent_cycle_R5_Pmax20_tokens"
+  }
+}

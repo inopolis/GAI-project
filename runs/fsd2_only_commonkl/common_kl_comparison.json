@@ -1,0 +1,19 @@
+[
+  {
+    "strategy": "fsd",
+    "checkpoint": "cosine",
+    "n_samples": 150,
+    "kl_bits_mean": 2.1484,
+    "kl_bits_lo": 2.0836,
+    "kl_bits_hi": 2.2185,
+    "risk_achieved_mean": 0.4269,
+    "risk_achieved_lo": 0.4195,
+    "risk_achieved_hi": 0.4332,
+    "latency_ms_mean": 2.9365,
+    "latency_ms_lo": 2.8775,
+    "latency_ms_hi": 3.0023,
+    "loop_rate": 0.02,
+    "rmst": 497.55,
+    "survival_auc": 0.9951
+  }
+]

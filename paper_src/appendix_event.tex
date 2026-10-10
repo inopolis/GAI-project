@@ -1,0 +1,40 @@
+\section{Loop-Event Validation}
+\label{sec:event}
+%==============================================================================
+
+\subsection{Why the naive event fails}
+\label{ssec:naive-fails}
+The candidate event ``the first repeated $n$-gram of length $n$'' fires on 54.0\% of held-out Doyle windows and 72.0\% of held-out Dickens windows at $n{=}10$. An event that fires on the majority of ordinary prose cannot distinguish degeneration from fluency and is not used.
+
+\subsection{Calibration}
+The persistent-cycle event is the earliest position $e$ at which a span of length $P\in[2,P_{\max}]$ repeats exactly $R$ times consecutively. $R$ and $P_{\max}$ are chosen by a pre-declared rule (the smallest $R$ whose worst-case upper 95\% CI, across window lengths 300/500/1000/2000, falls at or below a 1\% tolerance) on a calibration set (Carroll, Twain, Swift) never referenced afterward. No cell meets the 1\% tolerance at every window length; $R{=}6$ reproduces $R{=}5$'s counts exactly, indicating that the residual is stable and not a threshold-boundary artifact. Frozen: $R{=}5$, $P_{\max}{=}60$, with worst-case upper CI 2.80\%, which does not meet the a priori target.
+
+Period 1 (a single repeated character) uses a separate, decoupled threshold of 8. Using $R{=}5$ for period 1 caused plain-text typesetting conventions (five-character dash dividers) to fire; the threshold of 8 sits above ordinary divider and ellipsis lengths and below observed degenerate runs. Every other period $P\in[2,60]$ uses $R{=}5$.
+
+\subsection{Validation battery}
+\begin{table}[ht]
+\centering
+\caption{Validation battery for the frozen event.}
+\label{tab:validation}
+\begin{tabular}{@{}lrrl@{}}
+\toprule
+Corpus & fires/$n$ & rate & 95\% CI \\
+\midrule
+Melville, \emph{Moby-Dick}      & 0/300  & 0.0\% & [0.0\%, 1.2\%] \\
+Stoker, \emph{Dracula}          & 26/300 & 8.7\% & [5.7\%, 12.4\%] \\
+Whitman, \emph{Leaves of Grass} & 0/300  & 0.0\% & [0.0\%, 1.2\%] \\
+Paine, \emph{Common Sense}      & 1/249  & 0.4\% & [0.0\%, 2.2\%] \\
+Homer, \emph{Iliad} (trans.)    & 0/300  & 0.0\% & [0.0\%, 1.2\%] \\
+Doyle, \emph{Sherlock Holmes}   & 0/300  & 0.0\% & [0.0\%, 1.2\%] \\
+Dickens, \emph{A Tale of Two Cities} & 0/300 & 0.0\% & [0.0\%, 1.2\%] \\
+\midrule
+\textbf{Pooled}                 & 27/2049 & \textbf{1.3\%} & \textbf{[0.9\%, 1.9\%]} \\
+\bottomrule
+\end{tabular}
+\end{table}
+The residual is concentrated almost entirely in \emph{Dracula} (epistolary formulas); poetry (Whitman) shows zero false positives. Robustness to window length (300/500/1000/2000 characters) gives 0.0\%/0.5\%/1.4\%/2.4\%.
+
+\subsection{Synthetic sensitivity}
+Constructed text with a known period $P\in\{1,\allowbreak2,\allowbreak3,\allowbreak5,\allowbreak8,\allowbreak13,\allowbreak20,\allowbreak30,\allowbreak45,\allowbreak60\}$ repeated $R_{\text{true}}\in\{2,\allowbreak3,\allowbreak4,\allowbreak5,\allowbreak8,\allowbreak10\}$ times is detected correctly in 98--100\% of cases at every tested repeat count.
+
+

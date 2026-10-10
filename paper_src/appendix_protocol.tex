@@ -1,0 +1,68 @@
+\section{Experimental Protocol and Additional Primary-Model Results}
+\label{sec:protocol}
+
+\subsection{Model and data}
+The primary model is an 848K-parameter, 4-layer, 128-dimensional character-level Transformer with a 256-character context, trained on Austen and Shelley, validated on Doyle, and tested on Dickens. All primary-model results use the \textsc{cosine}-schedule checkpoint unless stated otherwise. A second, independently trained checkpoint of the same architecture and data (\textsc{baseline}, constant learning rate) provides a replication: greedy decoding loops at 60.0\% (vs.\ 93.3\% for \textsc{cosine}) and $T{=}0.15$ still shows a 4.0\% loop rate where \textsc{cosine} shows 0.0\%, so the temperature threshold does not carry over even across retrains of the same architecture and data. \textsc{rr-dual} ($\varepsilon{=}0.05$) reaches 0/150 loops on \textsc{baseline} at 100.0\% feasibility and 11.343 bits of KL, close to \textsc{cosine}'s 11.186 bits (Table~\ref{tab:main}).
+
+\subsection{Where the pathology occurs}
+A sweep of 14 temperatures $\times$ 5 prompts $\times$ 10 seeds (1000-character generations, exact Clopper--Pearson intervals) shows the loop rate falling smoothly from 96.0\% at $T{=}0.05$ to 0.0\% by $T{=}0.30$, crossing below 5\% near $T{\approx}0.2$. Every primary-model decoding comparison runs at $T{=}0.10$. The sweep was not repeated for the second model (Section~\ref{sec:generalization}), whose safe temperature range does not simply transfer.
+
+\subsection{Prompt protocol}
+A \textsc{Dev} set of 5 prompts is the only material inspected while choosing hyperparameters. A disjoint \textsc{Test} set of 15 prompts, written afterward and not inspected during tuning, is the source of every number in Sections~\ref{sec:results} and~\ref{sec:generalization}. All configurations, greedy decoding included, are evaluated on all 15 test prompts.
+
+\subsection{Inference}
+\label{ssec:inference}
+The unit of analysis for every confidence interval and hypothesis test is the \emph{prompt}. Two procedures were declared in advance:
+\begin{itemize}[leftmargin=*]
+  \item \textbf{Primary: exact sign-flip test.} For 15 prompts, all $2^{15}$ sign patterns are enumerated, giving an exact $p$-value for the paired difference in prompt-level RMST (\texttt{compute\_\allowbreak{}significance.py}, which reproduces every number in Table~\ref{tab:paired}).
+  \item \textbf{Sensitivity: cluster bootstrap.} 3000 resamples of prompts give a 95\% CI for the same statistic.
+\end{itemize}
+At small $n$ the two need not agree; Section~\ref{ssec:disagreement} reports where they differ. The primary test governs.
+
+\subsection{Metrics}
+\textbf{RMST} has a horizon of 500 characters and uses Kaplan--Meier with right-censoring. Model-consistency NLL (mcNLL) scores every target position independently with its exact context window $\text{full}[\max(0,t{-}\text{block\_size}):t]$, batched with right-padding so that causal masking cannot leak filler into real positions (Appendix~\ref{app:defects}). 4-gram similarity is measured against a held-out reference corpus. For dual-calibrated configurations the exact $\KL(q\Vert p)$, achieved risk, and per-step feasibility diagnostics are reported. Every $\KL(q\Vert p)$ figure reported anywhere in this paper for a real model, including Tables~\ref{tab:main}, \ref{tab:commonkl}, \ref{tab:olmofull}, and \ref{tab:mistralfull}, is a \emph{per-step mean}: the divergence $\KL(q_t\Vert p_t)$ between that step's sampling distribution and the shared reference is computed at every generated position, averaged over the fixed generation length of that sample (500 characters for the primary and non-fiction models, 200 tokens for GPT-2, 150 for OLMo and Mistral), and then averaged again over samples. Generation always runs for the full fixed length regardless of whether or when a loop is detected, so a sample's total path divergence is exactly its reported per-step mean multiplied by that fixed length.
+
+\subsection{No-repeat blocking is excluded from ranking}
+\label{ssec:hard-repeat}
+A global no-repeat-$n$-gram filter, checked against the entire history, structurally cannot sustain a persistent cycle of any period $P$: once a period-$P$ cycle has run for at least $n$ steps, every subsequent $n$-gram repeats one produced $P$ steps earlier and is blocked, regardless of the relation between $P$ and $n$. Its 0/150 result holds by construction and is not an experimental finding, so it is excluded from every significance test and from the survival ranking.
+
+\subsection{Paired comparisons}
+\label{ssec:disagreement}
+\begin{table}[ht]
+\centering
+\caption{Paired, prompt-clustered comparisons of RMST (\texttt{compute\_\allowbreak{}significance.py}).}
+\label{tab:paired}
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{@{}lrrl@{}}
+\toprule
+Comparison ($A-B$) & $\Delta$RMST & $p$ (exact) & 95\% cluster CI \\
+\midrule
+\textsc{rr-fixed} $-$ Temperature 0.10   & $+88.4$  & $<0.001$ & [66.4, 113.9] \\
+\textsc{rr-fixed} $-$ Rep.\ penalty 1.3  & $+6.5$   & $0.246$  & [$-3.7$, 15.9] \\
+\textsc{rr-adaptive} $-$ Rep.\ penalty 1.3 & $+13.6$ & $0.016$ & [6.1, 21.9] \\
+\textsc{rr-fixed} $-$ \{SuffixMatch, \textsc{dual}, \textsc{adaptive}, LZ Penalty\}$^{\dagger}$ & $-7.1$ & $0.125$ & [$-14.4$, $-1.1$] \\
+\textsc{rr-fixed} $-$ FSD-style & $-4.7$ & $0.313$ & [$-12.6$, $2.0$] \\
+\textsc{rr-adaptive} $-$ \textsc{rr-dual} & $0.0$ & $1.000$ & [0.0, 0.0] \\
+FSD-style $-$ SuffixMatch & $-2.5$ & $0.250$ & [$-5.3$, $0.0$] \\
+FSD-style $-$ LZ Penalty & $-2.5$ & $0.250$ & [$-5.3$, $0.0$] \\
+LZ Penalty $-$ SuffixMatch$^{\dagger}$ & $0.0$ & $1.000$ & [0.0, 0.0] \\
+\bottomrule
+\end{tabular}}
+
+\vspace{4pt}
+{\footnotesize $^{\dagger}$Identical because all listed configurations achieved 0/150; survival alone cannot distinguish them.}
+\end{table}
+
+The exact test and the bootstrap interval disagree on \textsc{rr-fixed} against the group with zero observed loops: the cluster interval excludes zero ($[-14.4,-1.1]$), but the pre-declared primary test gives $p{=}0.125$, not significant at 15 prompts. The primary test governs, and the difference is reported as not statistically significant. FSD-style's small survival deficit against the methods with zero observed loops (3/150 loops; $\Delta$RMST $-2.5$, $p{=}0.25$) is likewise not significant.
+
+\subsection{LZ Penalty and FSD-style}
+\label{ssec:results-fsd-lz}
+LZ Penalty reaches 0/150 loops and joins SuffixMatch and \textsc{rr-adaptive} in the group with zero observed loops. FSD-style does not: it produces 3/150 loops (2.0\%) and is not a member of that group. Their spelling-error rates, computed from the generated text, are 2.29\% for FSD-style and 0.75\% for LZ Penalty, against 0.44\% for \textsc{rr-fixed} and 1.51\% for SuffixMatch. LZ Penalty's low error rate together with its low KL cost (Table~\ref{tab:commonkl}: 0.186 bits, against 2.148 bits for FSD-style) is consistent with its continuously varying, codelength-based penalty against FSD-style's coarser top-$k$ contrast, although no independent account of this difference is offered.
+
+
+%==============================================================================
+
+\subsection{Full primary-model comparison}\label{ssec:fullmain}
+Table~\ref{tab:main} reports every configuration on the primary model with RMST, model-consistency NLL (mcNLL) and 4-gram similarity in addition to the quantities of Table~\ref{tab:primary}.
+
+{{TABLE:main}}

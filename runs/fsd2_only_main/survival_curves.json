@@ -1,0 +1,21 @@
+{
+  "cosine": {
+    "lt_fsd": {
+      "km_times": [
+        353,
+        375,
+        402
+      ],
+      "km_survival": [
+        0.99333,
+        0.98667,
+        0.98
+      ],
+      "n_censored": 147,
+      "n_total": 150,
+      "rmst": 497.55,
+      "survival_auc": 0.9951,
+      "event": "persistent_cycle_R5_Pmax60"
+    }
+  }
+}

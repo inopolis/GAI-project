@@ -1,0 +1,2 @@
+strategy,n_samples,kl_bits_per_step_mean,kl_lo,kl_hi,kl_bits_total_mean,loop_rate,loop_count,rmst,seconds,lam_mean,lam_std,lam_frac_zero,lam_p90,lam_max
+rr_fixed_lam1,75,0.01,0.0097,0.0103,5.0,0.0533,4,479.3,361.5053150653839,1.0,0.0,0.0,1.0,1.0

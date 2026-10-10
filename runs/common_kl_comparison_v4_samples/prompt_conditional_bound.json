@@ -1,0 +1,340 @@
+{
+  "rep_penalty_1.3": {
+    "loop_events": 7,
+    "n_samples": 150,
+    "path_kl_bits": 194.1282236958317,
+    "path_kl_ci95": [
+      183.8561592283777,
+      205.74250823422025
+    ],
+    "bound_prompt_conditional": 0.2593457655798655,
+    "bound_ci95": [
+      0.13322128258418817,
+      0.4120099543414027
+    ],
+    "excess_bits": 193.86887793025184,
+    "excess_ci95": [
+      183.57094266037086,
+      205.47838402195285
+    ],
+    "bound_pooled": 0.2700534656296165,
+    "ratio_descriptive": 748.5305312843057,
+    "sensitivity": {
+      "laplace": {
+        "B_prompt_conditional": 0.20384133418267905,
+        "B_pooled": 0.26374965096746816
+      },
+      "jeffreys": {
+        "B_prompt_conditional": 0.2593457655798655,
+        "B_pooled": 0.2700534656296165
+      },
+      "plug_in": {
+        "B_prompt_conditional": 0.3696702700343081,
+        "B_pooled": 0.27666302183622815
+      }
+    }
+  },
+  "no_repeat_4gram": {
+    "loop_events": 0,
+    "n_samples": 150,
+    "path_kl_bits": 4397.922787599042,
+    "path_kl_ci95": [
+      4329.739979031684,
+      4462.719710386922
+    ],
+    "bound_prompt_conditional": 0.3541418148503225,
+    "bound_ci95": [
+      0.2215729683271099,
+      0.5106000878177795
+    ],
+    "excess_bits": 4397.568645784191,
+    "excess_ci95": [
+      4329.45485317231,
+      4462.298075764529
+    ],
+    "bound_pooled": 0.46248520358408635,
+    "ratio_descriptive": 12418.535748052846,
+    "sensitivity": {
+      "laplace": {
+        "B_prompt_conditional": 0.273684708171364,
+        "B_pooled": 0.4444188894260913
+      },
+      "jeffreys": {
+        "B_prompt_conditional": 0.3541418148503225,
+        "B_pooled": 0.46248520358408635
+      },
+      "plug_in": {
+        "B_prompt_conditional": 0.5279867819540514,
+        "B_pooled": 0.4873517040947339
+      }
+    }
+  },
+  "suffixmatch_a3.0": {
+    "loop_events": 0,
+    "n_samples": 150,
+    "path_kl_bits": 217.8000318799823,
+    "path_kl_ci95": [
+      214.49748786697003,
+      220.97071479289718
+    ],
+    "bound_prompt_conditional": 0.3541418148503225,
+    "bound_ci95": [
+      0.21974259848510552,
+      0.5047144236303847
+    ],
+    "excess_bits": 217.44589006513198,
+    "excess_ci95": [
+      214.1619568035484,
+      220.6153956901273
+    ],
+    "bound_pooled": 0.46248520358408635,
+    "ratio_descriptive": 615.00795090248,
+    "sensitivity": {
+      "laplace": {
+        "B_prompt_conditional": 0.273684708171364,
+        "B_pooled": 0.4444188894260913
+      },
+      "jeffreys": {
+        "B_prompt_conditional": 0.3541418148503225,
+        "B_pooled": 0.46248520358408635
+      },
+      "plug_in": {
+        "B_prompt_conditional": 0.5279867819540514,
+        "B_pooled": 0.4873517040947339
+      }
+    }
+  },
+  "fsd": {
+    "loop_events": 3,
+    "n_samples": 150,
+    "path_kl_bits": 1074.2130326583087,
+    "path_kl_ci95": [
+      1039.479997636128,
+      1109.127618123244
+    ],
+    "bound_prompt_conditional": 0.3165955885613604,
+    "bound_ci95": [
+      0.17603510189085722,
+      0.4790100176241166
+    ],
+    "excess_bits": 1073.8964370697474,
+    "excess_ci95": [
+      1039.078235292392,
+      1108.9254288960733
+    ],
+    "bound_pooled": 0.3615313804903524,
+    "ratio_descriptive": 3393.013268250616,
+    "sensitivity": {
+      "laplace": {
+        "B_prompt_conditional": 0.24636005223975968,
+        "B_pooled": 0.3515659297259346
+      },
+      "jeffreys": {
+        "B_prompt_conditional": 0.3165955885613604,
+        "B_pooled": 0.3615313804903524
+      },
+      "plug_in": {
+        "B_prompt_conditional": 0.4638195621873478,
+        "B_pooled": 0.3722152061868941
+      }
+    }
+  },
+  "lzpenalty": {
+    "loop_events": 0,
+    "n_samples": 150,
+    "path_kl_bits": 92.79248884126196,
+    "path_kl_ci95": [
+      90.1686898952646,
+      95.55279442565678
+    ],
+    "bound_prompt_conditional": 0.3541418148503225,
+    "bound_ci95": [
+      0.219978209161911,
+      0.510933758220871
+    ],
+    "excess_bits": 92.43834702641163,
+    "excess_ci95": [
+      89.83798458822797,
+      95.1924997069322
+    ],
+    "bound_pooled": 0.46248520358408635,
+    "ratio_descriptive": 262.0207073837936,
+    "sensitivity": {
+      "laplace": {
+        "B_prompt_conditional": 0.273684708171364,
+        "B_pooled": 0.4444188894260913
+      },
+      "jeffreys": {
+        "B_prompt_conditional": 0.3541418148503225,
+        "B_pooled": 0.46248520358408635
+      },
+      "plug_in": {
+        "B_prompt_conditional": 0.5279867819540514,
+        "B_pooled": 0.4873517040947339
+      }
+    }
+  },
+  "rr_fixed": {
+    "loop_events": 4,
+    "n_samples": 150,
+    "path_kl_bits": 18.58058206757821,
+    "path_kl_ci95": [
+      18.172229399807918,
+      19.034777728889647
+    ],
+    "bound_prompt_conditional": 0.29928611526631543,
+    "bound_ci95": [
+      0.16446647306766426,
+      0.46101433647834733
+    ],
+    "excess_bits": 18.281295952311893,
+    "excess_ci95": [
+      17.905960869102227,
+      18.708540025233752
+    ],
+    "bound_pooled": 0.3357155197561226,
+    "ratio_descriptive": 62.08300726227993,
+    "sensitivity": {
+      "laplace": {
+        "B_prompt_conditional": 0.23330982985661297,
+        "B_pooled": 0.3269464095668817
+      },
+      "jeffreys": {
+        "B_prompt_conditional": 0.29928611526631543,
+        "B_pooled": 0.3357155197561226
+      },
+      "plug_in": {
+        "B_prompt_conditional": 0.43645293928620343,
+        "B_pooled": 0.3450343104207111
+      }
+    }
+  },
+  "rr_adaptive": {
+    "loop_events": 0,
+    "n_samples": 150,
+    "path_kl_bits": 48.17486612227585,
+    "path_kl_ci95": [
+      46.57677331928608,
+      49.72412267275686
+    ],
+    "bound_prompt_conditional": 0.3541418148503225,
+    "bound_ci95": [
+      0.22157296832710993,
+      0.5106734675872595
+    ],
+    "excess_bits": 47.82072430742553,
+    "excess_ci95": [
+      46.186364485424114,
+      49.399590980230265
+    ],
+    "bound_pooled": 0.46248520358408635,
+    "ratio_descriptive": 136.0326967958779,
+    "sensitivity": {
+      "laplace": {
+        "B_prompt_conditional": 0.273684708171364,
+        "B_pooled": 0.4444188894260913
+      },
+      "jeffreys": {
+        "B_prompt_conditional": 0.3541418148503225,
+        "B_pooled": 0.46248520358408635
+      },
+      "plug_in": {
+        "B_prompt_conditional": 0.5279867819540514,
+        "B_pooled": 0.4873517040947339
+      }
+    }
+  },
+  "rr_dual_eps0.05": {
+    "loop_events": 0,
+    "n_samples": 150,
+    "path_kl_bits": 5593.158360720866,
+    "path_kl_ci95": [
+      5524.124037997974,
+      5662.189474582005
+    ],
+    "bound_prompt_conditional": 0.3541418148503225,
+    "bound_ci95": [
+      0.21974259848510555,
+      0.5086316560435745
+    ],
+    "excess_bits": 5592.804218906015,
+    "excess_ci95": [
+      5523.660374227821,
+      5661.934630674328
+    ],
+    "bound_pooled": 0.46248520358408635,
+    "ratio_descriptive": 15793.555367317485,
+    "sensitivity": {
+      "laplace": {
+        "B_prompt_conditional": 0.273684708171364,
+        "B_pooled": 0.4444188894260913
+      },
+      "jeffreys": {
+        "B_prompt_conditional": 0.3541418148503225,
+        "B_pooled": 0.46248520358408635
+      },
+      "plug_in": {
+        "B_prompt_conditional": 0.5279867819540514,
+        "B_pooled": 0.4873517040947339
+      }
+    }
+  },
+  "rr_dual_eps0.01": {
+    "loop_events": 0,
+    "n_samples": 150,
+    "path_kl_bits": 6334.848579705491,
+    "path_kl_ci95": [
+      6226.57269641595,
+      6441.3631251677425
+    ],
+    "bound_prompt_conditional": 0.3541418148503225,
+    "bound_ci95": [
+      0.21959833674565418,
+      0.5067580696683065
+    ],
+    "excess_bits": 6334.49443789064,
+    "excess_ci95": [
+      6226.0994443269665,
+      6441.117344754664
+    ],
+    "bound_pooled": 0.46248520358408635,
+    "ratio_descriptive": 17887.886473905673,
+    "sensitivity": {
+      "laplace": {
+        "B_prompt_conditional": 0.273684708171364,
+        "B_pooled": 0.4444188894260913
+      },
+      "jeffreys": {
+        "B_prompt_conditional": 0.3541418148503225,
+        "B_pooled": 0.46248520358408635
+      },
+      "plug_in": {
+        "B_prompt_conditional": 0.5279867819540514,
+        "B_pooled": 0.4873517040947339
+      }
+    }
+  },
+  "_reference": {
+    "loop_events": 43,
+    "n_samples": 150,
+    "per_prompt_P_smoothed": {
+      "0": 0.13636363636363635,
+      "1": 0.22727272727272727,
+      "2": 0.4090909090909091,
+      "3": 0.22727272727272727,
+      "4": 0.13636363636363635,
+      "5": 0.4090909090909091,
+      "6": 0.3181818181818182,
+      "7": 0.3181818181818182,
+      "8": 0.5909090909090909,
+      "9": 0.5909090909090909,
+      "10": 0.22727272727272727,
+      "11": 0.3181818181818182,
+      "12": 0.22727272727272727,
+      "13": 0.13636363636363635,
+      "14": 0.3181818181818182
+    },
+    "rejection_kl_bits_mean": 0.5619699035084308,
+    "rejection_expected_generations_mean": 1.51935504926217
+  }
+}

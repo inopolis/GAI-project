@@ -1,0 +1,1 @@
+On a character-level language model the same ordering appears: a fixed price reaches zero observed loops at 39 bits per generation, a fixed budget at 1400 bits or more, and the budget rule realizes multipliers that are zero at most steps and in the hundreds at others.

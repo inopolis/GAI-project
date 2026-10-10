@@ -1,0 +1,2 @@
+strategy,checkpoint,n_samples,kl_bits_mean,kl_bits_lo,kl_bits_hi,risk_achieved_mean,risk_achieved_lo,risk_achieved_hi,latency_ms_mean,latency_ms_lo,latency_ms_hi,loop_rate,rmst,survival_auc
+fsd,cosine,150,2.1484,2.0836,2.2185,0.4269,0.4195,0.4332,2.9365,2.8775,3.0023,0.02,497.55,0.9951

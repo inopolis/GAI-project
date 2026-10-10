@@ -1,0 +1,456 @@
+[lt_fsd][mistralai/Mistral-7B-v0.3] prompt='The committee announced that' seed=1
+------------------------------------------------------------
+the 2018 event will be held in the city of Lille, France.
+
+The 30th edition of the European Athletics Championships will take place in LILLE, FRANCE from 7-12 August 2018. This was announced today by the European Broadcasting Union (EBU) and the Association of European Athletic Federations (AEAF) at a press conference in the French city.
+Lille was selected by an EBU/AEAJ jury following a presentation by the city and a visit to the proposed venue, the Stade Pierre Mauroy, which is currently under construction. It will be the first time that this stadium has hosted an athletics event
+
+[lt_fsd][mistralai/Mistral-7B-v0.3] prompt='The committee announced that' seed=2
+------------------------------------------------------------
+the 2019 event will be held in the city of Tampere, Finland.
+
+The 30th edition of the event is scheduled to take place from 14-18 August 2017. It will mark the first time the event has been held outside of the United States.
+“We are thrilled to be bringing the World Championships to Finland,” said IWF President Tamás Aján. “The Finnish Weightlifting Federation has a long history of hosting international events and we are confident that they will deliver a fantastic event for the athletes and spectators.”
+
+Tampere was selected as the host city following a vote by the IWFS Executive Board. The city
+
+[lt_fsd][mistralai/Mistral-7B-v0.3] prompt='The committee announced that' seed=3
+------------------------------------------------------------
+the 2019 event will be held at the University of California, Berkeley, on 14-16 May 2018.
+
+The 3rd International Conference on the History of the Physical Sciences (ICHPS-3) will take place at UC Berkeley on 5-7 May and will be hosted by the Department of History and Philosophy of Science. ICHPS is a biennial conference that brings together historians of science from around the world to discuss the history of the physical sciences. The conference is organized by an international committee of historians of physics, chemistry, and astronomy.
+For more information, please visit the conference website.</s>к</s>хпс-3
+
+[lt_fsd][mistralai/Mistral-7B-v0.3] prompt='The committee announced that' seed=4
+------------------------------------------------------------
+the 2019 event will be held at the University of California, Berkeley, on June 14-15.
+
+The 2nd Annual International Conference on the Future of Work will take place at UC Berkeley on June 13-June 14, 2018. The conference will bring together leading scholars, practitioners, and policymakers to discuss the future of work.
+This conference is organized by the Berkeley Future Of Work Initiative, the Berkeley Center for Technology, Law & Policy, and the Berkeley Center For Law And Business. It is co-sponsored by Stanford Law School, the Stanford Center on the Legal Profession, and the Stanford Institute for Human-Cent
+
+[lt_fsd][mistralai/Mistral-7B-v0.3] prompt='The committee announced that' seed=5
+------------------------------------------------------------
+the 2019 event will be held in the city of Tampere, Finland.
+
+The 30th edition of the event is scheduled to take place from 12-15 June 2018. It will mark the first time the event has been held outside of the United States.
+
+"We are very excited to be bringing the World Rowing Championships to Finland for the first ever time," said WorldRowing President Jean-Christophe Rolland. "Tampere is a city that has a strong rowing tradition and we are sure that the people of Finland will welcome the world's best rowers to their country. We are looking forward to working with the Finnish Row
+
+[lt_fsd][mistralai/Mistral-7B-v0.3] prompt='Scientists recently discovered that' seed=1
+------------------------------------------------------------
+a new species of dinosaur, the Tianyulong confuciusi, had feathers. The discovery was made in China, where the fossil was found.
+
+The T-Rex was a dinosaurs that lived in the Cretaceous period. It was a large, carnivorous dinosaurus that lived about 65 million years ago. The T-rex was one of the largest dinosauraurs ever to live. It could grow up to 40 feet long and weigh upwards of 10 tons.
+It was a carnosaur with a long, heavy tail and a short, stocky body. It had a large head with sharp teeth and a
+
+[lt_fsd][mistralai/Mistral-7B-v0.3] prompt='Scientists recently discovered that' seed=2
+------------------------------------------------------------
+the Earth’s magnetic field is weakening. This is a problem because the magnetic shield protects us from solar radiation.
+
+The Earth has a magnetic field that protects it from harmful solar winds. The magnetic poles are constantly moving, and the magnetic north pole is currently moving towards Siberia.
+Scientists have discovered an alarming trend in the Earth's magnetic fields. The strength of the planet's protective magnetic field is decreasing. It is weaker than it has been in 2,000 years.
+
+This is a serious problem for the planet. The magnetic field protects us against solar radiation by deflecting it. Without it, we would be exposed to harmful radiation from
+
+[lt_fsd][mistralai/Mistral-7B-v0.3] prompt='Scientists recently discovered that' seed=3
+------------------------------------------------------------
+the Earth’s magnetic field is weakening. This is a problem because the magnetic shield protects us from solar radiation and cosmic rays.
+
+The Earth has a magnetic field that protects it from harmful radiation. The magnetic poles are constantly moving, and the magnetic north pole is currently located in Siberia.
+Scientists have discovered an alarming trend: the strength of the earth’s magnetosphere is decreasing. It is not known how long this process will last, but it is already clear that it will have a negative impact on the planet.
+
+## What is the Earth's magnetic North Pole?
+
+The geomagnetic field is a magnetic force that surrounds the
+
+[lt_fsd][mistralai/Mistral-7B-v0.3] prompt='Scientists recently discovered that' seed=4
+------------------------------------------------------------
+the brain’s ability to process information is limited. This is why we can only focus on one thing at a time.
+
+The brain has a limited capacity to store information. It can hold about 7 pieces of information at any given time, and it can only process one piece of new information at a moment.
+This means that when you are trying to learn something new, your brain will be distracted by other things that are going on in your life. You may not be able to focus as well as you would like because your brain is trying hard to remember all the other stuff that is happening around you.
+
+## What is the 4-7-8 rule?
+
+The 4–7–8 breathing
+
+[lt_fsd][mistralai/Mistral-7B-v0.3] prompt='Scientists recently discovered that' seed=5
+------------------------------------------------------------
+the Earth’s magnetic field is weakening. This is a big deal because the magnetic poles are responsible for protecting us from harmful solar radiation.
+
+The Earth has a magnetic field that protects us by deflecting harmful cosmic rays and solar winds. The magnetic north pole is currently located in Siberia, but it’ll soon move to Canada.
+This is a natural process that happens every few hundred thousand years, so there’s no need to worry. However, it does mean that we’ll have to update our compasses and GPS systems.
+
+## The Earth’S Magnetic Field Is Weakening
+
+The earth’s magnetic fields are weakening, and scientists are not
+
+[lt_fsd][mistralai/Mistral-7B-v0.3] prompt='After years of research, the team' seed=1
+------------------------------------------------------------
+at the University of California, San Diego, has developed a new type of solar cell that can convert sunlight into electricity at a record-breaking efficiency of 40.7 percent.
+
+The new solar cells are made from a perovskite material that is cheaper and easier to produce than traditional silicon-based solar cells. The team’s research was published in the journal Nature Energy.
+“This is a significant milestone in our quest to develop more efficient and cost-effective solar energy technologies,” said Professor Joseph Wang, who led the research team. “We believe that this new type of photovoltaic cell has the potential to revolutionize the way we generate and use electricity.”
+
+Perovskites are
+
+[lt_fsd][mistralai/Mistral-7B-v0.3] prompt='After years of research, the team' seed=2
+------------------------------------------------------------
+at the University of California, San Diego, has developed a new type of solar cell that can generate electricity from both sunlight and infrared light.
+
+The new solar cells are made from a material called perovskite, which is a type of semiconductor that absorbs light and converts it into electricity. Perovskites are already used in some solar panels, but they are not very efficient at converting infrared radiation into electrical energy.
+
+To overcome this problem, the UCSD team developed an innovative way to combine pervoskite with another type of semicondutor called silicon. The result is what they call a “hybrid solar cell” that can absorb both visible
+
+[lt_fsd][mistralai/Mistral-7B-v0.3] prompt='After years of research, the team' seed=3
+------------------------------------------------------------
+at the University of California, San Diego (UCSD) has developed a new type of solar cell that can generate electricity from both sunlight and heat.
+
+The new solar cells are made from a material called perovskite, which is a type of semiconductor that absorbs light and converts it into electricity. Perovskites are relatively new to the solar industry, but they have been gaining popularity in recent years due to their high efficiency and low cost.
+
+One of the main advantages of pervoskite solar cells is that they can be made using a simple and inexpensive process. This makes them a good choice for large-scale solar installations, where cost is a major factor. In addition
+
+[lt_fsd][mistralai/Mistral-7B-v0.3] prompt='After years of research, the team' seed=4
+------------------------------------------------------------
+at the University of California, San Diego, has developed a new type of solar cell that can generate electricity from both sunlight and infrared light.
+
+The new solar cells are made from a material called perovskite, which is a type of semiconductor that absorbs light and converts it into electricity. Perovskites are known for their high efficiency and low cost, but they have one major drawback: they only absorb visible light, which means they can’t generate power from infrared radiation.
+This new type of solar panel is made by combining pervoskite with a second material – a semitransparent metal oxide – that allows it to absorb infrarred light as
+
+[lt_fsd][mistralai/Mistral-7B-v0.3] prompt='After years of research, the team' seed=5
+------------------------------------------------------------
+at the University of California, San Diego, has developed a new method for creating a 3D-printed human heart.
+
+The team, led by Dr. Shuichi Takayama, has been working on the project for over a decade.
+
+They have been able to create a 2D model of the heart using a computer-aided design (CAD) program. The model is then printed using an inkjet printer. This process is called 3d printing.
+
+The 100% biodegradable ink is made from a mixture of sugar and water. The ink is then mixed with a special type of plastic that is used to make the 3D model. Once the model
+
+[lt_fsd][mistralai/Mistral-7B-v0.3] prompt='The novel begins when a stranger' seed=1
+------------------------------------------------------------
+arrives in the small town of Blackwater, Texas. He is a man of mystery, and his arrival sets off a chain of events that will change the lives of everyone in town. The stranger is soon revealed to be a wanted man, and the townspeople must decide whether to turn him in or help him escape.
+
+The novel is a suspenseful and gripping read, with plenty of twists and turns to keep readers guessing. It is also a thought-provoking exploration of the nature of justice and the price of freedom.
+
+## Other related questions:
+
+### Q: What is the novel Black Water?
+
+A: Black Water is a novel by American author John Grisham. It was
+
+[lt_fsd][mistralai/Mistral-7B-v0.3] prompt='The novel begins when a stranger' seed=2
+------------------------------------------------------------
+arrives in the small town of Blackwater, South Carolina. He is a man of color, and he is looking for a job. The townspeople are suspicious of him, but they eventually hire him to work on their farms.
+
+The stranger is a hard worker, and soon he becomes a valuable member of the community. He falls in love with a local girl, Sarah, and they get married.
+
+But the stranger’s happiness is short-lived. One day, he is accused of murdering a white man. The evidence against him is circumstantial, but the townspeople believe that he must be guilty.
+
+The trial is a sham, and the stranger is convicted and sentenced to death
+
+[lt_fsd][mistralai/Mistral-7B-v0.3] prompt='The novel begins when a stranger' seed=3
+------------------------------------------------------------
+arrives in the small town of Blackwater, Texas. He is a man of few words, but he has a secret that he is willing to share with anyone who will listen. The stranger tells the townspeople that there is a monster living in their midst, and that it must be destroyed. The townspeople are skeptical at first, but they soon come to believe the stranger’s story. They begin to search for the monster, and they eventually find it.
+
+The monster is an enormous creature with sharp teeth and claws. It is also very strong and fast. The townsfolk are able to kill the monster after a long and difficult battle. However, the monster’s death is not the end of the
+
+[lt_fsd][mistralai/Mistral-7B-v0.3] prompt='The novel begins when a stranger' seed=4
+------------------------------------------------------------
+named Mr. Kemp arrives at the home of the narrator, a young woman named Jane Eyre. Jane is an orphan who has been raised by her aunt and uncle. She is a plain, unattractive girl who is not very popular. She works as a governess for the wealthy Mr Rochester.
+
+Mr Kemps arrival is a surprise to Jane, as she has never met him before. He tells her that he is looking for a governess position and asks if she would be interested in the job. Jane agrees to take the position, and Mr Kemp leaves.
+Jane begins her new job as governess to Mr Rochesters children. She quickly becomes close to the children, and they
+
+[lt_fsd][mistralai/Mistral-7B-v0.3] prompt='The novel begins when a stranger' seed=5
+------------------------------------------------------------
+, a young man, arrives in the small town of Blackwater, Maine. He is looking for a woman named Jane Doe. She is a woman who has been in a coma for the past six years. The stranger is her husband, and he is determined to wake her up.
+
+The novel is told from the perspective of the stranger, who is named Paul Sheldon. He was a famous romance novelist, but he has recently been involved in a car accident that left him with a broken leg and a broken arm. He is now confined to a wheelchair, and his career is in ruins.
+He is also a recovering alcoholic, and he struggles with his addiction. His wife, Jane,
+
+[lt_fsd][mistralai/Mistral-7B-v0.3] prompt='Investigators later determined that' seed=1
+------------------------------------------------------------
+the fire was caused by a faulty electrical outlet.
+
+The fire started in the kitchen of the home, which was occupied by two adults and two children. The family was able to escape the home without injury.
+A firefighter was transported to the hospital for treatment of heat exhaustion. He was later released. No other injuries were reported.
+
+Damage to the home was estimated at $100,000. Damage from the fire is estimated between $50, 000 and $75,000.</s>м
+
+The cause of the fire is under investigation.
+Firefighters were called to an apartment fire in New York City on Sunday.
+
+[lt_fsd][mistralai/Mistral-7B-v0.3] prompt='Investigators later determined that' seed=2
+------------------------------------------------------------
+the fire was caused by a faulty electrical outlet.
+
+The fire broke out at 11:30 p.m. on the second floor of the building, which is located at East 20th Street and South 10th Avenue.
+Firefighters were able to contain the fire to the second-floor apartment, but the flames spread to the roof. The fire was under control by 4:50 a.m., according to officials.
+
+No one was injured in the fire, but two people were displaced. Red Cross officials were on scene to assist the residents.
+A total of 60 firefighter responded to the scene.</s>й</s>ј</s>ј
+
+[lt_fsd][mistralai/Mistral-7B-v0.3] prompt='Investigators later determined that' seed=3
+------------------------------------------------------------
+the fire was caused by a faulty electrical outlet.
+
+The fire started in the kitchen and spread to the rest of the house. The fire was reported at 11:30 p.m.
+Firefighters from the city of Bellefontaine and the Belfontaine Township Fire Department responded to extinguish the blaze. No one was injured in this fire.
+
+A firefigorce from Logan County and Bellefountaine Township responded after a fire broke out at a home on the 200 block of East Main Street in Belefontain, Ohio.</s>м
+
+The cause of the fire is under investigation. A firefighter was injured while
+
+[lt_fsd][mistralai/Mistral-7B-v0.3] prompt='Investigators later determined that' seed=4
+------------------------------------------------------------
+the fire was caused by a faulty electrical outlet.
+
+The fire started in the kitchen of the home, which was occupied by three adults and two children. The family was able to escape the home unharmed.
+Firefighters were able extinguish the fire in about 15 minutes. Damage to the home was estimated at $100,000. No injuries were reported.
+
+Investigating officers were assisted by the State Fire Marshal’s Office.</s>ммррпррврдрррррргрррерррррррррррррррррррррр
+
+[lt_fsd][mistralai/Mistral-7B-v0.3] prompt='Investigators later determined that' seed=5
+------------------------------------------------------------
+the fire was caused by a candle that was left burning in the bedroom.
+
+The fire started in an upstairs bedroom and spread to the attic, according to investigators. The fire was reported at 11:30 p.m.
+Firefighters from the city of Newport News and the county responded to the scene. Firefighter/paramedics from Fort Eustis also responded with a rescue truck.
+
+Newport news firefighters were on the scene for about two hours. No injuries were reported.</s>м</s>ям</s>м
+
+The family was displaced by the fire. The Red Cross was called to assist the family.
+A firefighter was treated
+
+[lt_fsd][mistralai/Mistral-7B-v0.3] prompt='The company's spokesperson stated that' seed=1
+------------------------------------------------------------
+the company is currently in the process of developing a new product that will be released in 2021.
+
+The company's CEO, Mr. X, said that the new device will have a 5G network and will be able to support 4K video.
+He also said: "We are working on a new smartphone that will come out in 2Q 20."
+
+## What is the new smart phone?
+
+The new iPhone is expected to be released later this year. It will feature a 6.1-inch OLED display, a dual-camera system, and a new A12 Bionic chip.
+It will also have an improved battery life and a
+
+[lt_fsd][mistralai/Mistral-7B-v0.3] prompt='The company's spokesperson stated that' seed=2
+------------------------------------------------------------
+the company is not planning to launch any new products in the near future.
+
+The company's shares fell 1.7% to Rs 2,240.50 on the BSE.
+"We are not going to launch anything in next 6 months. We are focusing on our existing products," the company said in a statement.
+
+In the past, the company has launched products like Lumia 535, Lumi 64o, Lumina 73d, and Lumin 830. It has also launched the Lunia smartband.</s>м
+
+The firm had earlier said that it would launch a new product in the first quarter of 
+
+[lt_fsd][mistralai/Mistral-7B-v0.3] prompt='The company's spokesperson stated that' seed=3
+------------------------------------------------------------
+the company is currently in the process of developing a new product that will be launched in 2023.
+
+The company's CEO, Mr. X, said that the new device will have a more powerful processor and a larger battery capacity than the current model. He also stated that they are working on improving the camera quality and adding new features to the device.
+Mr. X also said "We are confident that our new device would be a game-changer in the market and would help us to gain more market share."
+
+He also added that the company has been working hard to improve its product quality over the past few years and that they believe that their new devices would be able to compete with other top brands in
+
+[lt_fsd][mistralai/Mistral-7B-v0.3] prompt='The company's spokesperson stated that' seed=4
+------------------------------------------------------------
+the company is not going to sell its stake in the joint venture.
+
+The company' s spokesman stated: "We are not selling our stake, we are just looking for a partner to invest in this project. We are not interested in selling it. We have a long-term strategy for this business. This is a very important project for us. It is a strategic project for Russia and for the whole world. We are ready to invest more money in this project."
+
+According to the company’s representative, the decision to sell the stake was made by the company management.
+"We have been working on this issue for a long time. Our management has decided to sell the shares. We will continue to work with
+
+[lt_fsd][mistralai/Mistral-7B-v0.3] prompt='The company's spokesperson stated that' seed=5
+------------------------------------------------------------
+the company has been working on the project for a long time and has already started the construction of the plant.
+
+The company's representative said that they are currently working with the local government to obtain the necessary permits and licenses. They also stated their commitment to the project and their desire to provide high-quality products to the local market.
+In addition, the company is also working on other projects in the region, including the construction of a new factory in another city. This new facility will be used to produce a range of products for the local market as well as for export.</s>м
+
+Overall, the news of the company starting construction on a new plant in the country is a positive development for the industry and the local
+
+[lt_fsd][mistralai/Mistral-7B-v0.3] prompt='Deep beneath the surface, researchers found' seed=1
+------------------------------------------------------------
+a new species of fish that has been living in the depths of the ocean for millions of years.
+
+The newfound fish, which is a member of the anglerfish family, was discovered in 2017 by a team of researchers from the University of Hawaii and the National Oceanic and Atmospheric Administration. The fish was found in the deep waters of the Pacific Ocean, near the Hawaiian Islands.
+
+Anglerfishes are a group of fish known for their unique hunting strategy. They have a long, thin filament that they use to lure prey. The filaments are covered in a bioluminescent substance that attracts prey.
+
+The newly discovered fish is called the “
+
+[lt_fsd][mistralai/Mistral-7B-v0.3] prompt='Deep beneath the surface, researchers found' seed=2
+------------------------------------------------------------
+a 100-million-year-old fossil of a giant sea turtle. The fossils were found in the Cretaceous period, which is the last period of the Mesozoic era.
+
+The fossil was found in an area of the North Sea, which has been known to have a lot of fossils. The fossil was discovered by a team of researchers from the University of Leicester.
+They found the fossil in a layer of rock that was about 200 meters below the surface. They were able to identify the fossil as a sea creature because it had a shell and a tail.
+It is believed that the sea turtles were able to
+
+[lt_fsd][mistralai/Mistral-7B-v0.3] prompt='Deep beneath the surface, researchers found' seed=3
+------------------------------------------------------------
+a new species of fish that has been living in the ocean for 100 million years.
+
+The fish, which is about 2 inches long, was discovered in an underwater cave in the Bahamas. It is the first new vertebrate species to be discovered since 1998.
+Researchers say the fish is a member of the family of fish known as the “lampreys.”
+
+Lamprey fish are known for their ability to survive in extreme environments. They can live in water that is as cold as 4 degrees Fahrenheit and as hot as 70 degrees Celsius. The fish also has a unique ability: It can survive without oxygen for up to
+
+[lt_fsd][mistralai/Mistral-7B-v0.3] prompt='Deep beneath the surface, researchers found' seed=4
+------------------------------------------------------------
+a 100-million-year-old fossil of a giant sea scorpion.
+
+The fossils were found in the Kem Khem Basin in southern Egypt, and the scorpioid was named Kemkhemia. The fossil was found in a layer of rock that was formed during the Cretaceous period, which was 66 million years ago.
+Kemkhemi was a giant among sea creatures, measuring 1.5 meters long. It had a long tail and a pair of pincers.
+
+It was a predator that fed on other sea creatures. Its paws were used to grab its prey and its tail was used as a weapon
+
+[lt_fsd][mistralai/Mistral-7B-v0.3] prompt='Deep beneath the surface, researchers found' seed=5
+------------------------------------------------------------
+a new species of worm that has been living in the depths of the ocean for millions of years.
+
+The newfound worm, which is about 10 centimeters long, was discovered in an area of the Pacific Ocean known as the Mariana Trench. The trench is the deepest part of Earth's oceans, and it is located in the western Pacific between Japan and the Mariana Islands.
+
+Researchers from the University of Hawaii at Manoa and the National Oceanic and Atmospheric Administration (NOAA) discovered the new species while studying the deep-sea ecosystem of the Mariana Trenches. They found the worm living on the seafloor at a depth of 
+
+[lt_fsd][mistralai/Mistral-7B-v0.3] prompt='The negotiations concluded when both sides' seed=1
+------------------------------------------------------------
+agreed to a 10-year deal worth $160 million, according to multiple reports.
+
+The deal includes a $20 million signing bonus, $105 million in guarantees and a $30M option for 2024. It also includes an opt-out clause after the 2nd year.
+
+> The #Broncos and RB Melvin Gordon have agreed on a 2-year, $16M deal, per source. He gets $20M guaranteed. https://t.co/879889399P
+>
+> — Adam Schefter (@AdamSchefter) March 17, 202
+
+[lt_fsd][mistralai/Mistral-7B-v0.3] prompt='The negotiations concluded when both sides' seed=2
+------------------------------------------------------------
+agreed to a 10-year deal worth $300 million.
+
+The deal includes a $150 million signing bonus, $100 guaranteed and $52 million in incentives. It also includes an opt-out clause after the fifth year.
+
+> The #Rams and Aaron Donald have agreed on a six-year, fully guaranteed contract extension worth up to $95 million, sources say. He’ll get $87 million in the first three years. And he’s the highest-paid defensive player in NFL history.
+>
+> — Ian Rapoport (@RapSheet) August 31, 2018
+
+Donald was the No. 1
+
+[lt_fsd][mistralai/Mistral-7B-v0.3] prompt='The negotiations concluded when both sides' seed=3
+------------------------------------------------------------
+agreed to a 10-year deal worth $240 million.
+
+The deal includes a $15 million signing bonus, $10 million in 2019, and $30 million in each of the next four seasons. He will earn $6 million per year in 2024 and 2025.
+
+> The #Browns have agreed on a 10-yr, $240M deal with WR Odell Beckham Jr., source said. It includes $65M guaranteed at signing. And it’s a record-setting deal for a WR.
+>
+> — Ian Rapoport (@RapSheet) March 12,
+
+[lt_fsd][mistralai/Mistral-7B-v0.3] prompt='The negotiations concluded when both sides' seed=4
+------------------------------------------------------------
+agreed to a 10-year deal worth $215 million.
+
+The deal includes a $10 million signing bonus, $13 million in 2019, and $4 million in each of the next four seasons. He will earn $8 million per season in 2023 and 2024.
+
+> The #Browns have agreed on a 6-yr, $72M deal with CB Denzel Ward, source said. $33M guaranteed. Deal includes $10M signing bn, plus $13M in ’19 & $4M in each year from 2nd-5th years. $8M per year
+
+[lt_fsd][mistralai/Mistral-7B-v0.3] prompt='The negotiations concluded when both sides' seed=5
+------------------------------------------------------------
+agreed to a 10-year deal worth $245 million.
+
+The deal includes a $13 million signing bonus, $10 million in 2019, and $8 million in each of the next two seasons. He will earn $7 million per season in 2022 and 2023, and then $10 million annually from 2024 to 2026.
+
+> The #Browns have agreed on a 1 year deal with OL Austin Corbett, source said. It’s a one-yr deal worth up to $3.5M.
+>
+> — Ian Rapoport (@RapSheet)
+
+[lt_fsd][mistralai/Mistral-7B-v0.3] prompt='Historians have long debated whether' seed=1
+------------------------------------------------------------
+the U.S. Civil War was fought over slavery or states’ rights. The answer, of course, is both.
+
+The same is true of the current debate over the Confederate flag.
+It is a symbol of slavery and racism, but it is also a reminder of states' rights — the right of states to govern themselves.
+
+That's why the flag is so important to some people. It's not just a symbol; it's a statement. And that statement is that the South will never surrender.
+In the wake of the Charleston massacre, many people are calling for the flag to be removed from the South Carolina statehouse. But that would be a mistake. Removing the flag would
+
+[lt_fsd][mistralai/Mistral-7B-v0.3] prompt='Historians have long debated whether' seed=2
+------------------------------------------------------------
+the American Revolution was a war of independence or a civil war. The answer is both.
+
+The American colonists were not a unified people. They were a diverse group of people with different interests and different ideas about how to govern themselves.
+Some colonies were more loyal to the British crown than others. Some colonists wanted to remain part of the British Empire, while others wanted complete independence.
+There was also a great deal of disagreement among the colonials about what kind of government they wanted. Some wanted a strong central government, like the one in England, while other wanted a more decentralized system of government.</s>й
+
+## Was the American revolution a civil War?
+
+The Civil War was a conflict
+
+[lt_fsd][mistralai/Mistral-7B-v0.3] prompt='Historians have long debated whether' seed=3
+------------------------------------------------------------
+the American Revolution was a war for independence or a civil war. The answer is both.
+
+The American colonists were not a unified people. They were a diverse group of people with different interests and different ideas about how to govern themselves. Some colonies were more loyal to the British crown than others. Some had more of a stake in the British economy than other colonies. And some colonials were more willing to fight for their independence than others, while others were content to remain loyal subjects of the king.
+In the end, the American revolutionaries were able to unite against the British and win their freedom. But it was only after a long and bloody war that the colonists finally achieved their goal of independence.
+
+
+
+[lt_fsd][mistralai/Mistral-7B-v0.3] prompt='Historians have long debated whether' seed=4
+------------------------------------------------------------
+the American Revolution was a war of independence or a civil war. The answer is both.
+
+The American colonists were British subjects, and the British government was their legitimate ruler. The colonies were not independent states. They were part of the British Empire.
+But the colonists did not want to be ruled by the king and Parliament. They wanted to govern themselves.
+
+So the American War of Independence was a revolution. It was an attempt to overthrow the British government and create a new nation.
+It was also a civil war because the colonials were fighting against their own countrymen. The British army was made up of British soldiers, but the American army included many colonials who had fought for the British
+
+[lt_fsd][mistralai/Mistral-7B-v0.3] prompt='Historians have long debated whether' seed=5
+------------------------------------------------------------
+the U.S. Civil War was fought over slavery or states’ rights. The answer is both.
+
+The war was about slavery, but it was also about states' rights and the balance of power between the states and federal government.
+
+## The Civil Rights Act of 1866
+
+The Civil Rights Bill of 2016 was a landmark piece of legislation that protected the rights of African Americans. It was passed by Congress and signed into law by President Andrew Johnson. This bill was a major step forward in the fight for civil rights.
+It was the first federal law to protect the rights of black people. It gave them the right to vote, hold property, and sue in court. It also
+
+[lt_fsd][mistralai/Mistral-7B-v0.3] prompt='The festival opened with a speech about' seed=1
+------------------------------------------------------------
+the importance of the festival and the need to support the arts.
+
+The festival opened on Friday, 10th of March, with an opening ceremony at the National Theatre. The ceremony was attended by the Minister of Culture, Mr. Mladen Vukčević, the Ambassador of the Republic of Croatia to Montenegro, Mr Željko Kovačić as well as the representatives of the Ministry of Culture from the Republics of Serbia and Bosnia and Herzegovina.
+In his speech, the Minister emphasized the importance that the festival has for the cultural life of the city of Podgorica and the country as a whole. He also stressed the need to continue to
+
+[lt_fsd][mistralai/Mistral-7B-v0.3] prompt='The festival opened with a speech about' seed=2
+------------------------------------------------------------
+the importance of the festival and the need to preserve the culture of our country.
+
+The festival was attended by the Minister of Culture and Information, Mr. Mohamed Al-Mekhlafi, the Director General of the Ministry of Culture for the Arts, Mr Abdulaziz Al Muhairi, the Chairman of the Board of Directors of Sharjah Art Foundation, Ms Hoor Al Qasimi, the Director of the Sharq Art Center, Mr. Abdullah Al-Shamsi, and a number of artists and art lovers.
+Mr. Mohammed Al Makhloufi, Director of Cultural Affairs at the Ministry said that the festival is a cultural event that aims to promote the culture in the
+
+[lt_fsd][mistralai/Mistral-7B-v0.3] prompt='The festival opened with a speech about' seed=3
+------------------------------------------------------------
+the importance of the festival and the need to support the arts.
+
+The festival opened on Friday, 20th of April, with an opening ceremony at the National Theatre. The ceremony was attended by the Minister of Culture, Mr. Mladen Vukosavljevic, the Ambassador of the Republic of Croatia, Mr Ivan Vilibor Sinovcic as well as the President of the Croats in Bosnia and Herzegovina, Mr. Josip Jelicic.
+In his speech, the Minister emphasized the importance that the Croatian National Theater in Zagreb has for the Croation people in Bosna and Herzogovina. He also said that he is very
+
+[lt_fsd][mistralai/Mistral-7B-v0.3] prompt='The festival opened with a speech about' seed=4
+------------------------------------------------------------
+the importance of the festival and the need to preserve the culture of our country.
+
+The festival was attended by the Minister of Culture and Tourism of the Republic of Azerbaijan Abulfas Garayev, the Minister for Youth and Sports of the Republic Azad Rahimov, representatives of state bodies, public organizations, as well as the heads of foreign delegations. In the opening ceremony, the national anthems of Azerbaijani and foreign countries were performed.
+Then, the Minister of Education of the Ministry of Education Jeyhun Bayramov made a welcoming speech. He noted that the festival is held for the 10th time and is a great event for the development of the
+
+[lt_fsd][mistralai/Mistral-7B-v0.3] prompt='The festival opened with a speech about' seed=5
+------------------------------------------------------------
+the importance of the festival and the need to preserve the culture of our country.
+
+The festival was held in the presence of the Minister of Culture, Mr. Mohammad Ali Al-Mousawi, the Director General of UNESCO, Ms. Audrey Azoulay, the Ambassador of the Republic of Iraq to UNESCO Dr. Ali Abdul-Amir Alwan, the Directorate of Antiquities and Heritage, representatives of the Ministry of Culture as well as a number of ambassadors and diplomats accredited to Iraq.
+In the festival, which was attended by a large number from the Iraqi people, there were a number of Iraqi and foreign artists who performed their artistic works
+

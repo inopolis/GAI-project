@@ -1,0 +1,27 @@
+\section{Setting and Definitions}\label{sec:setup}
+
+Let $p(\cdot\mid h)$ be the reference next-token distribution given a history $h$, the model at sampling temperature $T$ ($p=\mathrm{softmax}(\mathrm{logits}/T)$). A decoder samples from a kernel $q(\cdot\mid h)$. Over generations of $N$ tokens these define path measures $P$ (the reference) and $Q$ (the decoder). \textbf{Every KL divergence in this paper is in bits.} By the chain rule $\KL(Q\Vert P)=\E_Q\sum_t \KL(q_t\Vert p_t)$, so the path KL of a decoder is estimated by summing the per-step divergences along its own samples; a ``per-step mean'' divides that sum by the fixed generation length $N$.
+
+\textbf{The loop event.} A detector $\mathcal{L}$ defines the loop onset $\tau=\min\{t\le N:\mathcal{L}(x_{1:t})=1\}$ ($\tau=\infty$ if no such $t$ exists), and the event of interest is $E=\{\tau\le N\}$, a loop by the end of the generation. Appendix~\ref{sec:event} develops the detector used on the character-level model and states its limitations. For a history $h$ that has not yet looped and a candidate token $v$, the \emph{event-to-go hazard} is
+\begin{gather*}
+H(h,v)=P(E\mid h,v),\qquad H(h,v)=1\ \text{if $v$ completes a loop at once},\\
+V(h)=\textstyle\sum_v p(v\mid h)H(h,v)=P(E\mid h).
+\end{gather*}
+In a finite-state system $H$ is computed exactly (Section~\ref{sec:small}); on a language model it can only be estimated (Appendix~\ref{sec:hazard-transfer}).
+
+\textbf{One-step controllers.} Every controller considered is a one-step KL projection of $p(\cdot\mid h)$ for a risk signal $r(h,v)\ge 0$:
+\begin{equation}\label{eq:projection}
+\min_q \KL(q\Vert p)\ \ \text{s.t.}\ \ \E_q[r]\le b,\qquad\text{with solution}\qquad q_\lambda(v)\propto p(v)\,e^{-\lambda r(v)} .
+\end{equation}
+The budget $b$ and the multiplier $\lambda\ge 0$ are dual to one another: for a given history, each determines the other, and $\lambda$ is the \emph{price} of risk, the marginal KL paid per unit of risk removed. If $\E_p[r]\le b$ the constraint is inactive ($\lambda=0$, $q=p$); if $b<\min_v r(v)$ it is infeasible. What differs between decoders is which of the two is held fixed over the generation:
+\begin{itemize}[leftmargin=*,itemsep=1pt]
+\item \textbf{fixed budget (FB):} the same $b$ at every step and history; the price $\lambda(h)$ is whatever satisfies $\E_q[r]=b$;
+\item \textbf{fixed price (FP):} the same $\lambda$ at every step and history; the budget $b(h)=\E_{q_\lambda}[r]$ then adapts to the history.
+\end{itemize}
+The recurrence-risk decoder studied below uses the recurrence risk
+\[
+r(v)=\frac1{N_o}\sum_{n=n_{\min}}^{n_{\max}}\mathbf{1}\big[(\text{last }n{-}1\text{ tokens},v)\text{ has occurred earlier}\big],\qquad N_o=n_{\max}-n_{\min}+1;
+\]
+its \textsc{dual} mode is FB (it solves \eqref{eq:projection} exactly at every step), its \textsc{fixed} mode is FP, and its \textsc{adaptive} mode sets $\lambda$ by a heuristic with no guarantee. Appendix~\ref{app:baselines} gives the solver and its numerical tolerances. In the exact system of Section~\ref{sec:small} the risk signal is the exact hazard, $r=H$.
+
+The \textbf{event-level optimum} $Q^\star$ minimizes $\KL(Q\Vert P)$ subject to $Q(E)=\epsilon$. It is a benchmark defined on whole sequences, and Section~\ref{sec:theory} shows that it is realized by a causal sequential rule that uses the hazard with one multiplier for the whole generation.

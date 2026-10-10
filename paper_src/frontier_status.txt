@@ -1,0 +1,2 @@
+Supported at the zero-loop end (no budget setting with an intermediate loop rate)
+Supported (descriptive; proxy risk)

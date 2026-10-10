@@ -282,37 +282,39 @@ LookBackDecoder = SuffixMatchDecoder
 
 class FSDDecoder:
     """
-    Faithful reimplementation of Frustratingly Simple Decoding (FSD), Yang,
-    Cai, Li, Bi, Lam, and Shi, "A Frustratingly Simple Decoding Method for
-    Neural Text Generation" (arXiv:2305.12675).
-    No official code release could be found (checked again on this round of
-    review), so this implements the PAPER's own stated equations directly,
-    replacing an earlier revision of this class that combined the model and
-    the anti-LM differently than the paper specifies in three ways: it
-    subtracted the naive score from LOGITS rather than from the model's own
-    PROBABILITIES as the paper's eq. 2 does; it used a "longest available
-    order, else fall back to a shorter one" heuristic rather than the
-    paper's smoothed multi-order INTERPOLATION (eq. 3); and it re-scored the
-    full vocabulary rather than the paper's top-k candidate shortlist.
+    FSD-style decoder adapted from Frustratingly Simple Decoding (FSD), Yang,
+    Cai, Li, Bi, Lam, and Shi, arXiv:2305.12675; official code:
+    github.com/LHRYANG/FSD (ngram_model/fsd.py, utils.py).
 
-    FSD(v|x_{<t}) = p_theta(v|x_{<t}) - alpha * p_omega(v|x_{<t})   (eq. 2)
+    Scoring matches the official implementation (checked on constructed
+    prefixes by tests/test_fsd_against_official.py):
 
-    computed in PROBABILITY space, restricted to the top-k candidates by
-    p_theta (their k=6 default). p_omega is a smoothed, multi-order n-gram
-    anti-LM built online from the generated history (eq. 1, 3):
+      FSD(v) = p_theta(v) - alpha * p_omega(v)   over the top-k candidates by
+      p_theta (k=6).  The official code writes the same ranking as
+      (1-a)*p_theta - a*p_omega with a = alpha/(1+alpha); alpha=3 here is
+      a=0.75 there.  argmax is invariant to that positive rescaling.
 
-      p_n(x_i | x_{i-n+1:i-1}) = count(x_{i-n+1:i}) / count(x_{i-n+1:i-1})
-      p_omega = sum_{k=1}^{N} lambda_k * p_k,
-                lambda_k propto beta^{N-k}, normalized to sum to 1
+    p_omega is the official recursive residual-mass anti-LM (not fixed
+    interpolation weights).  For candidate v, with remaining=1, score=0, and
+    orders i = N-1 .. 0 (i = context length, highest order first):
+      if v never followed this length-i context: skip (remaining unchanged,
+        so a missing higher order leaves its mass to lower orders);
+      else if i > 0: score += remaining * beta * count/(total+1)
+           else:     score += remaining * count/total      (unigram: no beta)
+      remaining -= remaining * beta.
+    With N=3, beta=0.9 and every order firing the weights are about
+    0.90 / 0.09 / 0.01.  If len(history) < N-1 the penalty is 0.
 
-    (N=3, beta=0.9, alpha=3 -- the paper's own defaults for discrete FSD;
-    an n-gram order with no prior occurrence of its context contributes 0,
-    not a substitute fallback). Scores that go negative or non-positive
-    after subtraction (possible, since FSD(v) is a difference of
-    probabilities) are clamped to 0 and the top-k renormalized to sample
-    from; if every candidate clamps to 0 (the anti-LM's penalty exceeds
-    p_theta everywhere in the shortlist), the model's own top-k
-    distribution is used unmodified rather than dividing by zero.
+    Two deliberate deviations from the official method, so this class is an
+    FSD-style adaptation and not a reproduction of it:
+      1. The official method takes argmax over the top-k FSD scores.  This
+         project resamples every configuration over several seeds, so the
+         class instead samples from the top-k FSD scores after clamping at 0
+         and renormalizing (if every score clamps to 0, from p_theta's own
+         top-k).
+      2. p_theta is the temperature-scaled softmax (the project's reference
+         distribution p); the official code uses the raw softmax.
+    Defaults N=3, beta=0.9, alpha=3, k=6 are the paper's.
     """
     def __init__(self, temperature=0.8, top_p=0.95, alpha=3.0, n_max=3,
                  beta=0.9, top_k=6):
@@ -341,26 +343,29 @@ class FSDDecoder:
                 self._followers[n][context][self._all_ids[L - 1]] += 1
 
     def _anti_lm_scores(self, candidate_ids):
-        """p_omega(v) for each v in candidate_ids (a Python list of token
-        ids): smoothed interpolation over n-gram orders 1..n_max (eq. 3)."""
+        """p_omega(v) for each v in candidate_ids, following the official
+        recursive residual-mass allocation (see class docstring)."""
         L = len(self._all_ids)
-        raw_weights = [self.beta ** (self.n_max - k) for k in range(1, self.n_max + 1)]
-        wsum = sum(raw_weights)
-        weights = [w / wsum for w in raw_weights]
-
         scores = torch.zeros(len(candidate_ids))
-        for order, lam in zip(range(1, self.n_max + 1), weights):
-            if L < order - 1:
-                continue
-            context = tuple(self._all_ids[L - (order - 1): L]) if order > 1 else ()
-            followers = self._followers[order].get(context)
-            if not followers:
-                continue
-            total = sum(followers.values())
-            for i, v in enumerate(candidate_ids):
-                c = followers.get(v)
-                if c:
-                    scores[i] += lam * (c / total)
+        if L < self.n_max - 1:
+            return scores
+        for j, v in enumerate(candidate_ids):
+            remaining, score = 1.0, 0.0
+            for i in range(self.n_max - 1, -1, -1):
+                context = tuple(self._all_ids[L - i:]) if i > 0 else ()
+                followers = self._followers[i + 1].get(context)
+                if not followers:
+                    continue
+                c = followers.get(v, 0)
+                if not c:
+                    continue
+                total = sum(followers.values())
+                if i == 0:
+                    score += remaining * (c / total)
+                else:
+                    score += remaining * self.beta * (c / (total + 1))
+                remaining -= remaining * self.beta
+            scores[j] = score
         return scores
 
     def step(self, logits, generated_ids=None):

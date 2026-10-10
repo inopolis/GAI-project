@@ -1,0 +1,18 @@
+\begin{table}[ht]
+\centering
+\caption{The event-level optimum and two local controllers (repeat indicator; exact hazard), all matched to the same loop probability $\varepsilon$ within the horizon $H{=}6$. The optimum's achieved $\varepsilon$ matches the target to numerical precision (residual $<10^{-10}$), and the local controllers' to within bisection tolerance ($<10^{-9}$); all are exact, not simulated. KL/step is total path KL divided by $H$, in bits. \textbf{Infeasible}: probability-mass-weighted fraction of steps at which the hazard-informed controller's one-step budget was structurally below its achievable floor.}
+\label{tab:oracle}
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{@{}rrrrrrrr@{}}
+\toprule
+$\varepsilon$ & Indicator KL/step & Hazard-informed KL/step & \textbf{Optimum KL/step} & Indicator/Opt. & Hazard-informed/Opt. & Hazard-informed infeasible \\
+\midrule
+0.30 & 0.390 & 0.255 & \textbf{0.077} & 5.1$\times$ & 3.3$\times$ & 33\% \\
+0.20 & 0.443 & 0.245 & \textbf{0.123} & 3.6$\times$ & 2.0$\times$ & 50\% \\
+0.10 & 0.511 & 0.293 & \textbf{0.184} & 2.8$\times$ & 1.6$\times$ & 50\% \\
+0.05 & 0.555 & 0.412 & \textbf{0.224} & 2.5$\times$ & 1.8$\times$ & 50\% \\
+0.02 & 0.587 & 0.533 & \textbf{0.254} & 2.3$\times$ & 2.1$\times$ & 50\% \\
+0.01 & 0.599 & 0.632 & \textbf{0.266} & 2.3$\times$ & 2.4$\times$ & 50\% \\
+\bottomrule
+\end{tabular}}
+\end{table}

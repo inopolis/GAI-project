@@ -1,0 +1,20 @@
+\begin{table}[ht]
+\centering
+\caption{Comparison at exactly equal distortion. For each target loop probability $\epsilon$ of the hazard-informed controller, the indicator (local) controller's per-step budget is solved exactly so that its KL per step equals the hazard-informed controller's; its exact loop probability is then read off. All quantities are exact (no simulation).}
+\label{tab:synthetic}
+\begin{tabular}{@{}rrrr@{}}
+\toprule
+Target $\epsilon$ (hazard-informed loop prob.) & KL/step (both) & Local loop prob. & Local step budget \\
+\midrule
+0.30 & 0.255 & 44.5\% & 0.267 \\
+0.20 & 0.245 & 45.2\% & 0.286 \\
+0.10 & 0.293 & 42.1\% & 0.198 \\
+0.05 & 0.412 & 25.4\% & 0.056 \\
+0.02 & 0.533 & 7.4\% & 0.015 \\
+0.01 & 0.632 & \textbf{n/a}$^{*}$ & --- \\
+\bottomrule
+\end{tabular}
+
+\vspace{4pt}
+{\footnotesize $^{*}$The hazard-informed KL exceeds the local controller's ceiling (0.615 bits/step); at its ceiling the local controller's loop probability is already 0.0\%, so this is not a comparison at equal distortion.}
+\end{table}

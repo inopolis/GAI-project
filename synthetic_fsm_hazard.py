@@ -37,7 +37,7 @@ This is exact (not an approximation or a sampled estimate) because the state
 and window spaces are finite and the recursion is a direct application of
 the law of total probability over the next transition.
 
-Per-candidate hazard used by both decoders (haz(s') in simulate()):
+Per-candidate hazard used by both decoders (haz(s') in controlled_forward_exact()):
   haz(s') = 1[s' in current window]                     if s' already loops immediately
           = f[remaining][(s', new_window)]                otherwise
 where `remaining` is the number of transitions left in the current rollout
@@ -55,7 +55,6 @@ import math
 S = 20        # states
 W = 2         # trailing-window length ("period" bound)
 H = 6         # horizon (transitions)
-N_MC = 3000
 TRAP, CYC_A, CYC_B = S - 3, S - 2, S - 1   # gateway, then a tight 2-cycle
 P_GATEWAY, P_ENTER, P_CYCLE = 0.05, 0.75, 0.80
 
@@ -428,66 +427,45 @@ def solve_step_eps_for_target(P, w, horizon, mode, f_table, target_eps, start=0,
     return best
 
 
-def simulate(P, decoder, eps, f_table, n, horizon, w, start=0, seed=0):
-    """KL convention, made explicit and made to match the oracle's own exact
-    treatment (found inconsistent on review -- this function used to keep
-    stepping, and kept charging KL, for the FULL horizon even after a
-    trajectory had already looped, while the oracle's exact derivation
-    (oracle_forward_exact / controlled_forward_exact) treats a loop as
-    ABSORBING: once a path loops, no further transition is modeled and no
-    further KL is charged, since g[r]'s own recursion terminates the "loop
-    happens now" branch with a fixed weight rather than continuing it).
-    Fixed to match: the step that CAUSES the loop still pays its own KL (a
-    real decision was made and its distortion is real), but no step AFTER
-    that one contributes -- mirrored via an explicit break right after the
-    loop-causing transition is drawn."""
-    rr = np.random.default_rng(seed)
-    loops = 0
-    kls = []
-    infeasible_steps = 0
-    total_steps = 0
-    states_range = np.arange(S)
-    for _ in range(n):
-        s = start
-        window = (s,)
-        looped = False
-        step_kls = []
-        for t in range(horizon):
-            p_row = P[s, :]
-            remaining = horizon - t - 1
-            if decoder == "raw":
-                q_row = p_row
-            else:
-                if decoder == "local":
-                    risk_row = np.array([1.0 if sp in window else 0.0 for sp in range(S)])
-                elif decoder == "hazard":
-                    risk_row = np.array([
-                        1.0 if sp in window else f_table[remaining][(sp, (window + (sp,))[-w:])]
-                        for sp in range(S)
-                    ])
-                else:
-                    raise ValueError(decoder)
-                lam, ach, feas = dual_calibrate(p_row, risk_row, eps)
-                total_steps += 1
-                if not feas:
-                    infeasible_steps += 1
-                q_row = p_row * np.exp(-lam * risk_row)
-                q_row = q_row / q_row.sum()
-                step_kls.append(kl(q_row, p_row))
+def solve_step_eps_for_kl(P, w, horizon, mode, f_table, target_kl_per_step, start=0,
+                           iters=60, tol=1e-12):
+    """EXACT matched-distortion solver: bisects the one-step budget of a local
+    or hazard-aware controller until its exact expected total path KL, divided
+    by the horizon, equals target_kl_per_step. All quantities come from
+    controlled_forward_exact (exact forward propagation, loop absorbing), so
+    the matched point carries no Monte Carlo error and no grid resolution.
+    Returns the matched operating point, or the tightest-budget point with
+    reachable=False if the target exceeds the controller's own KL ceiling
+    (the KL at step_eps=0, where q is already concentrated on the one-step
+    risk-minimizing actions and tightening further cannot change q)."""
+    def at(step_eps):
+        eps_ach, kl_tot, infeas = controlled_forward_exact(
+            P, w, horizon, mode, step_eps, f_table, start)
+        return eps_ach, kl_tot / horizon, infeas
 
-            s_next = int(rr.choice(states_range, p=q_row))
-            if s_next in window:
-                looped = True
-            window = (window + (s_next,))[-w:]
-            s = s_next
-            if looped:
-                break  # absorbing: no further steps/KL once looped
-        if looped:
-            loops += 1
-        if step_kls:
-            kls.append(float(np.sum(step_kls)) / horizon)
-    infeasible_rate = (infeasible_steps / total_steps) if total_steps else 0.0
-    return loops / n, (float(np.mean(kls)) if kls else 0.0), infeasible_rate
+    e0, k0, i0 = at(0.0)
+    if target_kl_per_step > k0 + tol:
+        return {"step_eps": 0.0, "eps_achieved": e0, "kl_bits_per_step": k0,
+                "infeasible_mass": i0, "reachable": False, "kl_ceiling": k0}
+    e1, k1, i1 = at(1.0)
+    if target_kl_per_step <= k1 + tol:
+        return {"step_eps": 1.0, "eps_achieved": e1, "kl_bits_per_step": k1,
+                "infeasible_mass": i1, "reachable": True, "kl_ceiling": k0}
+    lo, hi = 0.0, 1.0   # KL(lo) > target >= KL(hi)
+    best = (0.0, e0, k0, i0)
+    for _ in range(iters):
+        mid = 0.5 * (lo + hi)
+        em, km, im = at(mid)
+        best = (mid, em, km, im)
+        if abs(km - target_kl_per_step) < tol:
+            break
+        if km > target_kl_per_step:
+            lo = mid
+        else:
+            hi = mid
+    mid, em, km, im = best
+    return {"step_eps": mid, "eps_achieved": em, "kl_bits_per_step": km,
+            "infeasible_mass": im, "reachable": True, "kl_ceiling": k0}
 
 
 def main():
@@ -500,15 +478,14 @@ def main():
     f_table = build_hazard_table(P, H, W)
     print(f"  done in {time.time()-t0:.1f}s\n")
 
-    raw_rate, _, _ = simulate(P, "raw", None, f_table, N_MC, H, W, seed=0)
-    print(f"RAW baseline (T={T0}): empirical loop-by-{H} rate = {raw_rate:.3f}\n")
+    raw_rate = f_table[H][(0, (0,))]   # exact untilted P(loop within H) from state 0
+    print(f"RAW baseline (T={T0}): exact loop-by-{H} probability = {raw_rate:.6f}\n")
 
     eps_grid = [0.30, 0.20, 0.10, 0.05, 0.02, 0.01]
     results = {"raw_loop_rate": raw_rate, "T0": T0, "H": H, "W": W, "S": S,
                "eps_grid": eps_grid, "rows": []}
 
-    # FIXED (found on review): this table used to call simulate(P, "local"/
-    # "hazard", eps, ...) with eps fed DIRECTLY as the one-step per-step risk
+    # Earlier versions called a Monte Carlo simulator for local/hazard with eps fed DIRECTLY as the one-step per-step risk
     # bound (dual_calibrate's own eps), while solve_oracle_lambda's target_eps
     # is a SEQUENCE-LEVEL loop probability -- two different quantities under
     # the same symbol and the same grid values, so "Local KL/step at eps=X"
@@ -568,83 +545,48 @@ def main():
     results["oracle_summary"] = {"avg_local_kl_over_oracle": avg_local_ratio,
                                  "avg_hazard_kl_over_oracle": avg_hazard_ratio}
 
-    # Matched-distortion comparison, applied UNIFORMLY across every eps in the
-    # grid (not a single hand-picked reference point, which would reintroduce
-    # exactly the kind of post-hoc-best-result selection this paper otherwise
-    # penalizes -- see the L-sweep discussion in the real-model hazard-transfer
-    # section). For each hazard row, scan local's eps to find the closest KL
-    # match, then compare loop rates at that matched budget.
-    print(f"\nMatched-distortion comparison (uniform across the full eps grid):")
-    print(f"{'hazard eps':>10} {'hazard KL':>10} {'hazard loop%':>13} | "
-          f"{'local eps (matched)':>20} {'local KL':>10} {'local loop%':>12}")
-    print("-" * 90)
+    # Matched-distortion comparison (Table tab:synthetic), applied uniformly to
+    # every eps in the grid. For each hazard-aware operating point, the local
+    # controller's one-step budget is solved EXACTLY (bisection on exact
+    # forward propagation, no Monte Carlo, no scan grid) so that its expected
+    # path KL per step equals hazard's, and both loop probabilities are then
+    # read off exactly.
+    print(f"\nExact matched-distortion comparison:")
+    print(f"{'hazard eps':>10} {'hazard KL':>11} {'hazard loop%':>13} | "
+          f"{'local step eps':>15} {'local KL':>11} {'local loop%':>12}")
+    print("-" * 82)
     matched_rows = []
-    local_scan_eps = np.linspace(0.001, 0.5, 60)
-    # Pre-compute local's (loop, KL) at every scan point ONCE, reused for all
-    # hazard rows (avoids re-simulating the same local configuration 6 times).
-    local_scan_cache = {}
-    for eps in local_scan_eps:
-        lr, lkl, _ = simulate(P, "local", float(eps), f_table, 2000, H, W, seed=3)
-        local_scan_cache[float(eps)] = (lr, lkl)
-
-    # Does local's own achievable KL keep rising as eps -> 0, or does it hit a
-    # structural ceiling? At eps == the one-step risk floor, q is already
-    # fully concentrated on the minimum-risk action(s); tightening eps
-    # further cannot change q at all, so KL cannot rise further either --
-    # this is the SAME boundary phenomenon as eps == min_v risk(v) in the
-    # real dual solver (Section 5 of the paper), here showing up as a hard
-    # ceiling on how much distortion budget the LOCAL mechanism can ever
-    # spend, no matter how aggressively it is configured. Confirmed
-    # empirically, not assumed: eps swept down to 0 exactly.
-    print(f"\nLocal's KL ceiling as eps -> 0 (is the tail of the eps grid a "
-          f"grid-resolution gap, or a structural limit local cannot cross "
-          f"at ANY eps, however small?):")
-    ceiling_probe_eps = [0.001, 0.0001, 0.00001, 0.0]
-    ceiling_probe_rows = []
-    for eps in ceiling_probe_eps:
-        lr, lkl, _ = simulate(P, "local", eps, f_table, 6000, H, W, seed=3)
-        print(f"  eps={eps:<10g} local loop%={lr*100:6.2f}  local KL/step={lkl:.4f}")
-        ceiling_probe_rows.append({"eps": eps, "loop_rate": lr, "kl": lkl})
-    ceiling_kl = ceiling_probe_rows[-1]["kl"]  # eps=0.0: tightest possible constraint
-    print(f"  -> local's KL ceiling is ~{ceiling_kl:.4f} bits/step; this does "
-          f"NOT increase further below eps=0.0001, confirming a structural "
-          f"limit, not a scan-resolution artifact.")
-    results["local_kl_ceiling"] = ceiling_kl
-    results["local_kl_ceiling_probe"] = ceiling_probe_rows
-
+    local_ceiling = None
     for row in results["rows"]:
         target_kl = row["hazard_kl"]
-        best = min(local_scan_cache.items(), key=lambda kv: abs(kv[1][1] - target_kl))
-        eps_m, (lr_m, lkl_m) = best
-        gap = lr_m - row["hazard_loop_rate"]
-        # A "matched-KL" comparison requires local to be ABLE to spend at
-        # least as much KL as hazard does at this eps -- if hazard's KL
-        # exceeds local's structural ceiling, no local configuration (however
-        # aggressive) reaches that budget, and the closest-available point
-        # found above is a comparison at UNEQUAL, not matched, distortion.
-        # Reporting a "win" there would credit hazard for spending distortion
-        # local was never able to spend in the first place.
-        comparable = target_kl <= ceiling_kl + 1e-6
+        loc = solve_step_eps_for_kl(P, W, H, "local", f_table, target_kl)
+        local_ceiling = loc["kl_ceiling"]
+        comparable = loc["reachable"]
+        gap = loc["eps_achieved"] - row["hazard_loop_rate"]
         flag = "" if comparable else "  [NOT COMPARABLE: exceeds local's KL ceiling]"
-        print(f"{row['eps']:>10.2f} {target_kl:>10.4f} {row['hazard_loop_rate']*100:>12.1f}% | "
-              f"{eps_m:>20.3f} {lkl_m:>10.4f} {lr_m*100:>11.1f}%{flag}")
+        print(f"{row['eps']:>10.2f} {target_kl:>11.6f} {row['hazard_loop_rate']*100:>12.2f}% | "
+              f"{loc['step_eps']:>15.6f} {loc['kl_bits_per_step']:>11.6f} "
+              f"{loc['eps_achieved']*100:>11.2f}%{flag}")
         matched_rows.append({
             "hazard_eps": row["eps"], "hazard_kl": target_kl,
             "hazard_loop_rate": row["hazard_loop_rate"],
-            "local_eps_matched": eps_m, "local_kl_at_match": lkl_m,
-            "local_loop_rate_at_match": lr_m,
+            "local_step_eps_matched": loc["step_eps"],
+            "local_kl_at_match": loc["kl_bits_per_step"],
+            "local_loop_rate_at_match": loc["eps_achieved"],
             "loop_rate_gap_local_minus_hazard": gap,
             "comparable_at_matched_kl": comparable,
         })
+    results["local_kl_ceiling"] = local_ceiling
     results["matched_distortion_all_eps"] = matched_rows
+    print(f"\nLocal controller's exact KL ceiling (step eps = 0): {local_ceiling:.6f} bits/step.")
 
     comparable_rows = [r for r in matched_rows if r["comparable_at_matched_kl"]]
     n_hazard_wins = sum(1 for r in comparable_rows if r["loop_rate_gap_local_minus_hazard"] > 0)
     n_excluded = len(matched_rows) - len(comparable_rows)
-    print(f"\nAmong points where a matched-KL comparison is actually possible "
-          f"({len(comparable_rows)}/{len(matched_rows)}; {n_excluded} excluded "
-          f"as exceeding local's KL ceiling, not credited either way), "
-          f"hazard beats local in {n_hazard_wins}/{len(comparable_rows)}.")
+    print(f"Among points where a matched-KL comparison is possible "
+          f"({len(comparable_rows)}/{len(matched_rows)}; {n_excluded} excluded as "
+          f"exceeding local's KL ceiling), hazard has the lower loop rate in "
+          f"{n_hazard_wins}/{len(comparable_rows)}.")
 
     with open("synthetic_fsm_results.json", "w") as fp:
         def _json_default(o):
