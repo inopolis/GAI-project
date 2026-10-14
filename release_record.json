@@ -1,5 +1,5 @@
 {
- "created": "2026-10-14T13:57:40",
+ "created": "2026-10-14T14:09:37",
  "files": {
   "src/decoding.py": "be7b2faadcf6a4ff8a665f5a8c5d1c65d5456984218fca6dcc3e0c91c520720c",
   "one_step_projection.py": "c65d2d4aeea72a9081074b833d7032024de822ea38f08acd65051b50135aef35",
@@ -83,9 +83,9 @@
   "FSDDecoder": "2a5d647990f4c3a36ece90b3d9d68d5f42b29e4ed10cfafefee390a40885f94a",
   "LZPenaltyDecoder": "185ebc257fba0bb9c801c4766dfa24c3feafc84b8c43ea063be9241af459ec17"
  },
- "git_head_when_recorded": "ed192721a9a38432fe39083b37f6da46a786bb4e",
+ "git_head_when_recorded": "e7b14a27ee54a82ed745620590fa9ce07a9a38c0",
  "note": "git_head_when_recorded is the commit the working tree was based on; files listed here may have been committed afterwards. The hashes, not the commit, identify the version.",
- "working_tree_dirty_when_recorded": true,
+ "working_tree_dirty_when_recorded": false,
  "language_model_runs_note": "src/decoding.py was changed after the language-model runs only in RecurrenceRiskDecoder._solve_dual_lambda (rule for an unmet budget, failure reporting). verify_paper_tables.py checks that every reported dual run has feasible rate 1.0 and structurally-infeasible rate 0.0, so that branch was not executed.",
  "fsd_lz_frozen_before_results": "2026-09-27T02:50"
 }
