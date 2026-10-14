@@ -50,11 +50,22 @@ import time
 import numpy as np
 
 import synthetic_fsm_hazard as fsm
+from one_step_projection import project_batch, SolverFailure
 
 LN2 = math.log(2.0)
 
 
 def d_ber_bits(eps, p):
+    """Bernoulli KL in bits; evaluated in 40-digit arithmetic when |p-eps| is tiny, where the two
+    terms of the float64 formula cancel."""
+    if abs(p - eps) < 1e-3:
+        try:
+            import mpmath as mp
+            mp.mp.dps = 40
+            e, q = mp.mpf(eps), mp.mpf(p)
+            return float((e * mp.log(e / q) + (1 - e) * mp.log((1 - e) / (1 - q))) / mp.log(2))
+        except ImportError:
+            pass
     v = 0.0
     if eps > 0:
         v += eps * math.log2(eps / p)
@@ -153,26 +164,27 @@ class System:
             sig2 = (Prow * Hm ** 2).sum(1) - m_p ** 2
             infeas = np.zeros(N, dtype=bool)
             lam = np.zeros(N)
+            Q = None
             if rule == "ref":
                 pass
             elif rule in ("abs", "abs_skip", "rel", "sched"):
                 if rule in ("abs", "abs_skip"):
-                    b = np.full(N, float(param))
+                    bud = np.full(N, float(param))
                 elif rule == "sched":
-                    b = np.full(N, float(param[t]))
+                    bud = np.full(N, float(param[t]))
                 else:
-                    b = floor + float(param) * (m_p - floor)
-                active = m_p > b
-                infeas = active & (b < floor - 1e-12)
-                lam = self._solve_lambda(Prow, Hm, b, active & ~infeas)
-                lam[infeas] = 0.0 if rule == "abs_skip" else 200.0
+                    bud = floor + float(param) * (m_p - floor)
+                # one shared solver with an expanding bracket and an explicit final check
+                # (raises SolverFailure instead of reporting success); lowest-risk rule when infeasible
+                Q, lam, status, _ = project_batch(Prow, Hm, bud, abstain_when_infeasible=(rule == "abs_skip"))
+                infeas = status == "infeasible"
             elif rule == "lam":
                 lam[:] = float(param)
             if rule == "affine":
                 c = 1.0 - 2.0 ** (-float(param))
                 wts = Prow * (1.0 - c * Hm)
                 Q = wts / wts.sum(1, keepdims=True)
-            else:
+            elif Q is None:
                 logw = np.log(Prow) - lam[:, None] * Hm
                 logw -= logw.max(1, keepdims=True)
                 Q = np.exp(logw)
@@ -204,30 +216,6 @@ class System:
             dist = new
         return {"eps": looped, "kl_bits": kl_tot, "infeasible_mass": infeas_mass / Hh,
                 "kl_infeasible": kl_infeas, "records": recs}
-
-    @staticmethod
-    def _solve_lambda(Prow, Hm, b, mask, hi0=1000.0, iters=60):
-        N = Prow.shape[0]
-        lam = np.zeros(N)
-        if not mask.any():
-            return lam
-        idx = np.where(mask)[0]
-        Pr, Hr, br = Prow[idx], Hm[idx], b[idx]
-        lo = np.zeros(len(idx))
-        hi = np.full(len(idx), hi0)
-        logp = np.log(Pr)
-        for _ in range(iters):
-            mid = 0.5 * (lo + hi)
-            lw = logp - mid[:, None] * Hr
-            lw -= lw.max(1, keepdims=True)
-            q = np.exp(lw)
-            q /= q.sum(1, keepdims=True)
-            g = (q * Hr).sum(1)
-            over = g > br
-            lo = np.where(over, mid, lo)
-            hi = np.where(over, hi, mid)
-        lam[idx] = hi
-        return lam
 
     # ------------------------------------------------------------------
     def calibrate(self, rule, eps, lo, hi, iters=60):
@@ -365,16 +353,24 @@ def main():
         out["systems"].append(r)
     base = System()
     conv = []
-    for D in [0.1, 0.03, 0.01, 0.003, 0.001, 0.0003]:
+    for D in [0.1, 0.03, 0.01, 0.003, 1e-3, 1e-4, 1e-5, 1e-6, 1e-7]:
         eps = base.p - D
         opt = d_ber_bits(eps, base.p)
-        entry = {"D": D}
+        entry = {"D": D, "min_kl_bits": opt}
         for rule, (lo, hi) in [("abs", (0.0, 1.0)), ("rel", (0.0, 1.0)), ("lam", (0.0, 60.0))]:
-            param, res = base.calibrate(rule, eps, lo, hi, iters=70)
+            param, res = base.calibrate(rule, eps, lo, hi, iters=90)
             st = allocation_stats(base, res, base.p)
-            entry[rule] = {"exact_ratio": res["kl_bits"] / opt, "R_pred": st["R_pred_quadratic"],
-                           "R_lower_1_over_phi": st["R_lower_1_over_phi"]}
+            entry[rule] = {"exact_ratio": res["kl_bits"] / opt, "kl_bits": res["kl_bits"],
+                           "R_pred": st["R_pred_quadratic"], "R_lower_1_over_phi": st["R_lower_1_over_phi"]}
         conv.append(entry)
+    # Limit of the fixed-budget ratio as D -> 0: only the histories at the maximal hazard level are
+    # touched, so the second-order ratio tends to 1/phi_max (finite), not to infinity.
+    ref = base.forward("ref", 0.0, record=True)["records"]
+    level = max(r[10] for r in ref)
+    top = [r for r in ref if abs(r[10] - level) < 1e-12]
+    phi_max = sum(r[4] * r[5] for r in top) / (base.p * (1 - base.p))
+    out["fixed_budget_limit"] = {"max_hazard_level": level, "n_histories_at_max": len(top),
+                                 "phi_max": phi_max, "one_over_phi_max": 1.0 / phi_max}
     out["small_distortion"] = conv
     from scipy.stats import spearmanr
     xs, ys = [], []

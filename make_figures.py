@@ -68,10 +68,13 @@ def fig_waste(d, out):
                    label=f"{name}: exact")
         ax[0].plot(D, [c[rule]["R_pred"] for c in conv], color=col, lw=0.9, ls=":",
                    label=f"{name}: $1+\\mathrm{{CV}}^2$" if rule != "lam" else None)
+    lim = d["fixed_budget_limit"]["one_over_phi_max"]
+    ax[0].axhline(lim, color=C["abs"], lw=0.8, ls="--")
+    ax[0].text(2e-3, lim * 1.1, r"$1/\varphi_{\max}=%.0f$" % lim, fontsize=6.8, color=C["abs"])
     ax[0].set_xscale("log"); ax[0].set_yscale("log")
     ax[0].set_xlabel(r"total reduction $D = p-\epsilon$")
     ax[0].set_ylabel("KL / minimum KL")
-    ax[0].set_title("(a) small reductions: law becomes exact")
+    ax[0].set_title("(a) small reductions: ratio saturates at $1/\\varphi_{\\max}$")
     h0, l0 = ax[0].get_legend_handles_labels()
     fig.legend(h0, l0, frameon=False, fontsize=6.8, loc="lower left", ncol=2, bbox_to_anchor=(0.02, -0.02))
     xs, ys, cs = [], [], []
@@ -98,44 +101,45 @@ def fig_waste(d, out):
 
 
 def fig_frontier(dirpath, out):
-    import glob
+    import glob, re
     paths = sorted(glob.glob(dirpath + "*/frontier_rows.csv")) + sorted(glob.glob(os.path.join(dirpath, "frontier_rows.csv")))
     if not paths:
         print("no frontier results yet under", dirpath)
         return
-    rows = []
+    rows = {}
     for pth in dict.fromkeys(paths):
-        rows += list(csv.DictReader(open(pth)))
-    fig, ax = plt.subplots(1, 2, figsize=(7.2, 2.9))
-    for fam, col, mk, name in [("rr_fixed", C["lam"], "o", "fixed multiplier $\\lambda$"),
-                                ("rr_dual", C["abs"], "s", "fixed budget $\\varepsilon$ (dual)")]:
-        pts = sorted([(float(r["kl_bits_total_mean"]), 100 * float(r["loop_rate"]), r["strategy"])
-                      for r in rows if r["strategy"].startswith(fam)])
-        ax[0].plot([x for x, _, _ in pts], [y for _, y, _ in pts], marker=mk, ms=4, color=col, lw=1.2, label=name)
-    ref = [r for r in rows if r["strategy"] == "temperature_0.10"]
+        for r in csv.DictReader(open(pth)):
+            rows[r["strategy"]] = r
+    num = lambda s: float(re.search(r"(?:lam|eps)([0-9.]+)", s).group(1))
+    fixed = sorted([r for k, r in rows.items() if k.startswith("rr_fixed")], key=lambda r: num(r["strategy"]))
+    dual = sorted([r for k, r in rows.items() if k.startswith("rr_dual") and num(k) < 1], key=lambda r: -num(r["strategy"]))
+    ref = rows.get("temperature_0.10")
+    fig, ax = plt.subplots(1, 2, figsize=(7.2, 3.1))
+    for fam, col, mk, name in [(fixed, C["lam"], "o", "fixed price $\\lambda$"),
+                                (dual, C["abs"], "s", "fixed budget $\\varepsilon<1$ (dual)")]:
+        ax[0].plot([float(r["kl_bits_total_mean"]) for r in fam], [100 * float(r["loop_rate"]) for r in fam],
+                   marker=mk, ms=4, color=col, lw=1.2, label=name)
     if ref:
-        y0 = 100 * float(ref[0]["loop_rate"])
+        y0 = 100 * float(ref["loop_rate"])
         ax[0].axhline(y0, color="0.6", lw=0.7, ls=":")
-        ax[0].text(0.98, y0 - 1.6, "reference (no control)", fontsize=6.5, color="0.4", ha="right",
+        ax[0].text(0.98, y0 - 2.0, "reference = budget $\\varepsilon=1$ (KL $=0$)", fontsize=6.5, color="0.4", ha="right",
                    transform=ax[0].get_yaxis_transform())
     ax[0].set_xscale("log")
     ax[0].set_xlabel("path KL per 500-character generation (bits)")
     ax[0].set_ylabel("generations with a loop (%)")
     ax[0].set_title("(a) loop rate against distortion")
     ax[0].legend(frameon=False, fontsize=7, loc="center left")
-    # panel b: per-step multipliers realised by the budget rule (mean, 90th percentile, maximum)
-    duals = sorted([r for r in rows if r["strategy"].startswith("rr_dual")],
-                   key=lambda r: -float(r["strategy"].split("eps")[1]))
-    xs = range(len(duals))
-    ax[1].plot(xs, [float(r["lam_mean"]) for r in duals], "o", color=C["abs"], label="mean")
-    ax[1].plot(xs, [max(float(r["lam_p90"]), 1e-2) for r in duals], "s", color=C["abs"], mfc="none", label="90th percentile")
-    ax[1].plot(xs, [float(r["lam_max"]) for r in duals], "^", color=C["abs"], mfc="none", label="maximum")
-    for x, r in zip(xs, duals):
-        ax[1].text(x, 1.25, "%.0f%%" % (100 * float(r["lam_frac_zero"])), ha="center", fontsize=6.5, color="0.35")
+    xs = list(range(len(dual)))
+    ax[1].plot(xs, [float(r["lam_mean"]) for r in dual], "o", color=C["abs"], label="mean")
+    ax[1].plot(xs, [float(r["lam_p90"]) for r in dual], "s", color=C["abs"], mfc="none", label="90th percentile")
+    ax[1].plot(xs, [float(r["lam_max"]) for r in dual], "^", color=C["abs"], mfc="none", label="maximum")
+    for x, r in zip(xs, dual):
+        if x % 2 == 0:
+            ax[1].text(x, 1.25, "%.0f%%" % (100 * float(r["lam_frac_zero"])), ha="center", fontsize=6, color="0.35")
     ax[1].set_yscale("log")
     ax[1].set_ylim(1.0, 1500)
-    ax[1].set_xticks(list(xs))
-    ax[1].set_xticklabels([r["strategy"].replace("rr_dual_eps", "") for r in duals])
+    ax[1].set_xticks(xs[::2])
+    ax[1].set_xticklabels([("%g" % num(r["strategy"])) for r in dual][::2], fontsize=7)
     ax[1].set_xlabel(r"per-step budget $\varepsilon$   (grey: share of steps with $\lambda_t=0$)")
     ax[1].set_ylabel(r"per-step multiplier $\lambda_t$")
     ax[1].set_title("(b) multipliers realised by the budget rule")

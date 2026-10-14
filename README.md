@@ -1,8 +1,17 @@
-# Recurrence-Risk Decoding for Repetition-Loop Control
+# Why Fixed Per-Step Risk Budgets Waste KL When Preventing Repetition Loops
 
-A decoding-time method that suppresses repetition loops in autoregressive
-language models by penalising candidate tokens in proportion to the risk that
-they would extend an already-repeated n-gram. Derived as the exact
+This repository accompanies the paper (source `paper_src/`, generated
+`paper_make.tex`). Its question: why can a fixed per-step risk budget waste KL
+divergence when the goal is to prevent a loop anywhere in a generation? A
+one-step controller has two dual parameters, the risk budget and its
+multiplier (the price of risk); the paper shows, in exactly solved systems and
+on a character-level language model, that holding the price fixed is cheap and
+holding the budget fixed is not. The language-model experiments use
+recurrence-risk decoding as an instrument; it is not proposed as a practical
+decoder.
+
+Recurrence-risk decoding penalises candidate tokens in proportion to the risk
+that they would extend an already-repeated n-gram. It is the
 minimum-distortion (KL-projection) solution to a risk-bounded decoding
 problem:
 
@@ -11,9 +20,11 @@ problem:
 whose Lagrangian dual has the exponential form
 `q(v) ∝ p(v) * exp(-lambda * risk(v))` — exact **only** when `lambda` is
 solved from `eps` at every step (`mode="dual"`), not when it is a hand-set
-constant (`mode="fixed"`) or an online heuristic (`mode="adaptive"`). See
-[last_paper.tex](last_paper.tex) for the full derivation, all experiments,
-and — just as importantly — the explicit list of what is *not* claimed.
+constant (`mode="fixed"`) or an online heuristic (`mode="adaptive"`). When no
+action can meet the budget the dual mode samples from `p` restricted to the
+minimum-risk tokens (the same rule as `one_step_projection.py`). See
+`paper_make.tex` (built by `build_paper.py`) for the derivation, all
+experiments, and the explicit list of what is *not* claimed.
 
 This README describes how to reproduce every experiment. It intentionally
 does **not** embed result tables/numbers inline (an earlier version of this
@@ -66,12 +77,25 @@ generalize_gpt2.py            Earlier, narrower subword generalization check
                                (superseded by gpt2_full_comparison.py for the
                                headline comparison; kept for its own record).
 
+one_step_projection.py        The one-step KL projection of the exact experiments:
+                               expanding multiplier bracket, explicit final check
+                               (raises SolverFailure), lowest-risk rule when a
+                               budget cannot be met.
+budget_ladder.py              Small-system experiments of the paper (fixed budget,
+                               always-feasible budget, schedule, fixed price,
+                               optimum; waste law; 8 systems).
+frontier_comparison.py        Fixed price vs fixed budget on the primary model
+                               (loop events, path KL, per-step multiplier traces).
+make_figures.py, build_paper.py, verify_paper_tables.py, make_release_record.py
+                              Figures, paper assembly from saved results, checks
+                               of the paper against results and code, and the
+                               hash record of one released version.
 synthetic_fsm_hazard.py       Synthetic finite-state hazard experiment with an
                                exactly DP-computed hazard (ground truth known);
                                every number (oracle, equal-distortion matching)
                                is exact, no Monte Carlo.
 verify_bernoulli_bound.py     Checks the oracle against the Bernoulli-KL closed
-                               form to 1e-14 and runs the functional-form ablation.
+                               form (to 1e-9) and runs the functional-form ablation.
 prompt_conditional_bound.py   Prompt-conditional event-level analysis from the
                                sample-level records of common_kl_comparison.py.
 build_hazard_dataset.py       Builds the real-model hazard-estimator dataset
@@ -300,7 +324,7 @@ python3 analyze_hazard_transfer.py --dataset hazard_dataset_v2.json --probe mult
 ```
 The hazard estimator labels each rollout by whether the frozen detector fires
 on the earlier context plus the rollout, and never pads contexts; results and
-their interpretation are in Appendix F of the paper.
+their interpretation are in Appendix H of the paper.
 
 ## 10. Significance testing and figures
 
@@ -326,7 +350,7 @@ python3 verify_human_eval_passages.py     # which saved run each passage came fr
 The passages of the FSD-style decoder come from an intermediate version of
 that decoder (fixed interpolation weights), not the final one reported in the
 tables; `verify_human_eval_passages.py` shows this. The evaluation is a pilot
-reported in Appendix E of the paper.
+reported in Appendix G of the paper.
 
 ## 12. Full reproduction, start to finish
 
@@ -358,8 +382,8 @@ model-consistency-NLL pass, not by decoding itself.
 ## What this project does and does not claim
 
 Kept intentionally short here to avoid drifting out of sync with the paper;
-the authoritative, current version is `last_paper.tex`'s Discussion and
-"What is not claimed" list. In brief: the theorem guarantees a **per-step**
+the authoritative, current version is the Discussion ("How to read the
+numbers" and Limitations) of `paper_make.tex`. In brief: the theorem guarantees a **per-step**
 bound on expected recurrence risk when the dual projection numerically
 succeeds; it says nothing about the sequence-level count of persistent
 loops. Zero observed loops across evaluated samples is reported throughout
@@ -371,7 +395,7 @@ predicts or as a guarantee that "transfers."
 ```
 python3 budget_ladder.py --out budget_ladder.json     # exact small-system experiments (~8 min)
 python3 tests/test_budget_ladder.py                    # identities and cross-checks of the above
-python3 frontier_comparison.py --help                  # fixed price vs fixed budget on the primary model
+python3 frontier_comparison.py --help                  # fixed price vs fixed budget on the primary model (hours)
 python3 make_figures.py                                # figures/ from the saved results
 python3 build_paper.py                                 # paper_make.tex from paper_src/ + saved results
 python3 verify_paper_tables.py --tests                 # paper vs saved results, provenance, baseline tests

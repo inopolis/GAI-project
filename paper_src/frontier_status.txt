@@ -1,2 +1,2 @@
-Supported at the zero-loop end (no budget setting with an intermediate loop rate)
+Supported at similar observed loop counts (budget rule jumps from reference level to 0/75 between $\varepsilon=1$ and 0.95)
 Supported (descriptive; proxy risk)

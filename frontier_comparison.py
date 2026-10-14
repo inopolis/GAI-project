@@ -36,8 +36,8 @@ from sampling_eval import (TEST_PROMPTS, encode, decode, load_model, cluster_boo
                            persistent_loop_onset, survival_auc, rmst, loop_rate)
 from common_kl_comparison import generate_and_score, TemperatureBaseline
 
-FIXED_LAMBDAS = [1.0, 2.0, 3.0, 4.0, 6.0, 8.0, 12.0]
-DUAL_EPS = [0.65, 0.60, 0.50, 0.30, 0.20, 0.10, 0.05, 0.01]
+FIXED_LAMBDAS = [0.25, 0.5, 1.0, 2.0, 3.0, 4.0, 6.0, 8.0, 12.0]
+DUAL_EPS = [1.0, 0.95, 0.90, 0.85, 0.80, 0.75, 0.70, 0.65, 0.60, 0.50, 0.30, 0.20, 0.10, 0.05, 0.01]
 
 
 def make_configs():

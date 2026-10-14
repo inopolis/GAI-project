@@ -35,17 +35,17 @@ def tab_ladder(d):
         R = r["rules"]
         a, rl, s, lm = R["abs"], R["rel"], R["sched"], R["lam"]
         rows.append(
-            f"{r['eps']:.2f} & {r['d_ber']:.3f} & {a['ratio']:.2f} & {rl['ratio']:.2f} & {s['ratio']:.2f} & "
+            f"{r['eps']:.2f} & {r['d_ber']:.3f} & {a['kl_bits']:.3f} & {a['ratio']:.2f} & {rl['ratio']:.2f} & {s['ratio']:.2f} & "
             f"{lm['ratio']:.3f} & {100*a['infeasible_mass']:.0f}\\% & {100*a['kl_share_infeasible']:.0f}\\% & "
             f"{1+a['cv2_lambda']:.1f} / {1+rl['cv2_lambda']:.1f} \\\\")
     return (r"""\begin{table}[H]
 \centering
-\caption{Base system ($R{=}1$, $N{=}6$, reference loop probability $p=%.4f$): KL spent as a multiple of the minimum $d_{\mathrm{Ber}}(\epsilon\Vert p)$, for each rule of the ladder at the same exact loop probability $\epsilon$. FB: fixed budget; AF: always-feasible budget; schedule: best history-independent budget schedule; FP: fixed price (one multiplier). The optimum is 1 by construction. ``Infeasible'': share of node visits at which the FB budget is below the achievable floor, and the share of the FB controller's KL spent there. $1+\mathrm{CV}^2$ is the second-order waste factor of Proposition~\ref{prop:waste} for FB / AF. All quantities are exact.}
+\caption{Base system ($R{=}1$, $N{=}6$, reference loop probability $p=%.4f$): total path KL in bits and as a multiple of the minimum $d_{\mathrm{Ber}}(\epsilon\Vert p)$, for each rule of the ladder at the same exact loop probability $\epsilon$. FB: fixed budget (its KL is also given in bits); AF: always-feasible budget; schedule: best history-independent budget schedule; FP: fixed price (one multiplier). The optimum is 1 by construction. ``Infeasible'': share of node visits at which the FB budget is below the achievable floor, and the share of the FB controller's KL spent there. $1+\mathrm{CV}^2$ is the second-order waste factor of Proposition~\ref{prop:waste} for FB / AF. All quantities are exact.}
 \label{tab:ladder}
 \resizebox{\textwidth}{!}{%%
-\begin{tabular}{@{}rrrrrrrrr@{}}
+\begin{tabular}{@{}rrrrrrrrrr@{}}
 \toprule
-$\epsilon$ & min KL (bits) & FB & AF & schedule & FP & infeasible visits & KL at infeasible & $1+\mathrm{CV}^2$ (FB / AF) \\
+$\epsilon$ & min KL (bits) & FB KL (bits) & FB & AF & schedule & FP & infeasible visits & KL at infeasible & $1+\mathrm{CV}^2$ (FB / AF) \\
 \midrule
 """ % p + "\n".join(rows) + r"""
 \bottomrule
@@ -57,20 +57,21 @@ def tab_smalld(d):
     rows = []
     for c in d["small_distortion"]:
         a, rl, lm = c["abs"], c["rel"], c["lam"]
-        rows.append(f"{c['D']:g} & {a['exact_ratio']:.1f} & {a['R_pred']:.1f} & {a['R_lower_1_over_phi']:.1f} & "
-                    f"{rl['exact_ratio']:.2f} & {rl['R_pred']:.2f} & {lm['exact_ratio']:.4f} \\\\")
+        rows.append(f"{c['D']:g} & {c['min_kl_bits']:.2e} & {a['kl_bits']:.2e} & {a['exact_ratio']:.1f} & {a['R_pred']:.1f} & "
+                    f"{a['R_lower_1_over_phi']:.1f} & {rl['exact_ratio']:.2f} & {rl['R_pred']:.2f} & {lm['exact_ratio']:.4f} \\\\")
+    lim = d["fixed_budget_limit"]
     return (r"""\begin{table}[H]
 \centering
-\caption{Small reductions in the base system. Exact KL as a multiple of the minimum, against the second-order prediction $1+\mathrm{CV}^2$ and, for the fixed budget, the lower bound $1/\varphi$ of Proposition~\ref{prop:waste}. $D=p-\epsilon$. FB: fixed budget; AF: always-feasible budget; FP: fixed price.}
+\caption{Small reductions $D=p-\epsilon$ in the base system. Total path KL in bits of the minimum and of the fixed budget (FB), and cost ratios (exact KL as a multiple of the minimum) against the second-order prediction $1+\mathrm{CV}^2$ and, for FB, the second-order lower bound $1/\varphi$ of Proposition~\ref{prop:waste}. AF: always-feasible budget; FP: fixed price. As $D\to0$ the FB ratio tends to the finite limit $1/\varphi_{\max}=%.2f$ (the single history of maximal hazard %.3f is the only one touched, $\varphi_{\max}=%.5f$), while both costs tend to zero.}
 \label{tab:smalld}
-\resizebox{\textwidth}{!}{%
-\begin{tabular}{@{}rrrrrrr@{}}
+\resizebox{\textwidth}{!}{%%
+\begin{tabular}{@{}rrrrrrrrr@{}}
 \toprule
- & \multicolumn{3}{c}{FB} & \multicolumn{2}{c}{AF} & FP \\
-\cmidrule(lr){2-4}\cmidrule(lr){5-6}\cmidrule(lr){7-7}
-$D$ & exact & $1+\mathrm{CV}^2$ & $1/\varphi$ & exact & $1+\mathrm{CV}^2$ & exact \\
+ & & & \multicolumn{3}{c}{FB ratio} & \multicolumn{2}{c}{AF ratio} & FP \\
+\cmidrule(lr){4-6}\cmidrule(lr){7-8}\cmidrule(lr){9-9}
+$D$ & min KL & FB KL & exact & $1+\mathrm{CV}^2$ & $1/\varphi$ & exact & $1+\mathrm{CV}^2$ & exact \\
 \midrule
-""" + "\n".join(rows) + r"""
+""" % (lim["one_over_phi_max"], lim["max_hazard_level"], lim["phi_max"]) + "\n".join(rows) + r"""
 \bottomrule
 \end{tabular}}
 \end{table}""")
@@ -249,7 +250,9 @@ def bib_to_mdpi(path):
         out = []
         for person in a.split(" and "):
             last, first = [x.strip() for x in person.split(",")] if "," in person else (person, "")
-            ini = "".join(w[0] + "." for w in re.split(r"[ \-]", first) if w and w[0].isalpha())
+            esc = r"\{\\[A-Za-z]+\}"      # a TeX accent command such as {\L}: keep it as the initial
+            ini = "".join((re.match(esc, w).group(0) + "." if re.match(esc, w) else w[0] + ".")
+                          for w in re.split(r"[ \-]", first) if w and (w[0].isalpha() or re.match(esc, w)))
             out.append(f"{last}, {ini}")
         return "; ".join(out)
 
@@ -312,6 +315,7 @@ FRONT = r"""\documentclass[make,article,submit,pdftex]{Definitions/mdpi}
 \setlength{\emergencystretch}{3em}
 % macros that some versions of the MDPI class do not define (no-ops where undefined)
 \providecommand{\hreflink}[1]{}
+\providecommand{\acknowledgments}[1]{\paragraph{Acknowledgments.} #1}
 \providecommand{\TitleCitation}[1]{}
 \providecommand{\AuthorCitation}[1]{}
 
@@ -349,11 +353,12 @@ $^{1}$ \quad [Affiliation, city, country]}
 
 BACK = r"""
 \vspace{6pt}
-\authorcontributions{The author conceived the study, derived the results, wrote the code, ran the experiments and wrote the manuscript.}
+\authorcontributions{The author defined the research question, ran the language-model experiments, collected the human-evaluation responses, reviewed and verified the results and is responsible for the content. A generative AI assistant helped with the implementation of code and tests, the preparation of figures and tables from saved results, and the drafting and editing of the text; the author reviewed all of it.}
 \funding{This research received no external funding.}
-\institutionalreview{No institutional ethical review was sought. The pilot human evaluation of Appendix~\\ref{sec:human-eval} was a short anonymous task in which volunteers judged machine-generated text; no sensitive personal data were collected, and the released result files identify participants only by the labels they chose.}
+\institutionalreview{No institutional ethical review was sought. The pilot human evaluation of Appendix~\ref{sec:human-eval} was a short anonymous task in which volunteers judged machine-generated text; no sensitive personal data were collected, and the released result files identify participants only by the labels they chose.}
 \informedconsent{Participants were told the nature and length of the task on the introduction page of the evaluation tool before taking part; no written consent was collected.}
-\dataavailability{Code, tests, saved results and the scripts that generate every table are available at https://github.com/inopolis/GAI-project (release tag \\texttt{paper-final}); see Appendix~\\ref{sec:reproducibility}.}
+\dataavailability{Code, tests, saved results and the scripts that generate every table are available at https://github.com/inopolis/GAI-project (release tag \texttt{paper-final}); see Appendix~\ref{sec:reproducibility}.}
+\acknowledgments{A generative AI assistant was used as a support tool for implementing code and tests, preparing figures and tables from saved results, and drafting and editing text. The mathematical statements are accompanied by numerical checks in the released tests (Appendix~\ref{sec:reproducibility}); the author reviewed the assistant's output and is responsible for the correctness of the mathematics, the results and the final text.}
 \conflictsofinterest{The author declares no conflict of interest.}
 
 \appendixtitles{yes}
@@ -384,6 +389,7 @@ ARTICLE_FRONT = r"""\documentclass[11pt]{article}
 \newcommand{\informedconsent}[1]{\paragraph{Informed consent.} #1}
 \newcommand{\dataavailability}[1]{\paragraph{Data availability.} #1}
 \newcommand{\conflictsofinterest}[1]{\paragraph{Conflicts of interest.} #1}
+\newcommand{\acknowledgments}[1]{\paragraph{Acknowledgments.} #1}
 \title{Why Fixed Per-Step Risk Budgets Waste KL When Preventing Repetition Loops}
 \author{}
 \date{}

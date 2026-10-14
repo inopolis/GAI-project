@@ -277,41 +277,12 @@ def solve_oracle_lambda(P, horizon, w, start, target_eps, lam_max=1000.0, iters=
     return best
 
 
-def dual_calibrate(p_row, risk_row, eps, lam_max=200.0, iters=40):
-    """One-step KL projection: min KL(q||p) s.t. E_q[risk] <= eps.
-
-    FIXED (found on review): feasibility used to be read off from q's
-    behavior AT lam_max, which is a correct proxy for "the achievable
-    infimum" but was never actually returned to, or checked by, any
-    caller -- every caller silently discarded the feasible flag and used
-    q_of(hi) regardless, meaning a structurally infeasible eps (eps below
-    the achievable floor min_v risk(v), the SAME boundary case already
-    handled explicitly for this paper's real dual solver, Section 5) was
-    resolved silently to "whatever lam_max achieves" with no record left
-    anywhere that the requested eps was never actually met. Feasibility is
-    now checked explicitly against the closed-form achievable floor
-    (min risk among states with positive prior mass -- the exact
-    lambda->infinity limit, not merely lam_max's approximation to it) and
-    every caller now must consume the returned flag.
-    """
-    def q_of(lam):
-        wgt = p_row * np.exp(-lam * risk_row)
-        return wgt / wgt.sum()
-    g0 = float((p_row * risk_row).sum())
-    if g0 <= eps:
-        return 0.0, g0, True
-    min_risk = float(risk_row[p_row > 0].min())
-    if eps < min_risk - 1e-12:
-        return lam_max, min_risk, False
-    lo, hi = 0.0, lam_max
-    for _ in range(iters):
-        mid = 0.5 * (lo + hi)
-        g_m = float((q_of(mid) * risk_row).sum())
-        if g_m > eps:
-            lo = mid
-        else:
-            hi = mid
-    return hi, float((q_of(hi) * risk_row).sum()), True
+# The one-step projection (min KL(q||p) s.t. E_q[risk] <= eps) is implemented once, in
+# one_step_projection.py, and used by every exact experiment. It uses an EXPANDING multiplier
+# bracket, checks its own result (raising SolverFailure rather than reporting success), and applies
+# one explicit rule when the budget is below the achievable floor: sample from p restricted to the
+# minimum-risk actions (see that module's docstring and Section 3 of the paper).
+from one_step_projection import project_batch, project_one_step, SolverFailure
 
 
 def kl(q, p):
@@ -340,15 +311,12 @@ def kl(q, p):
 # ---------------------------------------------------------------------------
 
 def controlled_forward_exact(P, w, horizon, mode, step_eps, f_table, start=0):
-    """Exact forward propagation of the one-step-projected process (mode
-    'local' or 'hazard') under a FIXED one-step budget step_eps re-solved
-    independently at every node. Returns (eps_achieved, kl_total_bits,
-    infeasible_mass): eps_achieved is the exact P(loop within horizon);
-    kl_total_bits is the exact expected total path KL; infeasible_mass is
-    the total probability mass, summed over every node visited along the
-    way, at which step_eps was structurally below the achievable one-step
-    floor (dual_calibrate's feasible=False) -- surfaced explicitly rather
-    than silently absorbed, per review."""
+    """Exact forward propagation of the one-step-projected process (mode 'local' or 'hazard') under a
+    FIXED one-step budget step_eps re-solved independently at every node. Returns (eps_achieved,
+    kl_total_bits, infeasible_mass): eps_achieved is the exact P(loop within horizon); kl_total_bits is
+    the exact expected total path KL; infeasible_mass is the total probability mass, summed over every
+    node visited, at which step_eps was below the achievable floor (such nodes use the lowest-risk rule
+    of one_step_projection.py). Raises SolverFailure if any one-step solve fails its own check."""
     start_win = (start,)
     dist = {(start, start_win): 1.0}
     looped_mass = 0.0
@@ -356,33 +324,30 @@ def controlled_forward_exact(P, w, horizon, mode, step_eps, f_table, start=0):
     infeasible_mass = 0.0
     for t in range(horizon):
         remaining = horizon - t - 1
+        keys = list(dist.keys())
+        Prow = np.stack([P[s, :] for (s, _) in keys])
+        if mode == "local":
+            Rrow = np.stack([[1.0 if sp in win else 0.0 for sp in range(S)] for (_, win) in keys])
+        elif mode == "hazard":
+            Rrow = np.stack([[1.0 if sp in win else f_table[remaining][(sp, (win + (sp,))[-w:])]
+                              for sp in range(S)] for (s, win) in keys])
+        else:
+            raise ValueError(mode)
+        Q, lam, status, ach = project_batch(Prow, Rrow, np.full(len(keys), float(step_eps)))
         new_dist = {}
-        for (s, win), m in dist.items():
-            p_row = P[s, :]
-            if mode == "local":
-                risk_row = np.array([1.0 if sp in win else 0.0 for sp in range(S)])
-            elif mode == "hazard":
-                risk_row = np.array([
-                    1.0 if sp in win else f_table[remaining][(sp, (win + (sp,))[-w:])]
-                    for sp in range(S)
-                ])
-            else:
-                raise ValueError(mode)
-            lam, ach, feasible = dual_calibrate(p_row, risk_row, step_eps)
-            if not feasible:
+        for i, (s, win) in enumerate(keys):
+            m = dist[(s, win)]
+            if status[i] == "infeasible":
                 infeasible_mass += m
-            q_row = p_row * np.exp(-lam * risk_row)
-            q_row = q_row / q_row.sum()
-            kl_total += m * kl(q_row, p_row)
+            kl_total += m * kl(Q[i], Prow[i])
             for sp in range(S):
-                qp = q_row[sp]
+                qp = Q[i, sp]
                 if qp <= 0:
                     continue
                 if sp in win:
                     looped_mass += m * qp
                 else:
-                    new_win = (win + (sp,))[-w:]
-                    key = (sp, new_win)
+                    key = (sp, (win + (sp,))[-w:])
                     new_dist[key] = new_dist.get(key, 0.0) + m * qp
         dist = new_dist
     return looped_mass, kl_total, infeasible_mass

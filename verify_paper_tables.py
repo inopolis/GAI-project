@@ -145,8 +145,17 @@ def main():
     r3 = [s for s in d["systems"] if s["name"].startswith("persistent R=3")][0]
     z = [r["rules"]["abs"]["infeasible_mass"] for r in r3["grid"]]
     ab3 = [r["rules"]["abs"]["ratio"] for r in r3["grid"]]
+    weak_ok = True
+    for sy in d["systems"]:
+        r0 = sy["grid"][0]["rules"]
+        weak_ok &= r0["lam"]["ratio"] <= r0["rel"]["ratio"] <= r0["abs"]["ratio"]
+    check("C. at the weakest target of every system: fixed price <= always-feasible <= fixed budget", weak_ok)
+    check("C. base system: fixed price within 10.3% at every target", max(r["rules"]["lam"]["ratio"] for r in base["grid"]) < 1.1035)
     check("C. R=3 system: no infeasible node, FB 2.7-7.1x", max(z) == 0 and abs(min(ab3) - 2.74) < 0.01 and abs(max(ab3) - 7.11) < 0.01)
-    check("C. Spearman 0.82 over 244 runs", d["spearman_logratio_vs_log1pCV2"]["n"] == 244 and abs(d["spearman_logratio_vs_log1pCV2"]["rho"] - 0.82) < 0.005)
+    check("C. Spearman 0.80 over 244 runs", d["spearman_logratio_vs_log1pCV2"]["n"] == 244 and abs(d["spearman_logratio_vs_log1pCV2"]["rho"] - 0.80) < 0.005)
+    lim = d["fixed_budget_limit"]
+    check("C. fixed-budget ratio limit 1/phi_max = 707.08, reached at D=1e-7", abs(lim["one_over_phi_max"] - 707.08) < 0.01 and abs(d["small_distortion"][-1]["abs"]["exact_ratio"] - 707.03) < 0.05)
+    check("C. absolute KL at D=1e-7: 2.4e-11 vs 3.4e-14 bits", abs(d["small_distortion"][-1]["abs"]["kl_bits"] / 2.38e-11 - 1) < 0.02 and abs(d["small_distortion"][-1]["min_kl_bits"] / 3.37e-14 - 1) < 0.02)
     pcb = J("runs/common_kl_comparison_v4_samples/prompt_conditional_bound.json")
     ex = [100 * (1 - pcb[k]["bound_prompt_conditional"] / pcb[k]["path_kl_bits"]) for k in pcb if k != "_reference"]
     check("C. excess share >= 98% for every decoder", min(ex) >= 98.0, f"min={min(ex):.2f}")
@@ -164,37 +173,82 @@ def main():
     if fr:
         kl = lambda k: float(fr[k]["kl_bits_total_mean"])
         du = [fr[k] for k in fr if k.startswith("rr_dual")]
-        check("C. frontier: 0/75 at lam=3 (38.6 bits), 0/75 at eps=0.5 (1696 bits), 44x and 92x",
-              fr["rr_fixed_lam3"]["loop_count"] == "0" and fr["rr_dual_eps0.5"]["loop_count"] == "0"
-              and abs(kl("rr_fixed_lam3") - 38.6) < 0.1 and abs(kl("rr_dual_eps0.5") - 1696.0) < 0.5
-              and round(kl("rr_dual_eps0.5") / kl("rr_fixed_lam3")) == 44 and round(kl("rr_dual_eps0.5") / kl("rr_fixed_lam2")) == 92)
-        check("C. frontier: eps=0.01 costs 23x lam=12; reference 29/75; lam=2 2/75 at 18.5 bits",
-              round(kl("rr_dual_eps0.01") / kl("rr_fixed_lam12")) == 23 and fr["temperature_0.10"]["loop_count"] == "29"
-              and fr["rr_fixed_lam2"]["loop_count"] == "2" and abs(kl("rr_fixed_lam2") - 18.5) < 0.1)
-        check("C. frontier: inactive at 60-80% of steps, p90 29-163, max 115-437",
-              all(0.595 < float(r["lam_frac_zero"]) < 0.805 for r in du)
-              and round(min(float(r["lam_p90"]) for r in du)) == 29 and round(max(float(r["lam_p90"]) for r in du)) == 163
-              and round(min(float(r["lam_max"]) for r in du)) == 115 and round(max(float(r["lam_max"]) for r in du)) == 437)
-        check("C. frontier: eps=0.65 0/75 at 1356 bits = 35x lam=3 = 73x lam=2; lam=1 4/75 at 5.0 bits",
-              fr["rr_dual_eps0.65"]["loop_count"] == "0" and abs(kl("rr_dual_eps0.65") - 1355.7) < 0.2
-              and round(kl("rr_dual_eps0.65") / kl("rr_fixed_lam3")) == 35 and round(kl("rr_dual_eps0.65") / kl("rr_fixed_lam2")) == 73
-              and fr["rr_fixed_lam1"]["loop_count"] == "4" and abs(kl("rr_fixed_lam1") - 5.0) < 0.05)
+        check("C. frontier: lam=3 0/75 at 38.6 bits; lam=2 2/75 at 18.5; lam=1 4/75 at 5.0; reference 29/75",
+              fr["rr_fixed_lam3"]["loop_count"] == "0" and abs(kl("rr_fixed_lam3") - 38.6) < 0.1
+              and fr["rr_fixed_lam2"]["loop_count"] == "2" and abs(kl("rr_fixed_lam2") - 18.5) < 0.1
+              and fr["rr_fixed_lam1"]["loop_count"] == "4" and abs(kl("rr_fixed_lam1") - 5.0) < 0.05
+              and fr["temperature_0.10"]["loop_count"] == "29")
+        check("C. frontier: budget rule 29/75 at eps=1 (identical to reference), 0/75 for every eps<=0.95; cheapest 458 bits",
+              fr["rr_dual_eps1"]["loop_count"] == "29"
+              and all(fr[k]["loop_count"] == "0" for k in fr if k.startswith("rr_dual") and k != "rr_dual_eps1")
+              and abs(kl("rr_dual_eps0.95") - 457.8) < 0.2
+              and round(kl("rr_dual_eps0.95") / kl("rr_fixed_lam3")) == 12 and round(kl("rr_dual_eps0.95") / kl("rr_fixed_lam2")) == 25
+              and round(kl("rr_dual_eps0.01") / kl("rr_fixed_lam3")) == 165 and round(kl("rr_dual_eps0.01") / kl("rr_fixed_lam12")) == 23)
+        ref_s = {(r["prompt_index"], r["seed"]): r for g in glob.glob(os.path.join(ROOT, "runs/frontier_v1*/frontier_samples.csv"))
+                 for r in csv.DictReader(open(g)) if r["strategy"] == "temperature_0.10"}
+        c1 = [r for g in glob.glob(os.path.join(ROOT, "runs/frontier_v1*/frontier_samples.csv"))
+              for r in csv.DictReader(open(g)) if r["strategy"] == "rr_dual_eps1"]
+        check("C. frontier: budget eps=1 reproduces the reference (75/75 identical loop onsets, KL <= 1e-5 bits)",
+              len(c1) == 75 and all(r["loop_onset"] == ref_s[(r["prompt_index"], r["seed"])]["loop_onset"] for r in c1)
+              and max(float(r["kl_bits_total"]) for r in c1) < 1e-5)
+        dd = [fr[k] for k in fr if k.startswith("rr_dual") and k != "rr_dual_eps1"]
+        check("C. frontier: inactive at 60-80% of steps, p90 26-163, max 94-437 (eps<1)",
+              all(0.595 < float(r["lam_frac_zero"]) < 0.805 for r in dd)
+              and round(min(float(r["lam_p90"]) for r in dd)) == 26 and round(max(float(r["lam_p90"]) for r in dd)) == 163
+              and round(min(float(r["lam_max"]) for r in dd)) == 94 and round(max(float(r["lam_max"]) for r in dd)) == 437)
         check("C. upper limit 4.8% for 0/75", abs(1 - 0.025 ** (1 / 75) - 0.048) < 5e-4)
 
     # D. provenance
-    t_code = os.path.getmtime(os.path.join(ROOT, "src/decoding.py"))
+    import hashlib, inspect, time as _time
+    rec_path = os.path.join(ROOT, "release_record.json")
+    if os.path.exists(rec_path):
+        rec = json.load(open(rec_path))
+        drift = []
+        for path, h in rec["files"].items():
+            fp = os.path.join(ROOT, path)
+            if not os.path.exists(fp) or hashlib.sha256(open(fp, "rb").read()).hexdigest() != h:
+                drift.append(path)
+        check("D. every recorded file (code, settings, results, paper, figures) matches release_record.json", not drift, str(drift[:6]))
+        from src import decoding
+        cls_ok = all(hashlib.sha256(inspect.getsource(getattr(decoding, n)).encode()).hexdigest() == h
+                     for n, h in rec["classes"].items())
+        check("D. FSDDecoder and LZPenaltyDecoder sources match the recorded (frozen) versions", cls_ok)
+    else:
+        check("D. release_record.json exists (run make_release_record.py)", False)
+    t_freeze = _time.mktime(_time.strptime("2026-09-27T02:50", "%Y-%m-%dT%H:%M"))
     stale = []
     for pat in ["runs/main_comparison_v7_fsd2_merged/all_results.json", "runs/nonfiction_v4_fsd2_merged/all_results.json",
                 "runs/gpt2_full_comparison_v3_merged/all_results.json", "runs/modern_llm_comparison_olmo_v3_merged/all_results.json",
                 "runs/modern_llm_comparison_mistral_v3_merged/all_results.json",
-                "runs/common_kl_comparison_v4_samples/common_kl_comparison.csv", "budget_ladder.json"] + \
-               [os.path.relpath(x, ROOT) for x in glob.glob(os.path.join(ROOT, "runs/frontier_v1*/frontier_rows.csv"))]:
+                "runs/common_kl_comparison_v4_samples/common_kl_comparison.csv"]:
         fp = os.path.join(ROOT, pat)
-        if os.path.exists(fp) and os.path.getmtime(fp) < t_code:
+        if os.path.exists(fp) and os.path.getmtime(fp) < t_freeze:
             stale.append(pat)
-    check("D. every result file is newer than the last change of src/decoding.py", not stale, str(stale))
-    st = subprocess.run(["git", "status", "--porcelain", "--", "src", "tests", "*.py"], cwd=ROOT, capture_output=True, text=True).stdout.strip()
-    check("D. source files committed (git working tree clean for src/, tests/, *.py)", st == "", "uncommitted: " + st.replace("\n", "; ")[:200])
+    check("D. language-model results were produced after the FSD/LZ decoders were frozen (2026-09-27)", not stale, str(stale))
+    # the changed dual-mode branch (rule for an unmet budget) was not executed in any reported run
+    infeas = []
+    for path, grp in [("runs/main_comparison_v7_fsd2_merged/all_results.json", "cosine"),
+                      ("runs/nonfiction_v4_fsd2_merged/all_results.json", None),
+                      ("runs/gpt2_full_comparison_v3_merged/all_results.json", "gpt2"),
+                      ("runs/modern_llm_comparison_olmo_v3_merged/all_results.json", None),
+                      ("runs/modern_llm_comparison_mistral_v3_merged/all_results.json", None)]:
+        dd = J(path)
+        dd = dd[grp] if grp else dd[list(dd)[0]]
+        for r in dd:
+            if "dual" in r["strategy"] and (r["dual_feasible_rate_mean"] != 1.0 or r["dual_structurally_infeasible_rate_mean"] != 0.0):
+                infeas.append((path, r["strategy"]))
+    check("D. every reported dual run: feasible rate 1.0, structurally-infeasible rate 0.0 (unmet-budget rule never executed)", not infeas, str(infeas))
+    # exact experiments were generated after their generating code was last modified
+    gen_ok = all(os.path.getmtime(os.path.join(ROOT, out)) >= max(os.path.getmtime(os.path.join(ROOT, c)) for c in srcs)
+                 for out, srcs in {"budget_ladder.json": ["budget_ladder.py", "one_step_projection.py", "synthetic_fsm_hazard.py"],
+                                   "synthetic_fsm_results.json": ["one_step_projection.py", "synthetic_fsm_hazard.py"],
+                                   "functional_form_ablation.json": ["verify_bernoulli_bound.py", "one_step_projection.py", "synthetic_fsm_hazard.py"]}.items())
+    check("D. exact-experiment results are newer than the code that generates them", gen_ok)
+    st = subprocess.run(["git", "status", "--porcelain", "--", "src", "tests", "*.py", "paper_src", "paper_make.tex",
+                         "budget_ladder.json", "synthetic_fsm_results.json", "functional_form_ablation.json", "figures",
+                         "release_record.json", "RELEASE_MANIFEST.md", "README.md", "references.bib"],
+                        cwd=ROOT, capture_output=True, text=True).stdout.strip()
+    check("D. working tree clean for code, tests, paper and results (git)", st == "", "uncommitted: " + st.replace("\n", "; ")[:240])
 
     # E. tests
     if a.tests:

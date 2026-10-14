@@ -808,20 +808,21 @@ class RecurrenceRiskDecoder:
 
         near_boundary = abs(min_attainable_risk - self.eps) <= BOUNDARY_TOL
         if min_attainable_risk > self.eps + BOUNDARY_TOL:
-            # Proven infeasible: no lambda can satisfy eps, since even
-            # concentrating all mass on argmin(risk) gives exactly
-            # min_attainable_risk > eps. Use a large-but-finite lambda so
-            # the actual sampling distribution still concentrates sharply
-            # on the lowest-risk tokens (the best achievable policy), while
-            # reporting this honestly as structural, not a search failure.
-            big_lambda = 1e4
-            log_q = self._log_q_of_lambda(log_p, risk, big_lambda)
+            # Proven infeasible: no lambda can satisfy eps, since even concentrating all mass on
+            # argmin(risk) gives exactly min_attainable_risk > eps. RULE (identical to
+            # one_step_projection.py and to Section 3 of the paper): sample from p restricted to the
+            # minimum-risk tokens {v : risk(v) <= min risk + BOUNDARY_TOL}, renormalized -- the
+            # lambda -> infinity limit of the projection. (Earlier versions used a large finite
+            # lambda=1e4, which is not equivalent when risk values differ by less than ~1e-3.)
+            low = risk <= (risk.min() + BOUNDARY_TOL)
+            log_q = torch.where(low, log_p, torch.full_like(log_p, float("-inf")))
+            log_q = log_q - torch.logsumexp(log_q, dim=-1)
             achieved = float((torch.exp(log_q) * risk).sum())
-            return {"lambda": big_lambda, "achieved": achieved, "feasible": False,
+            return {"lambda": float("inf"), "achieved": achieved, "feasible": False,
                     "structurally_infeasible": True, "near_boundary": near_boundary,
                     "min_attainable_risk": min_attainable_risk,
                     "violation": max(0.0, achieved - self.eps),
-                    "tolerance": float("nan"), "n_doublings": 0}
+                    "tolerance": float("nan"), "n_doublings": 0, "log_q": log_q}
 
         # Feasibility is guaranteed to exist (min_attainable_risk <= eps).
         # Expand the bracket geometrically until the upper end is feasible;
@@ -848,21 +849,13 @@ class RecurrenceRiskDecoder:
             g_hi = float((torch.exp(log_q_hi) * risk).sum())
 
         if g_hi > target:
-            # Not the ordinary case, but NOT necessarily a search failure
-            # either: at or very near eps == min_v risk(v), g(lambda) only
-            # approaches min_v risk(v) as lambda -> infinity in EXACT
-            # arithmetic and may still read as fractionally above self.eps
-            # after 60 doublings even though the true limiting distribution
-            # is achievable (near_boundary=True flags exactly this case, see
-            # _solve_dual_lambda's docstring). Away from that boundary this
-            # would indicate a genuinely pathological risk vector; report
-            # honestly either way rather than silently proceed.
-            achieved = g_hi
-            return {"lambda": hi, "achieved": achieved, "feasible": False,
-                    "structurally_infeasible": False, "near_boundary": near_boundary,
-                    "min_attainable_risk": min_attainable_risk,
-                    "violation": max(0.0, achieved - self.eps),
-                    "tolerance": float("nan"), "n_doublings": n_doublings}
+            # The bracket did not reach a feasible lambda after 60 doublings although
+            # min_attainable_risk <= eps (+ tolerance). Away from the eps == min risk boundary this
+            # cannot happen for a float32 risk vector; if it does, the solve has FAILED and is reported
+            # as a failure (never as a successful projection).
+            raise RuntimeError(
+                f"dual solver failed: E_q[risk]={g_hi:.6g} > eps+tol={target:.6g} after "
+                f"{n_doublings} doublings (min risk {min_attainable_risk:.6g}, eps {self.eps})")
 
         lo = hi / 2.0 if n_doublings > 0 else 0.0
         for _ in range(self.dual_iters):
@@ -875,6 +868,8 @@ class RecurrenceRiskDecoder:
                 hi = mid
         log_q_final = self._log_q_of_lambda(log_p, risk, hi)
         achieved = float((torch.exp(log_q_final) * risk).sum())
+        if achieved > target + 1e-9:       # explicit check of the final distribution
+            raise RuntimeError(f"dual solver final check failed: E_q[risk]={achieved:.6g} > {target:.6g}")
         return {"lambda": hi, "achieved": achieved, "feasible": True,
                 "structurally_infeasible": False, "near_boundary": near_boundary,
                 "min_attainable_risk": min_attainable_risk,
@@ -951,7 +946,7 @@ class RecurrenceRiskDecoder:
             # Exact solution of  min KL(q||p) s.t. E_q[risk] <= eps
             d = self._solve_dual_lambda(log_p, risk)
             lam, achieved = d["lambda"], d["achieved"]
-            log_q = self._log_q_of_lambda(log_p, risk, lam)
+            log_q = d["log_q"] if "log_q" in d else self._log_q_of_lambda(log_p, risk, lam)
             if self.top_p < 1.0:
                 # NOTE: top-p after the projection voids exactness; off by default
                 q_l = top_p_filtering(log_q.unsqueeze(0), self.top_p).squeeze(0)
@@ -966,7 +961,7 @@ class RecurrenceRiskDecoder:
             self.tolerance_history.append(d["tolerance"])
             self.n_doublings_history.append(d["n_doublings"])
             if step_record is not None:
-                step_record.update(d)
+                step_record.update({k: v for k, v in d.items() if k != "log_q"})
         else:
             # "fixed" (KL-regularized) or "adaptive" (heuristic controller)
             lam = self._current_alpha()          # already clipped to [0, alpha_max]
